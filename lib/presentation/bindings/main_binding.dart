@@ -1,6 +1,9 @@
 import 'package:get/get.dart';
+import 'package:mobile_hexy/data/datasources/best_sellers_remote_data_source.dart';
 import 'package:mobile_hexy/data/datasources/categories_remote_data_source.dart';
 import 'package:mobile_hexy/data/datasources/home_catalog_local_data_source.dart';
+import 'package:mobile_hexy/data/datasources/home_products_remote_data_source.dart';
+import 'package:mobile_hexy/data/datasources/new_arrivals_remote_data_source.dart';
 import 'package:mobile_hexy/data/repositories/home_catalog_repository_impl.dart';
 import 'package:mobile_hexy/domain/repositories/home_catalog_repository.dart';
 import 'package:mobile_hexy/domain/usecases/get_home_catalog.dart';
@@ -19,7 +22,17 @@ class MainBinding extends Bindings {
       () => HomeCatalogRepositoryImpl(Get.find()),
     );
     Get.lazyPut(() => GetHomeCatalog(Get.find()));
-    Get.lazyPut(() => StationeryHomeViewModel(Get.find()));
+    Get.lazyPut(() => BestSellersRemoteDataSource(Get.find()));
+    Get.lazyPut(() => NewArrivalsRemoteDataSource(Get.find()));
+    Get.lazyPut(() => HomeProductsRemoteDataSource(Get.find()));
+    Get.lazyPut(
+      () => StationeryHomeViewModel(
+        Get.find(),
+        Get.find(),
+        Get.find(),
+        Get.find(),
+      ),
+    );
     Get.lazyPut(() => CategoriesRemoteDataSource(Get.find()));
     Get.lazyPut(() => CategoriesViewModel(Get.find()));
     Get.lazyPut(CartViewModel.new);

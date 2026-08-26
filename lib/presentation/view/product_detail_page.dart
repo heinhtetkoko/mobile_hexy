@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:mobile_hexy/core/widgets/shimmer_skeletons.dart';
 import 'package:mobile_hexy/presentation/viewmodel/product_detail_view_model.dart';
 
 class ProductDetailPage extends GetView<ProductDetailViewModel> {
@@ -9,24 +10,42 @@ class ProductDetailPage extends GetView<ProductDetailViewModel> {
   static const _pink = Color(0xFFDB2777);
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-    bottomNavigationBar: _BottomActions(controller: controller),
-    body: SafeArea(
-      bottom: false,
-      child: CustomScrollView(
-        slivers: [
-          SliverToBoxAdapter(child: _Header(controller: controller)),
-          SliverToBoxAdapter(child: _Gallery(controller: controller)),
-          SliverToBoxAdapter(child: _ProductInfo(controller: controller)),
-          SliverToBoxAdapter(child: _Variants(controller: controller)),
-          const SliverToBoxAdapter(child: _Description()),
-          const SliverToBoxAdapter(child: _SimilarProducts()),
-          const SliverToBoxAdapter(child: SizedBox(height: 16)),
-        ],
+  Widget build(BuildContext context) => Obx(() {
+    final product = controller.product.value;
+    return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      bottomNavigationBar: product == null
+          ? null
+          : _BottomActions(controller: controller),
+      body: SafeArea(
+        bottom: false,
+        child: controller.isLoading.value
+            ? const ProductDetailShimmer()
+            : controller.errorMessage.value != null
+            ? _DetailError(
+                message: controller.errorMessage.value!,
+                onRetry: controller.loadProduct,
+              )
+            : product == null
+            ? const Center(child: Text('Product not found.'))
+            : CustomScrollView(
+                slivers: [
+                  SliverToBoxAdapter(child: _Header(controller: controller)),
+                  SliverToBoxAdapter(child: _Gallery(controller: controller)),
+                  SliverToBoxAdapter(
+                    child: _ProductInfo(controller: controller),
+                  ),
+                  SliverToBoxAdapter(child: _Variants(controller: controller)),
+                  SliverToBoxAdapter(
+                    child: _Description(controller: controller),
+                  ),
+                  const SliverToBoxAdapter(child: _SimilarProducts()),
+                  const SliverToBoxAdapter(child: SizedBox(height: 16)),
+                ],
+              ),
       ),
-    ),
-  );
+    );
+  });
 }
 
 class _Header extends StatelessWidget {
@@ -130,168 +149,198 @@ class _Gallery extends StatelessWidget {
   const _Gallery({required this.controller});
   final ProductDetailViewModel controller;
   @override
-  Widget build(BuildContext context) => Column(
-    children: [
-      Obx(
-        () => SizedBox(
-          height: 300,
-          width: double.infinity,
-          child: Image.asset(
-            controller.gallery[controller.selectedImage.value],
-            fit: BoxFit.cover,
+  Widget build(BuildContext context) {
+    final images = controller.product.value!.imageUrls;
+    return Column(
+      children: [
+        Obx(
+          () => SizedBox(
+            height: 300,
+            width: double.infinity,
+            child: images.isEmpty
+                ? const Icon(Icons.image_not_supported_outlined, size: 64)
+                : Image.network(
+                    images[controller.selectedImage.value],
+                    fit: BoxFit.contain,
+                    errorBuilder: (_, _, _) => const Icon(
+                      Icons.image_not_supported_outlined,
+                      size: 64,
+                    ),
+                  ),
           ),
         ),
-      ),
-      SizedBox(
-        height: 60,
-        child: Obx(() {
-          final selectedImage = controller.selectedImage.value;
-          return ListView.separated(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-            scrollDirection: Axis.horizontal,
-            itemCount: controller.gallery.length,
-            separatorBuilder: (_, _) => const SizedBox(width: 8),
-            itemBuilder: (_, index) => GestureDetector(
-              onTap: () => controller.selectedImage.value = index,
-              child: Container(
-                width: 52,
-                height: 52,
-                padding: const EdgeInsets.all(2),
-                decoration: BoxDecoration(
-                  border: Border.all(
-                    color: selectedImage == index
-                        ? ProductDetailPage._pink
-                        : Colors.transparent,
-                    width: 2,
-                  ),
-                  borderRadius: BorderRadius.circular(8),
+        if (images.length > 1)
+          SizedBox(
+            height: 60,
+            child: Obx(() {
+              final selectedImage = controller.selectedImage.value;
+              return ListView.separated(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 4,
                 ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(5),
-                  child: Image.asset(
-                    controller.gallery[index],
-                    fit: BoxFit.cover,
+                scrollDirection: Axis.horizontal,
+                itemCount: images.length,
+                separatorBuilder: (_, _) => const SizedBox(width: 8),
+                itemBuilder: (_, index) => GestureDetector(
+                  onTap: () => controller.selectedImage.value = index,
+                  child: Container(
+                    width: 52,
+                    height: 52,
+                    padding: const EdgeInsets.all(2),
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color: selectedImage == index
+                            ? ProductDetailPage._pink
+                            : Colors.transparent,
+                        width: 2,
+                      ),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(5),
+                      child: Image.network(images[index], fit: BoxFit.cover),
+                    ),
                   ),
                 ),
-              ),
-            ),
-          );
-        }),
-      ),
-    ],
-  );
+              );
+            }),
+          ),
+      ],
+    );
+  }
 }
 
 class _ProductInfo extends StatelessWidget {
   const _ProductInfo({required this.controller});
   final ProductDetailViewModel controller;
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.all(16),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: const [
-            _Tag(label: 'PILOT', active: true),
-            _Tag(label: 'Gel Pens'),
-          ],
-        ),
-        const SizedBox(height: 16),
-        Text(
-          'Pilot G-2 Gel Pen 0.7mm Blue'.tr,
-          style: TextStyle(
-            color: Theme.of(context).colorScheme.onSurface,
-            fontSize: 22,
-            height: 1.2,
-            fontWeight: FontWeight.w800,
+  Widget build(BuildContext context) {
+    final product = controller.product.value!;
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: product.categories
+                .map((name) => _Tag(label: name, active: true))
+                .toList(),
           ),
-        ),
-        const SizedBox(height: 10),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'SKU: PIL-G2-07-BLU'.tr,
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-                fontSize: 12,
-              ),
+          const SizedBox(height: 16),
+          Text(
+            product.name,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface,
+              fontSize: 22,
+              height: 1.2,
+              fontWeight: FontWeight.w800,
             ),
-            Row(
-              children: [
-                Icon(Icons.circle, size: 8, color: Color(0xFF22C55E)),
-                SizedBox(width: 5),
-                Text(
-                  'In Stock'.tr,
-                  style: TextStyle(
-                    color: Color(0xFF22C55E),
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Icon(Icons.star_rounded, color: Color(0xFFFBBF24), size: 18),
-            Icon(Icons.star_rounded, color: Color(0xFFFBBF24), size: 18),
-            Icon(Icons.star_rounded, color: Color(0xFFFBBF24), size: 18),
-            Icon(Icons.star_rounded, color: Color(0xFFFBBF24), size: 18),
-            Icon(Icons.star_rounded, color: Color(0xFFFBBF24), size: 18),
-            SizedBox(width: 7),
-            Text(
-              '4.8'.tr,
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurface,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            Text(
-              ' / 5.0'.tr,
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
-            borderRadius: BorderRadius.circular(16),
           ),
-          child: Row(
+          const SizedBox(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                '2,100 Ks'.tr,
+                product.sku.isEmpty ? 'No SKU' : 'SKU: ${product.sku}',
                 style: TextStyle(
-                  color: Theme.of(context).colorScheme.primary,
-                  fontSize: 28,
-                  fontWeight: FontWeight.w800,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  fontSize: 12,
                 ),
               ),
-              SizedBox(width: 12),
-              Text(
-                '2,800 Ks'.tr,
-                style: TextStyle(
-                  color: Color(0xFF9CA3AF),
-                  decoration: TextDecoration.lineThrough,
-                ),
+              Row(
+                children: [
+                  Icon(
+                    Icons.circle,
+                    size: 8,
+                    color: product.inStock
+                        ? const Color(0xFF22C55E)
+                        : Colors.red,
+                  ),
+                  const SizedBox(width: 5),
+                  Text(
+                    product.inStock ? 'In Stock'.tr : 'Out of Stock'.tr,
+                    style: TextStyle(
+                      color: product.inStock
+                          ? const Color(0xFF22C55E)
+                          : Colors.red,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
               ),
-              SizedBox(width: 12),
-              _DiscountBadge(),
             ],
           ),
-        ),
-      ],
-    ),
-  );
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              ...List.generate(
+                5,
+                (index) => Icon(
+                  index < product.rating.round()
+                      ? Icons.star_rounded
+                      : Icons.star_border_rounded,
+                  color: const Color(0xFFFBBF24),
+                  size: 18,
+                ),
+              ),
+              const SizedBox(width: 7),
+              Text(
+                product.rating.toStringAsFixed(1),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Text(
+                ' / 5.0 (${product.reviewCount})',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Row(
+              children: [
+                Text(
+                  product.formattedPrice,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.primary,
+                    fontSize: 28,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                if (product.formattedCompareAtPrice != null) ...[
+                  const SizedBox(width: 12),
+                  Text(
+                    product.formattedCompareAtPrice!,
+                    style: const TextStyle(
+                      color: Color(0xFF9CA3AF),
+                      decoration: TextDecoration.lineThrough,
+                    ),
+                  ),
+                ],
+                if (product.discountPercent > 0) ...[
+                  const SizedBox(width: 12),
+                  _DiscountBadge(percent: product.discountPercent),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _Tag extends StatelessWidget {
@@ -321,7 +370,8 @@ class _Tag extends StatelessWidget {
 }
 
 class _DiscountBadge extends StatelessWidget {
-  const _DiscountBadge();
+  const _DiscountBadge({required this.percent});
+  final int percent;
   @override
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -330,7 +380,7 @@ class _DiscountBadge extends StatelessWidget {
       borderRadius: BorderRadius.circular(20),
     ),
     child: Text(
-      '25% OFF'.tr,
+      '$percent% OFF'.tr,
       style: TextStyle(
         color: Colors.white,
         fontSize: 12,
@@ -344,79 +394,49 @@ class _Variants extends StatelessWidget {
   const _Variants({required this.controller});
   final ProductDetailViewModel controller;
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Color:'.tr,
-          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-        ),
-        const SizedBox(height: 10),
-        Obx(
-          () => _ChoiceRow(
-            values: const ['Blue', 'Black', 'Red', 'Green'],
-            selected: controller.selectedColor.value,
-            onSelected: (value) => controller.selectedColor.value = value,
+  Widget build(BuildContext context) {
+    final variants = controller.product.value!.variants;
+    if (variants.length <= 1) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Variants'.tr,
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
           ),
-        ),
-        const SizedBox(height: 20),
-        Text(
-          'Ink Type:'.tr,
-          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-        ),
-        const SizedBox(height: 10),
-        Obx(
-          () => _ChoiceRow(
-            values: const ['Gel Ink', 'Ballpoint'],
-            selected: controller.selectedInkType.value,
-            onSelected: (value) => controller.selectedInkType.value = value,
+          const SizedBox(height: 10),
+          Obx(
+            () => Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: variants.map((variant) {
+                final selected =
+                    controller.selectedVariantId.value == variant.id;
+                return ChoiceChip(
+                  label: Text(variant.name),
+                  selected: selected,
+                  onSelected: (_) =>
+                      controller.selectedVariantId.value = variant.id,
+                  selectedColor: ProductDetailPage._ink,
+                  labelStyle: TextStyle(
+                    fontSize: 11,
+                    color: selected ? Colors.white : null,
+                  ),
+                );
+              }).toList(),
+            ),
           ),
-        ),
-      ],
-    ),
-  );
-}
-
-class _ChoiceRow extends StatelessWidget {
-  const _ChoiceRow({
-    required this.values,
-    required this.selected,
-    required this.onSelected,
-  });
-  final List<String> values;
-  final String selected;
-  final ValueChanged<String> onSelected;
-  @override
-  Widget build(BuildContext context) => Wrap(
-    spacing: 8,
-    runSpacing: 8,
-    children: values.map((value) {
-      final active = value == selected;
-      return ChoiceChip(
-        label: Text(value.tr),
-        selected: active,
-        onSelected: (_) => onSelected(value),
-        selectedColor: ProductDetailPage._ink,
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        labelStyle: TextStyle(
-          fontSize: 11,
-          color: active
-              ? Colors.white
-              : Theme.of(context).colorScheme.onSurfaceVariant,
-          fontWeight: FontWeight.w700,
-        ),
-        side: BorderSide(
-          color: active ? ProductDetailPage._ink : Colors.transparent,
-        ),
-      );
-    }).toList(),
-  );
+        ],
+      ),
+    );
+  }
 }
 
 class _Description extends StatelessWidget {
-  const _Description();
+  const _Description({required this.controller});
+  final ProductDetailViewModel controller;
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.all(16),
@@ -433,8 +453,9 @@ class _Description extends StatelessWidget {
         ),
         SizedBox(height: 8),
         Text(
-          'Smooth-writing Pilot G-2 gel pen with a comfortable grip and vibrant blue ink. Perfect for school, office, and everyday notes.'
-              .tr,
+          controller.product.value!.description.isEmpty
+              ? 'No description available.'.tr
+              : controller.product.value!.description,
           style: TextStyle(
             color: Theme.of(context).colorScheme.onSurfaceVariant,
             height: 1.5,
@@ -552,6 +573,43 @@ class _QuantitySelector extends StatelessWidget {
         style: IconButton.styleFrom(backgroundColor: ProductDetailPage._ink),
         color: Colors.white,
         icon: const Icon(Icons.add, size: 16),
+      ),
+    ],
+  );
+}
+
+class _DetailError extends StatelessWidget {
+  const _DetailError({required this.message, required this.onRetry});
+
+  final String message;
+  final Future<void> Function() onRetry;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    children: [
+      SizedBox(
+        height: 56,
+        child: Row(
+          children: [
+            const SizedBox(width: 12),
+            IconButton(
+              onPressed: Get.back,
+              icon: const Icon(Icons.chevron_left),
+            ),
+          ],
+        ),
+      ),
+      Expanded(
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(message, textAlign: TextAlign.center),
+              const SizedBox(height: 12),
+              ElevatedButton(onPressed: onRetry, child: const Text('Retry')),
+            ],
+          ),
+        ),
       ),
     ],
   );

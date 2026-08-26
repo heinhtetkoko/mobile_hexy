@@ -19,15 +19,19 @@ class HomeCategory {
 
 class HomeProduct {
   const HomeProduct({
+    this.id = '',
     required this.name,
     required this.price,
     required this.imageAsset,
+    this.imageUrl,
     this.hot = false,
   });
 
+  final String id;
   final String name;
   final String price;
   final String imageAsset;
+  final String? imageUrl;
   final bool hot;
 }
 

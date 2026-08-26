@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:mobile_hexy/app/routes/app_routes.dart';
 import 'package:mobile_hexy/app/theme/app_colors.dart';
 import 'package:mobile_hexy/domain/entities/catalog_product.dart';
+import 'package:mobile_hexy/core/widgets/shimmer_skeletons.dart';
 import 'package:mobile_hexy/presentation/viewmodel/product_list_view_model.dart';
 
 class ProductListPage extends GetView<ProductListViewModel> {
@@ -20,7 +21,7 @@ class ProductListPage extends GetView<ProductListViewModel> {
           Expanded(
             child: Obx(() {
               if (controller.isLoading.value) {
-                return const Center(child: CircularProgressIndicator());
+                return const ProductGridShimmer();
               }
               final error = controller.errorMessage.value;
               if (error != null) {
@@ -65,8 +66,10 @@ class ProductListPage extends GetView<ProductListViewModel> {
                           onFavorite: () =>
                               controller.toggleFavorite(products[index].id),
                           onCart: () => controller.addToCart(products[index]),
-                          onOpen: () =>
-                              Get.toNamed<void>(AppRoutes.productDetail),
+                          onOpen: () => Get.toNamed<void>(
+                            AppRoutes.productDetail,
+                            arguments: products[index].id,
+                          ),
                         ),
                       ),
                     ),

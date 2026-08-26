@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:mobile_hexy/app/routes/app_routes.dart';
 import 'package:mobile_hexy/domain/entities/catalog_category.dart';
+import 'package:mobile_hexy/core/widgets/shimmer_skeletons.dart';
 import 'package:mobile_hexy/presentation/viewmodel/categories_view_model.dart';
 
 class CategoriesPage extends GetView<CategoriesViewModel> {
@@ -21,7 +22,7 @@ class CategoriesPage extends GetView<CategoriesViewModel> {
             Expanded(
               child: Obx(() {
                 if (controller.isLoading.value) {
-                  return const Center(child: CircularProgressIndicator());
+                  return const CategoriesShimmer();
                 }
                 final error = controller.errorMessage.value;
                 if (error != null) {
@@ -56,7 +57,7 @@ class CategoriesPage extends GetView<CategoriesViewModel> {
                     ),
                     Expanded(
                       child: controller.isSubcategoriesLoading.value
-                          ? const Center(child: CircularProgressIndicator())
+                          ? const CategoriesShimmer(sidebar: false)
                           : _SubcategoryList(
                               selectedName: controller
                                   .categories[controller.selectedIndex.value]

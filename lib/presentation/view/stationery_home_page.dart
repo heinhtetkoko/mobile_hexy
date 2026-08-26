@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:mobile_hexy/app/routes/app_routes.dart';
 import 'package:mobile_hexy/domain/entities/home_catalog.dart';
+import 'package:mobile_hexy/core/widgets/shimmer_skeletons.dart';
 import 'package:mobile_hexy/presentation/viewmodel/stationery_home_view_model.dart';
 
 class StationeryHomePage extends GetView<StationeryHomeViewModel> {
@@ -41,8 +42,17 @@ class StationeryHomePage extends GetView<StationeryHomeViewModel> {
                     child: _Section(
                       title: 'Best Sellers',
                       badge: 'HOT',
-                      child: _ProductList(
-                        items: controller.catalog.bestSellers,
+                      child: Obx(
+                        () => _RemoteProductContent(
+                          items: controller.bestSellers,
+                          loading: controller.isBestSellersLoading.value,
+                          loadingMore:
+                              controller.isBestSellersLoadingMore.value,
+                          error: controller.bestSellersError.value,
+                          hasMore: controller.hasMoreBestSellers.value,
+                          onRetry: controller.loadBestSellers,
+                          onLoadMore: controller.loadMoreBestSellers,
+                        ),
                       ),
                     ),
                   ),
@@ -50,23 +60,49 @@ class StationeryHomePage extends GetView<StationeryHomeViewModel> {
                     child: _Section(
                       title: 'New Arrivals',
                       badge: 'NEW',
-                      child: _ProductList(
-                        items: controller.catalog.newArrivals,
+                      child: Obx(
+                        () => _RemoteProductContent(
+                          items: controller.newArrivals,
+                          loading: controller.isNewArrivalsLoading.value,
+                          loadingMore:
+                              controller.isNewArrivalsLoadingMore.value,
+                          error: controller.newArrivalsError.value,
+                          hasMore: controller.hasMoreNewArrivals.value,
+                          onRetry: controller.loadNewArrivals,
+                          onLoadMore: controller.loadMoreNewArrivals,
+                        ),
                       ),
                     ),
                   ),
                   const SliverToBoxAdapter(child: _OfferCard()),
                   SliverToBoxAdapter(
-                    child: _FlashSaleSection(
-                      items: controller.catalog.bestSellers,
+                    child: Obx(
+                      () => _FlashSaleContent(
+                        items: controller.flashSaleProducts,
+                        loading: controller.isFlashSaleLoading.value,
+                        loadingMore: controller.isFlashSaleLoadingMore.value,
+                        error: controller.flashSaleError.value,
+                        hasMore: controller.hasMoreFlashSale.value,
+                        onRetry: controller.loadFlashSale,
+                        onLoadMore: controller.loadMoreFlashSale,
+                      ),
                     ),
                   ),
                   SliverToBoxAdapter(
                     child: _Section(
                       title: 'Recommended For You',
                       badge: '✨',
-                      child: _RecommendedList(
-                        items: controller.catalog.newArrivals,
+                      child: Obx(
+                        () => _RecommendedContent(
+                          items: controller.recommendedProducts,
+                          loading: controller.isRecommendedLoading.value,
+                          loadingMore:
+                              controller.isRecommendedLoadingMore.value,
+                          error: controller.recommendedError.value,
+                          hasMore: controller.hasMoreRecommended.value,
+                          onRetry: controller.loadRecommendedProducts,
+                          onLoadMore: controller.loadMoreRecommendedProducts,
+                        ),
                       ),
                     ),
                   ),
@@ -403,17 +439,42 @@ class _BrandList extends StatelessWidget {
 }
 
 class _ProductList extends StatelessWidget {
-  const _ProductList({required this.items});
+  const _ProductList({
+    required this.items,
+    this.onLoadMore,
+    this.loadingMore = false,
+  });
   final List<HomeProduct> items;
+  final VoidCallback? onLoadMore;
+  final bool loadingMore;
   @override
   Widget build(BuildContext context) => SizedBox(
     height: 186,
     child: ListView.separated(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       scrollDirection: Axis.horizontal,
-      itemCount: items.length,
+      itemCount: items.length + (onLoadMore == null ? 0 : 1),
       separatorBuilder: (_, _) => const SizedBox(width: 12),
-      itemBuilder: (_, index) => _ProductCard(product: items[index]),
+      itemBuilder: (_, index) {
+        if (index == items.length) {
+          return SizedBox(
+            width: 110,
+            child: Center(
+              child: OutlinedButton(
+                onPressed: loadingMore ? null : onLoadMore,
+                child: loadingMore
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Load more'),
+              ),
+            ),
+          );
+        }
+        return _ProductCard(product: items[index]);
+      },
     ),
   );
 }
@@ -423,7 +484,9 @@ class _ProductCard extends StatelessWidget {
   final HomeProduct product;
   @override
   Widget build(BuildContext context) => InkWell(
-    onTap: () => Get.toNamed(AppRoutes.productDetail),
+    onTap: product.id.isEmpty
+        ? null
+        : () => Get.toNamed(AppRoutes.productDetail, arguments: product.id),
     borderRadius: BorderRadius.circular(12),
     child: Container(
       width: 142,
@@ -444,7 +507,16 @@ class _ProductCard extends StatelessWidget {
         children: [
           Expanded(
             child: Center(
-              child: Image.asset(product.imageAsset, fit: BoxFit.contain),
+              child: product.imageUrl?.isNotEmpty == true
+                  ? Image.network(
+                      product.imageUrl!,
+                      fit: BoxFit.contain,
+                      errorBuilder: (_, _, _) => const Icon(
+                        Icons.image_not_supported_outlined,
+                        size: 36,
+                      ),
+                    )
+                  : Image.asset(product.imageAsset, fit: BoxFit.contain),
             ),
           ),
           const SizedBox(height: 5),
@@ -482,6 +554,56 @@ class _ProductCard extends StatelessWidget {
       ),
     ),
   );
+}
+
+class _RemoteProductContent extends StatelessWidget {
+  const _RemoteProductContent({
+    required this.items,
+    required this.loading,
+    required this.loadingMore,
+    required this.error,
+    required this.hasMore,
+    required this.onRetry,
+    required this.onLoadMore,
+  });
+
+  final List<HomeProduct> items;
+  final bool loading;
+  final bool loadingMore;
+  final String? error;
+  final bool hasMore;
+  final VoidCallback onRetry;
+  final VoidCallback onLoadMore;
+
+  @override
+  Widget build(BuildContext context) {
+    if (loading) {
+      return const HorizontalProductShimmer();
+    }
+    if (error != null) {
+      return SizedBox(
+        height: 120,
+        child: Center(
+          child: TextButton.icon(
+            onPressed: onRetry,
+            icon: const Icon(Icons.refresh),
+            label: Text(error!),
+          ),
+        ),
+      );
+    }
+    if (items.isEmpty) {
+      return const SizedBox(
+        height: 100,
+        child: Center(child: Text('No best sellers found.')),
+      );
+    }
+    return _ProductList(
+      items: items,
+      onLoadMore: hasMore ? onLoadMore : null,
+      loadingMore: loadingMore,
+    );
+  }
 }
 
 class _OfferCard extends StatelessWidget {
@@ -539,8 +661,14 @@ class _OfferCard extends StatelessWidget {
 }
 
 class _FlashSaleSection extends StatelessWidget {
-  const _FlashSaleSection({required this.items});
+  const _FlashSaleSection({
+    required this.items,
+    this.onLoadMore,
+    this.loadingMore = false,
+  });
   final List<HomeProduct> items;
+  final VoidCallback? onLoadMore;
+  final bool loadingMore;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -578,18 +706,76 @@ class _FlashSaleSection extends StatelessWidget {
           child: ListView.separated(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             scrollDirection: Axis.horizontal,
-            itemCount: items.length,
+            itemCount: items.length + (onLoadMore == null ? 0 : 1),
             separatorBuilder: (_, _) => const SizedBox(width: 12),
-            itemBuilder: (_, index) => _FlashSaleCard(
-              product: items[index],
-              stockLeft: const [2, 6, 1][index % 3],
-              progress: const [.8, .4, .9][index % 3],
-            ),
+            itemBuilder: (_, index) {
+              if (index == items.length) {
+                return _HorizontalLoadMore(
+                  onTap: onLoadMore!,
+                  loading: loadingMore,
+                );
+              }
+              return _FlashSaleCard(
+                product: items[index],
+                stockLeft: const [2, 6, 1][index % 3],
+                progress: const [.8, .4, .9][index % 3],
+              );
+            },
           ),
         ),
       ],
     ),
   );
+}
+
+class _FlashSaleContent extends StatelessWidget {
+  const _FlashSaleContent({
+    required this.items,
+    required this.loading,
+    required this.loadingMore,
+    required this.error,
+    required this.hasMore,
+    required this.onRetry,
+    required this.onLoadMore,
+  });
+
+  final List<HomeProduct> items;
+  final bool loading;
+  final bool loadingMore;
+  final String? error;
+  final bool hasMore;
+  final VoidCallback onRetry;
+  final VoidCallback onLoadMore;
+
+  @override
+  Widget build(BuildContext context) {
+    if (loading) {
+      return const HorizontalProductShimmer(height: 308, itemWidth: 202);
+    }
+    if (error != null) {
+      return SizedBox(
+        height: 130,
+        child: Center(
+          child: TextButton.icon(
+            onPressed: onRetry,
+            icon: const Icon(Icons.refresh),
+            label: Text(error!),
+          ),
+        ),
+      );
+    }
+    if (items.isEmpty) {
+      return const SizedBox(
+        height: 120,
+        child: Center(child: Text('No flash sale products found.')),
+      );
+    }
+    return _FlashSaleSection(
+      items: items,
+      onLoadMore: hasMore ? onLoadMore : null,
+      loadingMore: loadingMore,
+    );
+  }
 }
 
 class _TimerBox extends StatelessWidget {
@@ -669,7 +855,7 @@ class _FlashSaleCard extends StatelessWidget {
                 height: 136,
                 padding: const EdgeInsets.all(12),
                 color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                child: Image.asset(product.imageAsset, fit: BoxFit.contain),
+                child: _RemoteOrAssetImage(product: product),
               ),
             ),
             const SizedBox(height: 11),
@@ -738,8 +924,14 @@ class _FlashSaleCard extends StatelessWidget {
 }
 
 class _RecommendedList extends StatelessWidget {
-  const _RecommendedList({required this.items});
+  const _RecommendedList({
+    required this.items,
+    this.onLoadMore,
+    this.loadingMore = false,
+  });
   final List<HomeProduct> items;
+  final VoidCallback? onLoadMore;
+  final bool loadingMore;
 
   @override
   Widget build(BuildContext context) => SizedBox(
@@ -747,11 +939,103 @@ class _RecommendedList extends StatelessWidget {
     child: ListView.separated(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       scrollDirection: Axis.horizontal,
-      itemCount: items.length,
+      itemCount: items.length + (onLoadMore == null ? 0 : 1),
       separatorBuilder: (_, _) => const SizedBox(width: 12),
-      itemBuilder: (_, index) => _RecommendedCard(product: items[index]),
+      itemBuilder: (_, index) => index == items.length
+          ? _HorizontalLoadMore(onTap: onLoadMore!, loading: loadingMore)
+          : _RecommendedCard(product: items[index]),
     ),
   );
+}
+
+class _RecommendedContent extends StatelessWidget {
+  const _RecommendedContent({
+    required this.items,
+    required this.loading,
+    required this.loadingMore,
+    required this.error,
+    required this.hasMore,
+    required this.onRetry,
+    required this.onLoadMore,
+  });
+
+  final List<HomeProduct> items;
+  final bool loading;
+  final bool loadingMore;
+  final String? error;
+  final bool hasMore;
+  final VoidCallback onRetry;
+  final VoidCallback onLoadMore;
+
+  @override
+  Widget build(BuildContext context) {
+    if (loading) {
+      return const HorizontalProductShimmer(height: 218, itemWidth: 158);
+    }
+    if (error != null) {
+      return SizedBox(
+        height: 120,
+        child: Center(
+          child: TextButton.icon(
+            onPressed: onRetry,
+            icon: const Icon(Icons.refresh),
+            label: Text(error!),
+          ),
+        ),
+      );
+    }
+    if (items.isEmpty) {
+      return const SizedBox(
+        height: 100,
+        child: Center(child: Text('No recommended products found.')),
+      );
+    }
+    return _RecommendedList(
+      items: items,
+      onLoadMore: hasMore ? onLoadMore : null,
+      loadingMore: loadingMore,
+    );
+  }
+}
+
+class _HorizontalLoadMore extends StatelessWidget {
+  const _HorizontalLoadMore({required this.onTap, required this.loading});
+
+  final VoidCallback onTap;
+  final bool loading;
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    width: 110,
+    child: Center(
+      child: OutlinedButton(
+        onPressed: loading ? null : onTap,
+        child: loading
+            ? const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : const Text('Load more'),
+      ),
+    ),
+  );
+}
+
+class _RemoteOrAssetImage extends StatelessWidget {
+  const _RemoteOrAssetImage({required this.product});
+
+  final HomeProduct product;
+
+  @override
+  Widget build(BuildContext context) => product.imageUrl?.isNotEmpty == true
+      ? Image.network(
+          product.imageUrl!,
+          fit: BoxFit.contain,
+          errorBuilder: (_, _, _) =>
+              const Icon(Icons.image_not_supported_outlined, size: 36),
+        )
+      : Image.asset(product.imageAsset, fit: BoxFit.contain);
 }
 
 class _RecommendedCard extends StatelessWidget {
@@ -786,7 +1070,7 @@ class _RecommendedCard extends StatelessWidget {
                 width: double.infinity,
                 height: 112,
                 padding: const EdgeInsets.all(8),
-                child: Image.asset(product.imageAsset, fit: BoxFit.contain),
+                child: _RemoteOrAssetImage(product: product),
               ),
             ),
             Positioned(
