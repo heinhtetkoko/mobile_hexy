@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 import 'package:mobile_hexy/core/base/base_view_model.dart';
 import 'package:mobile_hexy/data/datasources/best_sellers_remote_data_source.dart';
+import 'package:mobile_hexy/data/datasources/banners_remote_data_source.dart';
 import 'package:mobile_hexy/data/datasources/brands_remote_data_source.dart';
 import 'package:mobile_hexy/data/datasources/categories_remote_data_source.dart';
 import 'package:mobile_hexy/data/datasources/home_products_remote_data_source.dart';
@@ -20,6 +23,7 @@ class StationeryHomeViewModel extends BaseViewModel {
     this._homeProductsDataSource,
     this._categoriesDataSource,
     this._brandsDataSource,
+    this._bannersDataSource,
   );
 
   final GetHomeCatalog _getHomeCatalog;
@@ -28,10 +32,14 @@ class StationeryHomeViewModel extends BaseViewModel {
   final HomeProductsRemoteDataSource _homeProductsDataSource;
   final CategoriesRemoteDataSource _categoriesDataSource;
   final BrandsRemoteDataSource _brandsDataSource;
+  final BannersRemoteDataSource _bannersDataSource;
   final activeBanner = 0.obs;
   final searchQuery = ''.obs;
-  final bannerController = PageController(viewportFraction: .94);
+  final bannerController = PageController();
+  Timer? _bannerTimer;
   late final HomeCatalog catalog;
+  final banners = <HomeBanner>[].obs;
+  final isBannersLoading = false.obs;
   final homeCategories = <CatalogCategory>[].obs;
   final isCategoriesLoading = false.obs;
   final categoriesError = RxnString();
@@ -70,12 +78,56 @@ class StationeryHomeViewModel extends BaseViewModel {
   void onInit() {
     super.onInit();
     catalog = _getHomeCatalog();
+    loadBanners();
     loadCategories();
     loadBrands();
     loadBestSellers();
     loadNewArrivals();
     loadFlashSale();
     loadRecommendedProducts();
+  }
+
+  Future<void> loadBanners() async {
+    isBannersLoading.value = true;
+    try {
+      final result = await _bannersDataSource.fetchBanners();
+      if (result.isNotEmpty) {
+        activeBanner.value = 0;
+        banners.assignAll(result);
+        if (bannerController.hasClients) bannerController.jumpToPage(0);
+        _startBannerAutoplay();
+      }
+    } catch (_) {
+      banners.clear();
+    } finally {
+      isBannersLoading.value = false;
+    }
+  }
+
+  Future<void> refreshHome() async {
+    await Future.wait([
+      loadBanners(),
+      loadCategories(),
+      loadBrands(),
+      loadBestSellers(),
+      loadNewArrivals(),
+      loadFlashSale(),
+      loadRecommendedProducts(),
+    ]);
+  }
+
+  void _startBannerAutoplay() {
+    _bannerTimer?.cancel();
+    if (banners.length < 2) return;
+    _bannerTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (!bannerController.hasClients || banners.length < 2) return;
+      final nextPage = (activeBanner.value + 1) % banners.length;
+      bannerController.animateToPage(
+        nextPage,
+        duration: const Duration(milliseconds: 450),
+        curve: Curves.easeInOut,
+      );
+    });
   }
 
   Future<void> loadCategories() async {
@@ -265,6 +317,7 @@ class StationeryHomeViewModel extends BaseViewModel {
 
   @override
   void onClose() {
+    _bannerTimer?.cancel();
     bannerController.dispose();
     super.onClose();
   }

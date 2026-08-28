@@ -9,5 +9,6 @@ abstract interface class ProfileRepository {
   Future<PersonalInformation> updatePersonalInformation(
     UpdatePersonalInfoRequest request,
   );
+  Future<PersonalInformation> updateAvatar(String base64Image);
   Future<void> changePassword(ChangePasswordRequest request);
 }

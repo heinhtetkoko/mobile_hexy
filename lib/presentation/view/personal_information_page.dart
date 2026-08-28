@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:mobile_hexy/core/theme/app_colors.dart';
@@ -35,38 +37,55 @@ class PersonalInformationPage extends GetView<PersonalInformationViewModel> {
         padding: const EdgeInsets.all(16),
         children: [
           Center(
-            child: Column(
-              children: [
-                Stack(
-                  children: [
-                    ClipOval(
-                      child: _PersonalAvatar(url: controller.avatarUrl.value),
-                    ),
-                    const Positioned(
-                      right: 0,
-                      bottom: 0,
-                      child: CircleAvatar(
-                        radius: 15,
-                        backgroundColor: AppColors.primary,
-                        child: Icon(
-                          Icons.camera_alt_outlined,
-                          color: Colors.white,
-                          size: 15,
+            child: InkWell(
+              onTap: controller.isAvatarUploading.value
+                  ? null
+                  : controller.changePhoto,
+              borderRadius: BorderRadius.circular(16),
+              child: Column(
+                children: [
+                  Stack(
+                    children: [
+                      ClipOval(
+                        child: _PersonalAvatar(
+                          url: controller.avatarUrl.value,
+                          bytes: controller.avatarBytes.value,
                         ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Change Photo'.tr,
-                  style: const TextStyle(
-                    color: AppColors.primary,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
+                      Positioned(
+                        right: 0,
+                        bottom: 0,
+                        child: CircleAvatar(
+                          radius: 15,
+                          backgroundColor: AppColors.primary,
+                          child: controller.isAvatarUploading.value
+                              ? const Padding(
+                                  padding: EdgeInsets.all(7),
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Icon(
+                                  Icons.camera_alt_outlined,
+                                  color: Colors.white,
+                                  size: 15,
+                                ),
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-              ],
+                  const SizedBox(height: 8),
+                  Text(
+                    'Change Photo'.tr,
+                    style: const TextStyle(
+                      color: AppColors.primary,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 22),
@@ -151,15 +170,18 @@ class PersonalInformationPage extends GetView<PersonalInformationViewModel> {
 }
 
 class _PersonalAvatar extends StatelessWidget {
-  const _PersonalAvatar({required this.url});
+  const _PersonalAvatar({required this.url, required this.bytes});
 
   final String url;
+  final Uint8List? bytes;
 
   @override
   Widget build(BuildContext context) => SizedBox(
     width: 96,
     height: 96,
-    child: url.isEmpty
+    child: bytes != null
+        ? Image.memory(bytes!, fit: BoxFit.cover)
+        : url.isEmpty
         ? Image.asset('assets/images/profile/avatar.png', fit: BoxFit.cover)
         : Image.network(
             url,

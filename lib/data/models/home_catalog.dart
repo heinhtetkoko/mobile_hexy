@@ -2,12 +2,14 @@ class HomeBanner {
   const HomeBanner({
     required this.title,
     required this.subtitle,
-    required this.imageAsset,
+    this.imageAsset = '',
+    this.imageUrl,
   });
 
   final String title;
   final String subtitle;
   final String imageAsset;
+  final String? imageUrl;
 }
 
 class HomeCategory {

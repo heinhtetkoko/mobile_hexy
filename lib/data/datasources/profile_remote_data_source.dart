@@ -52,6 +52,18 @@ class ProfileRemoteDataSource {
     return PersonalInformation.fromJson(Map<String, dynamic>.from(body));
   }
 
+  Future<PersonalInformation> updateAvatar(String base64Image) async {
+    final response = await _apiService.post<dynamic>(
+      ApiEndpoints.avatar,
+      data: {'image': base64Image},
+    );
+    final body = response.data;
+    if (body is! Map || body['success'] == false) {
+      throw const FormatException('Could not update profile photo.');
+    }
+    return fetchPersonalInformation();
+  }
+
   Future<void> changePassword(ChangePasswordRequest request) async {
     final response = await _apiService.post<dynamic>(
       ApiEndpoints.changePassword,

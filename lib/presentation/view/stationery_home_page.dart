@@ -25,129 +25,135 @@ class StationeryHomePage extends GetView<StationeryHomeViewModel> {
           children: [
             _Header(onSearch: controller.updateSearch),
             Expanded(
-              child: CustomScrollView(
-                slivers: [
-                  SliverToBoxAdapter(child: _HeroSlider(viewModel: controller)),
-                  SliverToBoxAdapter(
-                    child: _Section(
-                      title: 'Categories',
-                      onArrowTap: () =>
-                          Get.find<MainViewModel>().openCategories(),
-                      child: Obx(
-                        () => _HomeCategoriesContent(
-                          items: controller.homeCategories,
-                          loading: controller.isCategoriesLoading.value,
-                          error: controller.categoriesError.value,
-                          onRetry: controller.loadCategories,
-                          onTap: (category) => Get.find<MainViewModel>()
-                              .openCategories(categoryName: category.name),
+              child: RefreshIndicator(
+                onRefresh: controller.refreshHome,
+                child: CustomScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  slivers: [
+                    SliverToBoxAdapter(
+                      child: _HeroSlider(viewModel: controller),
+                    ),
+                    SliverToBoxAdapter(
+                      child: _Section(
+                        title: 'Categories',
+                        onArrowTap: () =>
+                            Get.find<MainViewModel>().openCategories(),
+                        child: Obx(
+                          () => _HomeCategoriesContent(
+                            items: controller.homeCategories,
+                            loading: controller.isCategoriesLoading.value,
+                            error: controller.categoriesError.value,
+                            onRetry: controller.loadCategories,
+                            onTap: (category) => Get.find<MainViewModel>()
+                                .openCategories(categoryName: category.name),
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                  SliverToBoxAdapter(
-                    child: _Section(
-                      title: 'Top Brands',
-                      onArrowTap: () => Get.toNamed<void>(AppRoutes.brands),
-                      child: Obx(
-                        () => _HomeBrandsContent(
-                          items: controller.brands,
-                          loading: controller.isBrandsLoading.value,
-                          error: controller.brandsError.value,
-                          onRetry: controller.loadBrands,
+                    SliverToBoxAdapter(
+                      child: _Section(
+                        title: 'Top Brands',
+                        onArrowTap: () => Get.toNamed<void>(AppRoutes.brands),
+                        child: Obx(
+                          () => _HomeBrandsContent(
+                            items: controller.brands,
+                            loading: controller.isBrandsLoading.value,
+                            error: controller.brandsError.value,
+                            onRetry: controller.loadBrands,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                  SliverToBoxAdapter(
-                    child: _Section(
-                      title: 'Best Sellers',
-                      badge: 'HOT',
-                      onArrowTap: () => Get.toNamed<void>(
-                        AppRoutes.productList,
-                        arguments: const ProductListRequest.bestSellers(),
-                      ),
-                      child: Obx(
-                        () => _RemoteProductContent(
-                          items: controller.bestSellers,
-                          loading: controller.isBestSellersLoading.value,
-                          loadingMore:
-                              controller.isBestSellersLoadingMore.value,
-                          error: controller.bestSellersError.value,
-                          hasMore: controller.hasMoreBestSellers.value,
-                          onRetry: controller.loadBestSellers,
-                          onLoadMore: controller.loadMoreBestSellers,
-                        ),
-                      ),
-                    ),
-                  ),
-                  SliverToBoxAdapter(
-                    child: _Section(
-                      title: 'New Arrivals',
-                      badge: 'NEW',
-                      onArrowTap: () => Get.toNamed<void>(
-                        AppRoutes.productList,
-                        arguments: const ProductListRequest.newArrivals(),
-                      ),
-                      child: Obx(
-                        () => _RemoteProductContent(
-                          items: controller.newArrivals,
-                          loading: controller.isNewArrivalsLoading.value,
-                          loadingMore:
-                              controller.isNewArrivalsLoadingMore.value,
-                          error: controller.newArrivalsError.value,
-                          hasMore: controller.hasMoreNewArrivals.value,
-                          onRetry: controller.loadNewArrivals,
-                          onLoadMore: controller.loadMoreNewArrivals,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SliverToBoxAdapter(child: _OfferCard()),
-                  SliverToBoxAdapter(
-                    child: Obx(
-                      () => _FlashSaleContent(
-                        items: controller.flashSaleProducts,
-                        loading: controller.isFlashSaleLoading.value,
-                        loadingMore: controller.isFlashSaleLoadingMore.value,
-                        error: controller.flashSaleError.value,
-                        hasMore: controller.hasMoreFlashSale.value,
-                        onRetry: controller.loadFlashSale,
-                        onLoadMore: controller.loadMoreFlashSale,
-                        onViewAll: () => Get.toNamed<void>(
+                    SliverToBoxAdapter(
+                      child: _Section(
+                        title: 'Best Sellers',
+                        badge: 'HOT',
+                        onArrowTap: () => Get.toNamed<void>(
                           AppRoutes.productList,
-                          arguments: const ProductListRequest.flashSale(),
+                          arguments: const ProductListRequest.bestSellers(),
+                        ),
+                        child: Obx(
+                          () => _RemoteProductContent(
+                            items: controller.bestSellers,
+                            loading: controller.isBestSellersLoading.value,
+                            loadingMore:
+                                controller.isBestSellersLoadingMore.value,
+                            error: controller.bestSellersError.value,
+                            hasMore: controller.hasMoreBestSellers.value,
+                            onRetry: controller.loadBestSellers,
+                            onLoadMore: controller.loadMoreBestSellers,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                  SliverToBoxAdapter(
-                    child: _Section(
-                      title: 'Recommended For You',
-                      badge: '✨',
-                      onArrowTap: () => Get.toNamed<void>(
-                        AppRoutes.productList,
-                        arguments: const ProductListRequest.recommended(),
+                    SliverToBoxAdapter(
+                      child: _Section(
+                        title: 'New Arrivals',
+                        badge: 'NEW',
+                        onArrowTap: () => Get.toNamed<void>(
+                          AppRoutes.productList,
+                          arguments: const ProductListRequest.newArrivals(),
+                        ),
+                        child: Obx(
+                          () => _RemoteProductContent(
+                            items: controller.newArrivals,
+                            loading: controller.isNewArrivalsLoading.value,
+                            loadingMore:
+                                controller.isNewArrivalsLoadingMore.value,
+                            error: controller.newArrivalsError.value,
+                            hasMore: controller.hasMoreNewArrivals.value,
+                            onRetry: controller.loadNewArrivals,
+                            onLoadMore: controller.loadMoreNewArrivals,
+                          ),
+                        ),
                       ),
+                    ),
+                    const SliverToBoxAdapter(child: _OfferCard()),
+                    SliverToBoxAdapter(
                       child: Obx(
-                        () => _RecommendedContent(
-                          items: controller.recommendedProducts,
-                          loading: controller.isRecommendedLoading.value,
-                          loadingMore:
-                              controller.isRecommendedLoadingMore.value,
-                          error: controller.recommendedError.value,
-                          hasMore: controller.hasMoreRecommended.value,
-                          onRetry: controller.loadRecommendedProducts,
-                          onLoadMore: controller.loadMoreRecommendedProducts,
+                        () => _FlashSaleContent(
+                          items: controller.flashSaleProducts,
+                          loading: controller.isFlashSaleLoading.value,
+                          loadingMore: controller.isFlashSaleLoadingMore.value,
+                          error: controller.flashSaleError.value,
+                          hasMore: controller.hasMoreFlashSale.value,
+                          onRetry: controller.loadFlashSale,
+                          onLoadMore: controller.loadMoreFlashSale,
+                          onViewAll: () => Get.toNamed<void>(
+                            AppRoutes.productList,
+                            arguments: const ProductListRequest.flashSale(),
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                  const SliverToBoxAdapter(child: _CollectionsSection()),
-                  const SliverToBoxAdapter(child: _ChatFooter()),
-                  const SliverToBoxAdapter(child: _PaymentMethods()),
-                  const SliverToBoxAdapter(child: SizedBox(height: 20)),
-                ],
+                    SliverToBoxAdapter(
+                      child: _Section(
+                        title: 'Recommended For You',
+                        badge: '✨',
+                        onArrowTap: () => Get.toNamed<void>(
+                          AppRoutes.productList,
+                          arguments: const ProductListRequest.recommended(),
+                        ),
+                        child: Obx(
+                          () => _RecommendedContent(
+                            items: controller.recommendedProducts,
+                            loading: controller.isRecommendedLoading.value,
+                            loadingMore:
+                                controller.isRecommendedLoadingMore.value,
+                            error: controller.recommendedError.value,
+                            hasMore: controller.hasMoreRecommended.value,
+                            onRetry: controller.loadRecommendedProducts,
+                            onLoadMore: controller.loadMoreRecommendedProducts,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SliverToBoxAdapter(child: _CollectionsSection()),
+                    const SliverToBoxAdapter(child: _ChatFooter()),
+                    const SliverToBoxAdapter(child: _PaymentMethods()),
+                    const SliverToBoxAdapter(child: SizedBox(height: 20)),
+                  ],
+                ),
               ),
             ),
           ],
@@ -242,24 +248,39 @@ class _HeroSlider extends StatelessWidget {
   final StationeryHomeViewModel viewModel;
 
   @override
-  Widget build(BuildContext context) => SizedBox(
-    height: 186,
-    child: Column(
-      children: [
-        Expanded(
-          child: PageView.builder(
-            controller: viewModel.bannerController,
-            itemCount: viewModel.catalog.banners.length,
-            onPageChanged: viewModel.updateBanner,
-            itemBuilder: (context, index) =>
-                _HeroCard(banner: viewModel.catalog.banners[index]),
+  Widget build(BuildContext context) => Obx(() {
+    if (viewModel.isBannersLoading.value) {
+      return const SizedBox(
+        height: 173,
+        child: Padding(
+          padding: EdgeInsets.only(bottom: 13),
+          child: AppShimmer(
+            child: ShimmerBox(width: double.infinity, height: 160, radius: 0),
           ),
         ),
-        Obx(
-          () => Row(
+      );
+    }
+    if (viewModel.banners.isEmpty) return const SizedBox.shrink();
+    final hasRemoteBanners =
+        viewModel.banners.isNotEmpty &&
+        viewModel.banners.first.imageUrl?.isNotEmpty == true;
+    return SizedBox(
+      height: hasRemoteBanners ? 173 : 186,
+      child: Column(
+        children: [
+          Expanded(
+            child: PageView.builder(
+              controller: viewModel.bannerController,
+              itemCount: viewModel.banners.length,
+              onPageChanged: viewModel.updateBanner,
+              itemBuilder: (context, index) =>
+                  _HeroCard(banner: viewModel.banners[index]),
+            ),
+          ),
+          Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: List.generate(
-              viewModel.catalog.banners.length,
+              viewModel.banners.length,
               (index) => AnimatedContainer(
                 duration: const Duration(milliseconds: 180),
                 width: viewModel.activeBanner.value == index ? 24 : 6,
@@ -274,72 +295,89 @@ class _HeroSlider extends StatelessWidget {
               ),
             ),
           ),
-        ),
-      ],
-    ),
-  );
+        ],
+      ),
+    );
+  });
 }
 
 class _HeroCard extends StatelessWidget {
   const _HeroCard({required this.banner});
   final HomeBanner banner;
   @override
-  Widget build(BuildContext context) => Container(
-    margin: const EdgeInsets.only(right: 8),
-    padding: const EdgeInsets.fromLTRB(24, 12, 14, 12),
-    decoration: const BoxDecoration(
-      gradient: LinearGradient(
-        begin: Alignment.bottomLeft,
-        end: Alignment.topRight,
-        colors: [Color(0xFF1E1B4B), Color(0xFF312E81)],
-      ),
-    ),
-    child: Row(
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                banner.title,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 26,
-                  height: 1.05,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                banner.subtitle,
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: .8),
-                  fontSize: 12,
-                ),
-              ),
-              const Spacer(),
-              FilledButton(
-                onPressed: () {},
-                style: FilledButton.styleFrom(
-                  backgroundColor: StationeryHomePage._pink,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 9,
-                  ),
-                ),
-                child: Text('Shop Now'.tr),
-              ),
-            ],
+  Widget build(BuildContext context) {
+    final imageUrl = banner.imageUrl;
+    if (imageUrl != null && imageUrl.isNotEmpty) {
+      return Container(
+        color: const Color.fromARGB(255, 231, 230, 236),
+        child: Image.network(
+          imageUrl,
+          width: double.infinity,
+          height: double.infinity,
+          fit: BoxFit.cover,
+          errorBuilder: (_, _, _) => const Center(
+            child: Icon(Icons.broken_image_outlined, color: Colors.white54),
           ),
         ),
-        SizedBox(
-          width: 116,
-          height: 116,
-          child: Image.asset(banner.imageAsset, fit: BoxFit.contain),
+      );
+    }
+    return Container(
+      margin: const EdgeInsets.only(right: 8),
+      padding: const EdgeInsets.fromLTRB(24, 12, 14, 12),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.bottomLeft,
+          end: Alignment.topRight,
+          colors: [Color(0xFF1E1B4B), Color(0xFF312E81)],
         ),
-      ],
-    ),
-  );
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  banner.title,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 26,
+                    height: 1.05,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  banner.subtitle,
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: .8),
+                    fontSize: 12,
+                  ),
+                ),
+                const Spacer(),
+                FilledButton(
+                  onPressed: () {},
+                  style: FilledButton.styleFrom(
+                    backgroundColor: StationeryHomePage._pink,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 9,
+                    ),
+                  ),
+                  child: Text('Shop Now'.tr),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(
+            width: 116,
+            height: 116,
+            child: Image.asset(banner.imageAsset, fit: BoxFit.contain),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _Section extends StatelessWidget {

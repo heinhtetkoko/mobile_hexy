@@ -12,6 +12,7 @@ import 'package:mobile_hexy/core/services/secure_storage.dart';
 import 'package:mobile_hexy/core/services/secure_storage_impl.dart';
 import 'package:mobile_hexy/data/datasources/auth_remote_data_source.dart';
 import 'package:mobile_hexy/data/datasources/best_sellers_remote_data_source.dart';
+import 'package:mobile_hexy/data/datasources/banners_remote_data_source.dart';
 import 'package:mobile_hexy/data/datasources/brands_remote_data_source.dart';
 import 'package:mobile_hexy/data/datasources/categories_remote_data_source.dart';
 import 'package:mobile_hexy/data/datasources/category_products_remote_data_source.dart';
@@ -37,6 +38,7 @@ import 'package:mobile_hexy/domain/usecases/register_user.dart';
 import 'package:mobile_hexy/domain/usecases/get_profile.dart';
 import 'package:mobile_hexy/domain/usecases/get_personal_information.dart';
 import 'package:mobile_hexy/domain/usecases/update_personal_information.dart';
+import 'package:mobile_hexy/domain/usecases/update_avatar.dart';
 import 'package:mobile_hexy/domain/usecases/change_password.dart';
 
 /// Registers dependencies shared by every feature.
@@ -61,6 +63,7 @@ class InitialBinding extends Bindings {
 
     Get.lazyPut(() => AuthRemoteDataSource(Get.find()), fenix: true);
     Get.lazyPut(() => BestSellersRemoteDataSource(Get.find()), fenix: true);
+    Get.lazyPut(() => BannersRemoteDataSource(Get.find()), fenix: true);
     Get.lazyPut(() => BrandsRemoteDataSource(Get.find()), fenix: true);
     Get.lazyPut(() => CategoriesRemoteDataSource(Get.find()), fenix: true);
     Get.lazyPut(
@@ -97,6 +100,7 @@ class InitialBinding extends Bindings {
     Get.lazyPut(() => GetProfile(Get.find()), fenix: true);
     Get.lazyPut(() => GetPersonalInformation(Get.find()), fenix: true);
     Get.lazyPut(() => UpdatePersonalInformation(Get.find()), fenix: true);
+    Get.lazyPut(() => UpdateAvatar(Get.find()), fenix: true);
     Get.lazyPut(() => ChangePassword(Get.find()), fenix: true);
     Get.lazyPut(() => GetHomeCatalog(Get.find()), fenix: true);
     Get.lazyPut(() => GetOnboardingSlides(Get.find()), fenix: true);

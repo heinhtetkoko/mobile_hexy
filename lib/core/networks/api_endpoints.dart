@@ -6,8 +6,10 @@ abstract final class ApiEndpoints {
   );
   static const login = 'api/v1/auth/token';
   static const signup = 'api/v1/auth/signup';
+  static const banners = 'api/v1/banners';
   static const profile = 'api/v1/profile';
   static const personalInfo = 'api/v1/profile/personal-info';
+  static const avatar = 'api/v1/profile/avatar';
   static const changePassword = 'api/v1/profile/change-password';
   static const categories = 'api/v1/categories';
   static const brands = 'api/v1/brands';

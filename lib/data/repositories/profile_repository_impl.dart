@@ -23,6 +23,10 @@ class ProfileRepositoryImpl implements ProfileRepository {
   ) => _remoteDataSource.updatePersonalInformation(request);
 
   @override
+  Future<PersonalInformation> updateAvatar(String base64Image) =>
+      _remoteDataSource.updateAvatar(base64Image);
+
+  @override
   Future<void> changePassword(ChangePasswordRequest request) =>
       _remoteDataSource.changePassword(request);
 }
