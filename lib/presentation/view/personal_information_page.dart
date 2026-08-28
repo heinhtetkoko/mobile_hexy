@@ -1,144 +1,174 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:mobile_hexy/app/theme/app_colors.dart';
+import 'package:mobile_hexy/core/theme/app_colors.dart';
+import 'package:mobile_hexy/presentation/viewmodel/personal_information_view_model.dart';
 
-class PersonalInformationPage extends StatefulWidget {
+class PersonalInformationPage extends GetView<PersonalInformationViewModel> {
   const PersonalInformationPage({super.key});
-  @override
-  State<PersonalInformationPage> createState() =>
-      _PersonalInformationPageState();
-}
-
-class _PersonalInformationPageState extends State<PersonalInformationPage> {
-  late final fields = [
-    TextEditingController(text: 'Zar'),
-    TextEditingController(text: 'Zar'),
-    TextEditingController(text: 'Zar Zar'),
-    TextEditingController(text: '09-123-456-789'),
-    TextEditingController(text: 'sarah.johnson@email.com'),
-  ];
-  @override
-  void dispose() {
-    for (final field in fields) {
-      field.dispose();
-    }
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: Theme.of(context).scaffoldBackgroundColor,
     appBar: const _ChildBar(title: 'Personal Information'),
-    body: ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        Center(
+    body: Obx(() {
+      if (controller.isLoading.value) {
+        return const Center(child: CircularProgressIndicator());
+      }
+      final error = controller.loadError.value;
+      if (error != null) {
+        return Center(
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Stack(
-                children: [
-                  ClipOval(
-                    child: Image.asset(
-                      'assets/images/profile/avatar.png',
-                      width: 96,
-                      height: 96,
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                  const Positioned(
-                    right: 0,
-                    bottom: 0,
-                    child: CircleAvatar(
-                      radius: 15,
-                      backgroundColor: AppColors.primary,
-                      child: Icon(
-                        Icons.camera_alt_outlined,
-                        color: Colors.white,
-                        size: 15,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Change Photo'.tr,
-                style: TextStyle(
-                  color: AppColors.primary,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                ),
+              Text(error, textAlign: TextAlign.center),
+              const SizedBox(height: 12),
+              FilledButton.icon(
+                onPressed: controller.load,
+                icon: const Icon(Icons.refresh_rounded),
+                label: Text('Retry'.tr),
               ),
             ],
           ),
-        ),
-        const SizedBox(height: 22),
-        _Field('First Name*', fields[0]),
-        _Field('Last Name*', fields[1]),
-        _Field(
-          'Display Name',
-          fields[2],
-          helper: 'This is how your name appears publicly',
-        ),
-        _Field('Phone Number*', fields[3], prefix: Text('🇲🇲  +95  │  '.tr)),
-        _Field(
-          'Email Address',
-          fields[4],
-          prefix: const Icon(
-            Icons.mail_outline_rounded,
-            color: Color(0xFF9CA3AF),
-            size: 20,
-          ),
-        ),
-        const SizedBox(height: 8),
-        SizedBox(
-          height: 52,
-          child: FilledButton.icon(
-            onPressed: () => Get.snackbar(
-              'Profile saved',
-              'Your personal information has been updated.',
-              snackPosition: SnackPosition.BOTTOM,
-            ),
-            icon: const Icon(Icons.check),
-            label: Text('Save'.tr),
-          ),
-        ),
-        const SizedBox(height: 24),
-        InkWell(
-          onTap: () => Get.defaultDialog(
-            title: 'Delete Account?',
-            middleText: 'This action cannot be undone.',
-            textCancel: 'Cancel',
-            textConfirm: 'Delete',
-            confirmTextColor: Colors.white,
-          ),
-          child: Container(
-            height: 68,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFFF5F5),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
+        );
+      }
+      return ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Center(
+            child: Column(
               children: [
-                CircleAvatar(
-                  backgroundColor: Color(0xFFFFEBEE),
-                  child: Icon(Icons.delete_outline, color: Color(0xFFEF4444)),
+                Stack(
+                  children: [
+                    ClipOval(
+                      child: _PersonalAvatar(url: controller.avatarUrl.value),
+                    ),
+                    const Positioned(
+                      right: 0,
+                      bottom: 0,
+                      child: CircleAvatar(
+                        radius: 15,
+                        backgroundColor: AppColors.primary,
+                        child: Icon(
+                          Icons.camera_alt_outlined,
+                          color: Colors.white,
+                          size: 15,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                SizedBox(width: 12),
+                const SizedBox(height: 8),
                 Text(
-                  'Delete Account'.tr,
-                  style: TextStyle(
-                    color: Color(0xFFEF4444),
+                  'Change Photo'.tr,
+                  style: const TextStyle(
+                    color: AppColors.primary,
+                    fontSize: 13,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
               ],
             ),
           ),
-        ),
-      ],
-    ),
+          const SizedBox(height: 22),
+          _Field('First Name*', controller.firstName),
+          _Field('Last Name*', controller.lastName),
+          _Field(
+            'Display Name',
+            controller.displayName,
+            helper: 'This is how your name appears publicly',
+          ),
+          _Field(
+            'Phone Number*',
+            controller.phone,
+            prefix: Text('🇲🇲  +95  │  '.tr),
+          ),
+          _Field(
+            'Email Address',
+            controller.email,
+            prefix: const Icon(
+              Icons.mail_outline_rounded,
+              color: Color(0xFF9CA3AF),
+              size: 20,
+            ),
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            height: 52,
+            child: FilledButton.icon(
+              onPressed: controller.isSaving.value ? null : controller.save,
+              icon: controller.isSaving.value
+                  ? const SizedBox.square(
+                      dimension: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Icon(Icons.check),
+              label: Text(
+                controller.isSaving.value ? 'Saving...'.tr : 'Save'.tr,
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+          InkWell(
+            onTap: () => Get.defaultDialog(
+              title: 'Delete Account?',
+              middleText: 'This action cannot be undone.',
+              textCancel: 'Cancel',
+              textConfirm: 'Delete',
+              confirmTextColor: Colors.white,
+            ),
+            child: Container(
+              height: 68,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF5F5),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  const CircleAvatar(
+                    backgroundColor: Color(0xFFFFEBEE),
+                    child: Icon(Icons.delete_outline, color: Color(0xFFEF4444)),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    'Delete Account'.tr,
+                    style: const TextStyle(
+                      color: Color(0xFFEF4444),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      );
+    }),
+  );
+}
+
+class _PersonalAvatar extends StatelessWidget {
+  const _PersonalAvatar({required this.url});
+
+  final String url;
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    width: 96,
+    height: 96,
+    child: url.isEmpty
+        ? Image.asset('assets/images/profile/avatar.png', fit: BoxFit.cover)
+        : Image.network(
+            url,
+            fit: BoxFit.cover,
+            errorBuilder: (_, _, _) => Image.asset(
+              'assets/images/profile/avatar.png',
+              fit: BoxFit.cover,
+            ),
+          ),
   );
 }
 

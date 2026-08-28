@@ -1,8 +1,9 @@
 import 'package:get/get.dart';
+import 'package:mobile_hexy/core/base/base_view_model.dart';
 import 'package:mobile_hexy/data/datasources/product_detail_remote_data_source.dart';
-import 'package:mobile_hexy/domain/entities/product_detail.dart';
+import 'package:mobile_hexy/data/models/product_detail.dart';
 
-class ProductDetailViewModel extends GetxController {
+class ProductDetailViewModel extends BaseViewModel {
   ProductDetailViewModel(this._remoteDataSource);
 
   final ProductDetailRemoteDataSource _remoteDataSource;
@@ -12,7 +13,6 @@ class ProductDetailViewModel extends GetxController {
   final isFavorite = false.obs;
   final product = Rxn<ProductDetail>();
   final isLoading = false.obs;
-  final errorMessage = RxnString();
 
   @override
   void onInit() {

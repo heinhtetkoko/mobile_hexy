@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:mobile_hexy/app/theme/app_colors.dart';
+import 'package:mobile_hexy/core/theme/app_colors.dart';
+import 'package:mobile_hexy/data/models/profile_summary.dart';
 import 'package:mobile_hexy/presentation/viewmodel/profile_view_model.dart';
 
 class ProfilePage extends GetView<ProfileViewModel> {
@@ -16,8 +17,24 @@ class ProfilePage extends GetView<ProfileViewModel> {
       child: CustomScrollView(
         slivers: [
           SliverToBoxAdapter(child: _ProfileAppBar(onTap: controller.openItem)),
-          const SliverToBoxAdapter(child: _ProfileHero()),
-          SliverToBoxAdapter(child: _Orders(onTap: controller.openItem)),
+          SliverToBoxAdapter(
+            child: Obx(
+              () => _ProfileHero(
+                profile: controller.profile.value,
+                loading: controller.isProfileLoading.value,
+                error: controller.profileError.value,
+                onRetry: controller.loadProfile,
+              ),
+            ),
+          ),
+          SliverToBoxAdapter(
+            child: Obx(
+              () => _Orders(
+                onTap: controller.openItem,
+                profile: controller.profile.value,
+              ),
+            ),
+          ),
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
             sliver: SliverList.list(
@@ -73,25 +90,38 @@ class ProfilePage extends GetView<ProfileViewModel> {
                   ),
                 ),
                 const SizedBox(height: 4),
-                SizedBox(
-                  height: 52,
-                  child: OutlinedButton.icon(
-                    key: const Key('profile-log-out'),
-                    onPressed: controller.logOut,
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(0xFFEF4444),
-                      side: const BorderSide(
-                        color: Color(0xFFEF4444),
-                        width: 1.2,
+                Obx(
+                  () => SizedBox(
+                    height: 52,
+                    child: OutlinedButton.icon(
+                      key: const Key('profile-log-out'),
+                      onPressed: controller.isLoggingOut.value
+                          ? null
+                          : controller.confirmLogout,
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFFEF4444),
+                        side: const BorderSide(
+                          color: Color(0xFFEF4444),
+                          width: 1.2,
+                        ),
+                        shape: const StadiumBorder(),
+                        textStyle: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                      shape: const StadiumBorder(),
-                      textStyle: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
+                      icon: controller.isLoggingOut.value
+                          ? const SizedBox.square(
+                              dimension: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.logout_rounded, size: 20),
+                      label: Text(
+                        controller.isLoggingOut.value
+                            ? 'Logging Out...'.tr
+                            : 'Log Out'.tr,
                       ),
                     ),
-                    icon: Icon(Icons.logout_rounded, size: 20),
-                    label: Text('Log Out'.tr),
                   ),
                 ),
                 Padding(
@@ -204,7 +234,17 @@ class _RoundAction extends StatelessWidget {
 }
 
 class _ProfileHero extends StatelessWidget {
-  const _ProfileHero();
+  const _ProfileHero({
+    required this.profile,
+    required this.loading,
+    required this.error,
+    required this.onRetry,
+  });
+
+  final ProfileSummary? profile;
+  final bool loading;
+  final String? error;
+  final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -220,114 +260,162 @@ class _ProfileHero extends StatelessWidget {
         bottomRight: Radius.circular(24),
       ),
     ),
-    child: Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Container(
-          width: 80,
-          height: 80,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(color: Colors.white, width: 3),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x33000000),
-                blurRadius: 16,
-                offset: Offset(0, 8),
+    child: loading && profile == null
+        ? const Center(child: CircularProgressIndicator(color: Colors.white))
+        : Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 3),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x33000000),
+                      blurRadius: 16,
+                      offset: Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: ClipOval(
+                  child: _ProfileAvatar(url: profile?.avatarUrl ?? ''),
+                ),
               ),
+              const SizedBox(height: 12),
+              Text(
+                (profile?.name.isNotEmpty == true
+                        ? profile!.name
+                        : 'My Account')
+                    .tr,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              if (profile?.email.isNotEmpty == true) ...[
+                const SizedBox(height: 3),
+                Text(
+                  profile!.email,
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: .8),
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+              if (error != null && profile == null)
+                TextButton(
+                  onPressed: onRetry,
+                  style: TextButton.styleFrom(foregroundColor: Colors.white),
+                  child: Text('Retry'.tr),
+                ),
             ],
           ),
-          child: ClipOval(
-            child: Image.asset(
-              'assets/images/profile/avatar.png',
-              fit: BoxFit.cover,
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
-        Text(
-          'Zar Zar'.tr,
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 20,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-      ],
-    ),
   );
 }
 
-class _Orders extends StatelessWidget {
-  const _Orders({required this.onTap});
-  final ValueChanged<String> onTap;
+class _ProfileAvatar extends StatelessWidget {
+  const _ProfileAvatar({required this.url});
 
-  static const _items = [
-    _OrderItem(Icons.schedule_rounded, 'Pending', '2', Color(0xFFF59E0B)),
-    _OrderItem(Icons.sync_rounded, 'Processing', '1', Color(0xFF3B82F6)),
-    _OrderItem(
-      Icons.currency_exchange_rounded,
-      'Refunded',
-      '0',
-      Color(0xFFF59E0B),
-    ),
-    _OrderItem(
-      Icons.check_circle_outline_rounded,
-      'Delivered',
-      '18',
-      AppColors.success,
-    ),
-    _OrderItem(
-      Icons.cancel_outlined,
-      'Cancelled',
-      null,
-      AppColors.textSecondary,
-    ),
-  ];
+  final String url;
 
   @override
-  Widget build(BuildContext context) => Container(
-    color: Theme.of(context).colorScheme.surface,
-    padding: const EdgeInsets.fromLTRB(10, 16, 10, 16),
-    child: Column(
-      children: [
-        Row(
-          children: [
-            Text(
-              'My Orders'.tr,
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurface,
-                fontSize: 16,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            const Spacer(),
-            InkWell(
-              onTap: () => onTap('My Orders'),
-              child: Text(
-                'View All'.tr,
+  Widget build(BuildContext context) => url.isEmpty
+      ? Image.asset('assets/images/profile/avatar.png', fit: BoxFit.cover)
+      : Image.network(
+          url,
+          fit: BoxFit.cover,
+          errorBuilder: (_, _, _) => Image.asset(
+            'assets/images/profile/avatar.png',
+            fit: BoxFit.cover,
+          ),
+        );
+}
+
+class _Orders extends StatelessWidget {
+  const _Orders({required this.onTap, required this.profile});
+  final ValueChanged<String> onTap;
+  final ProfileSummary? profile;
+
+  @override
+  Widget build(BuildContext context) {
+    final items = [
+      _OrderItem(
+        Icons.schedule_rounded,
+        'Pending',
+        '${profile?.orderCount('pending') ?? 0}',
+        const Color(0xFFF59E0B),
+      ),
+      _OrderItem(
+        Icons.sync_rounded,
+        'Processing',
+        '${profile?.orderCount('processing') ?? 0}',
+        const Color(0xFF3B82F6),
+      ),
+      _OrderItem(
+        Icons.currency_exchange_rounded,
+        'Refunded',
+        '${profile?.orderCount('refunded') ?? 0}',
+        const Color(0xFFF59E0B),
+      ),
+      _OrderItem(
+        Icons.check_circle_outline_rounded,
+        'Delivered',
+        '${profile?.orderCount('delivered') ?? 0}',
+        AppColors.success,
+      ),
+      _OrderItem(
+        Icons.cancel_outlined,
+        'Cancelled',
+        '${profile?.orderCount('cancelled') ?? 0}',
+        AppColors.textSecondary,
+      ),
+    ];
+    return Container(
+      color: Theme.of(context).colorScheme.surface,
+      padding: const EdgeInsets.fromLTRB(10, 16, 10, 16),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Text(
+                'My Orders'.tr,
                 style: TextStyle(
-                  color: AppColors.textSecondary,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
+                  color: Theme.of(context).colorScheme.onSurface,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
                 ),
               ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: _items
-              .map(
-                (item) =>
-                    _OrderStatus(item: item, onTap: () => onTap(item.label)),
-              )
-              .toList(),
-        ),
-      ],
-    ),
-  );
+              const Spacer(),
+              InkWell(
+                onTap: () => onTap('My Orders'),
+                child: Text(
+                  'View All'.tr,
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: items
+                .map(
+                  (item) =>
+                      _OrderStatus(item: item, onTap: () => onTap(item.label)),
+                )
+                .toList(),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _OrderItem {

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:mobile_hexy/core/widgets/shimmer_skeletons.dart';
+import 'package:mobile_hexy/presentation/widgets/shimmer_skeletons.dart';
 import 'package:mobile_hexy/presentation/viewmodel/product_detail_view_model.dart';
 
 class ProductDetailPage extends GetView<ProductDetailViewModel> {
@@ -19,30 +19,40 @@ class ProductDetailPage extends GetView<ProductDetailViewModel> {
           : _BottomActions(controller: controller),
       body: SafeArea(
         bottom: false,
-        child: controller.isLoading.value
-            ? const ProductDetailShimmer()
-            : controller.errorMessage.value != null
-            ? _DetailError(
-                message: controller.errorMessage.value!,
-                onRetry: controller.loadProduct,
-              )
-            : product == null
-            ? const Center(child: Text('Product not found.'))
-            : CustomScrollView(
-                slivers: [
-                  SliverToBoxAdapter(child: _Header(controller: controller)),
-                  SliverToBoxAdapter(child: _Gallery(controller: controller)),
-                  SliverToBoxAdapter(
-                    child: _ProductInfo(controller: controller),
-                  ),
-                  SliverToBoxAdapter(child: _Variants(controller: controller)),
-                  SliverToBoxAdapter(
-                    child: _Description(controller: controller),
-                  ),
-                  const SliverToBoxAdapter(child: _SimilarProducts()),
-                  const SliverToBoxAdapter(child: SizedBox(height: 16)),
-                ],
-              ),
+        child: Column(
+          children: [
+            _Header(controller: controller),
+            Expanded(
+              child: controller.isLoading.value
+                  ? const ProductDetailShimmer()
+                  : controller.errorMessage.value != null
+                  ? _DetailError(
+                      message: controller.errorMessage.value!,
+                      onRetry: controller.loadProduct,
+                    )
+                  : product == null
+                  ? const Center(child: Text('Product not found.'))
+                  : CustomScrollView(
+                      slivers: [
+                        SliverToBoxAdapter(
+                          child: _Gallery(controller: controller),
+                        ),
+                        SliverToBoxAdapter(
+                          child: _ProductInfo(controller: controller),
+                        ),
+                        SliverToBoxAdapter(
+                          child: _Variants(controller: controller),
+                        ),
+                        SliverToBoxAdapter(
+                          child: _Description(controller: controller),
+                        ),
+                        const SliverToBoxAdapter(child: _SimilarProducts()),
+                        const SliverToBoxAdapter(child: SizedBox(height: 16)),
+                      ],
+                    ),
+            ),
+          ],
+        ),
       ),
     );
   });
@@ -502,30 +512,38 @@ class _BottomActions extends StatelessWidget {
           ),
           const SizedBox(width: 10),
           Expanded(
-            child: FilledButton.icon(
+            child: FilledButton(
               onPressed: () {},
               style: FilledButton.styleFrom(
                 backgroundColor: ProductDetailPage._ink,
+                padding: const EdgeInsets.symmetric(horizontal: 10),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              icon: const Icon(Icons.shopping_cart_outlined),
-              label: Text('Add to Cart'.tr),
+              child: Text(
+                'Add to Cart'.tr,
+                maxLines: 1,
+                overflow: TextOverflow.visible,
+              ),
             ),
           ),
           const SizedBox(width: 8),
           Expanded(
-            child: FilledButton.icon(
+            child: FilledButton(
               onPressed: () {},
               style: FilledButton.styleFrom(
                 backgroundColor: ProductDetailPage._pink,
+                padding: const EdgeInsets.symmetric(horizontal: 10),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              icon: const Icon(Icons.bolt),
-              label: Text('Buy Now'.tr),
+              child: Text(
+                'Buy Now'.tr,
+                maxLines: 1,
+                overflow: TextOverflow.visible,
+              ),
             ),
           ),
         ],

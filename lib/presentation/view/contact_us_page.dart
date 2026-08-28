@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:mobile_hexy/app/theme/app_colors.dart';
+import 'package:mobile_hexy/core/theme/app_colors.dart';
 
 class ContactUsPage extends StatelessWidget {
   const ContactUsPage({super.key});

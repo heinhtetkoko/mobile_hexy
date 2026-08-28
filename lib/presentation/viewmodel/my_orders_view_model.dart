@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:mobile_hexy/core/base/base_view_model.dart';
 
 enum OrderStatus { pending, processing, delivered, refunded, cancelled }
 
@@ -22,7 +23,7 @@ class OrderSummary {
   final String? reason;
 }
 
-class MyOrdersViewModel extends GetxController {
+class MyOrdersViewModel extends BaseViewModel {
   static const tabs = [
     'All',
     'Pending',

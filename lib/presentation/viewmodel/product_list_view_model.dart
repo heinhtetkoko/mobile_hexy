@@ -1,13 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:mobile_hexy/core/base/base_view_model.dart';
 import 'package:mobile_hexy/data/datasources/category_products_remote_data_source.dart';
-import 'package:mobile_hexy/domain/entities/catalog_category.dart';
-import 'package:mobile_hexy/domain/entities/catalog_product.dart';
+import 'package:mobile_hexy/data/datasources/best_sellers_remote_data_source.dart';
+import 'package:mobile_hexy/data/datasources/home_products_remote_data_source.dart';
+import 'package:mobile_hexy/data/datasources/new_arrivals_remote_data_source.dart';
+import 'package:mobile_hexy/core/networks/api_endpoints.dart';
+import 'package:mobile_hexy/data/models/catalog_category.dart';
+import 'package:mobile_hexy/data/models/catalog_product.dart';
+import 'package:mobile_hexy/data/models/product_list_request.dart';
+import 'package:mobile_hexy/data/models/home_catalog.dart';
 
-class ProductListViewModel extends GetxController {
-  ProductListViewModel(this._remoteDataSource);
+class ProductListViewModel extends BaseViewModel {
+  ProductListViewModel(
+    this._remoteDataSource,
+    this._bestSellersDataSource,
+    this._newArrivalsDataSource,
+    this._homeProductsDataSource,
+  );
 
   final CategoryProductsRemoteDataSource _remoteDataSource;
+  final BestSellersRemoteDataSource _bestSellersDataSource;
+  final NewArrivalsRemoteDataSource _newArrivalsDataSource;
+  final HomeProductsRemoteDataSource _homeProductsDataSource;
   static const pageLimit = 10;
 
   final query = ''.obs;
@@ -26,10 +41,10 @@ class ProductListViewModel extends GetxController {
   final isLoading = false.obs;
   final isLoadingMore = false.obs;
   final hasNextPage = false.obs;
-  final errorMessage = RxnString();
   final categoryName = 'Products'.obs;
   int _categoryId = 0;
   int _page = 1;
+  ProductListMode? _mode;
 
   @override
   void onInit() {
@@ -41,21 +56,27 @@ class ProductListViewModel extends GetxController {
       selectedCategory.value = category.name;
       pendingCategory.value = category.name;
       loadProducts();
+    } else if (category is ProductListRequest) {
+      _mode = category.mode;
+      categoryName.value = switch (category.mode) {
+        ProductListMode.bestSellers => 'Best Sellers',
+        ProductListMode.newArrivals => 'New Arrivals',
+        ProductListMode.flashSale => 'Flash Sale',
+        ProductListMode.recommended => 'Recommended For You',
+      };
+      activeFilters.value = 0;
+      loadProducts();
     } else {
       errorMessage.value = 'No category selected.';
     }
   }
 
   Future<void> loadProducts() async {
-    if (_categoryId <= 0) return;
+    if (_categoryId <= 0 && _mode == null) return;
     isLoading.value = true;
     errorMessage.value = null;
     try {
-      final result = await _remoteDataSource.fetchProducts(
-        categoryId: _categoryId,
-        page: 1,
-        limit: pageLimit,
-      );
+      final result = await _fetchPage(1);
       products.assignAll(result.products);
       _page = result.page;
       hasNextPage.value = result.hasNext;
@@ -216,14 +237,14 @@ class ProductListViewModel extends GetxController {
   }
 
   Future<void> loadMore() async {
-    if (_categoryId <= 0 || !hasNextPage.value || isLoadingMore.value) return;
+    if ((_categoryId <= 0 && _mode == null) ||
+        !hasNextPage.value ||
+        isLoadingMore.value) {
+      return;
+    }
     isLoadingMore.value = true;
     try {
-      final result = await _remoteDataSource.fetchProducts(
-        categoryId: _categoryId,
-        page: _page + 1,
-        limit: pageLimit,
-      );
+      final result = await _fetchPage(_page + 1);
       products.addAll(result.products);
       _page = result.page;
       hasNextPage.value = result.hasNext;
@@ -236,5 +257,74 @@ class ProductListViewModel extends GetxController {
     } finally {
       isLoadingMore.value = false;
     }
+  }
+
+  Future<({List<CatalogProduct> products, int page, bool hasNext})> _fetchPage(
+    int page,
+  ) async {
+    if (_mode == null) {
+      final result = await _remoteDataSource.fetchProducts(
+        categoryId: _categoryId,
+        page: page,
+        limit: pageLimit,
+      );
+      return (
+        products: result.products,
+        page: result.page,
+        hasNext: result.hasNext,
+      );
+    }
+
+    switch (_mode!) {
+      case ProductListMode.bestSellers:
+        final result = await _bestSellersDataSource.fetch(
+          page: page,
+          limit: pageLimit,
+        );
+        return _catalogResult(result.products, result.page, result.hasNext);
+      case ProductListMode.newArrivals:
+        final result = await _newArrivalsDataSource.fetch(
+          page: page,
+          limit: pageLimit,
+        );
+        return _catalogResult(result.products, result.page, result.hasNext);
+      case ProductListMode.flashSale:
+        final result = await _homeProductsDataSource.fetch(
+          path: ApiEndpoints.flashSale,
+          programType: '',
+          page: page,
+          limit: pageLimit,
+        );
+        return _catalogResult(result.products, result.page, result.hasNext);
+      case ProductListMode.recommended:
+        final result = await _homeProductsDataSource.fetch(
+          path: ApiEndpoints.recommendedProducts,
+          page: page,
+          limit: pageLimit,
+        );
+        return _catalogResult(result.products, result.page, result.hasNext);
+    }
+  }
+
+  ({List<CatalogProduct> products, int page, bool hasNext}) _catalogResult(
+    List<HomeProduct> products,
+    int page,
+    bool hasNext,
+  ) {
+    return (
+      products: products
+          .map(
+            (product) => CatalogProduct(
+              id: product.id,
+              name: product.name,
+              price: product.price,
+              imageAsset: product.imageAsset,
+              imageUrl: product.imageUrl,
+            ),
+          )
+          .toList(growable: false),
+      page: page,
+      hasNext: hasNext,
+    );
   }
 }

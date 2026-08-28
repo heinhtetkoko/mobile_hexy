@@ -1,7 +1,8 @@
 import 'package:get/get.dart';
-import 'package:mobile_hexy/domain/entities/wishlist_item.dart';
+import 'package:mobile_hexy/core/base/base_view_model.dart';
+import 'package:mobile_hexy/data/models/wishlist_item.dart';
 
-class WishlistViewModel extends GetxController {
+class WishlistViewModel extends BaseViewModel {
   final items = <WishlistItem>[
     const WishlistItem(
       id: 'pencil-set',

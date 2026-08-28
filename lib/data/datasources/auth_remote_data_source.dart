@@ -1,49 +1,60 @@
 import 'package:dio/dio.dart';
-import 'package:mobile_hexy/core/constants/api_constants.dart';
-import 'package:mobile_hexy/core/error/exceptions.dart';
-import 'package:mobile_hexy/data/models/auth_session_model.dart';
+import 'package:mobile_hexy/core/networks/api_endpoints.dart';
+import 'package:mobile_hexy/core/base/exceptions.dart';
+import 'package:mobile_hexy/core/networks/api_service.dart';
+import 'package:mobile_hexy/data/models/request/login_request.dart';
+import 'package:mobile_hexy/data/models/request/signup_request.dart';
+import 'package:mobile_hexy/data/models/response/auth_session_model.dart';
 
 class AuthRemoteDataSource {
-  const AuthRemoteDataSource(this._dio);
+  const AuthRemoteDataSource(this._apiService);
 
-  final Dio _dio;
+  final ApiService _apiService;
 
   Future<AuthSessionModel> login({
     required String login,
     required String password,
   }) async {
     try {
-      final response = await _dio.post<Map<String, dynamic>>(
-        ApiConstants.login,
-        data: {'login': login, 'password': password},
-        options: Options(extra: {ApiConstants.requiresAuthKey: false}),
+      final response = await _apiService.post<Map<String, dynamic>>(
+        ApiEndpoints.login,
+        data: LoginRequest(login: login, password: password).toJson(),
+        options: Options(extra: {ApiEndpoints.requiresAuthKey: false}),
       );
       final body = response.data;
       if (body == null) {
         throw const ServerException('The server returned an empty response.');
       }
       return AuthSessionModel.fromJson(body);
-    } on DioException catch (error) {
-      throw ServerException(_messageFrom(error));
+    } on Exception catch (error) {
+      throw ServerException(error.toString().replaceFirst('Exception: ', ''));
     }
   }
 
-  String _messageFrom(DioException error) {
-    final body = error.response?.data;
-    if (body is Map) {
-      for (final key in const ['message', 'error', 'detail']) {
-        final value = body[key];
-        if (value is String && value.isNotEmpty) return value;
+  Future<AuthSessionModel> signup({
+    required String username,
+    required String email,
+    required String password,
+  }) async {
+    try {
+      final response = await _apiService.post<Map<String, dynamic>>(
+        ApiEndpoints.signup,
+        data: SignupRequest(
+          username: username,
+          email: email,
+          password: password,
+        ).toJson(),
+        options: Options(extra: {ApiEndpoints.requiresAuthKey: false}),
+      );
+      final body = response.data;
+      if (body == null) {
+        throw const ServerException('The server returned an empty response.');
       }
+      return AuthSessionModel.fromJson(body);
+    } on ServerException {
+      rethrow;
+    } on Exception catch (error) {
+      throw ServerException(error.toString().replaceFirst('Exception: ', ''));
     }
-    if (error.type == DioExceptionType.connectionTimeout ||
-        error.type == DioExceptionType.receiveTimeout ||
-        error.type == DioExceptionType.sendTimeout) {
-      return 'The request timed out. Please try again.';
-    }
-    if (error.type == DioExceptionType.connectionError) {
-      return 'Unable to connect to the server.';
-    }
-    return 'Login failed. Please check your credentials.';
   }
 }

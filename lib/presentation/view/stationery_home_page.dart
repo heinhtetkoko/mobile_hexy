@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:mobile_hexy/app/routes/app_routes.dart';
-import 'package:mobile_hexy/domain/entities/home_catalog.dart';
-import 'package:mobile_hexy/core/widgets/shimmer_skeletons.dart';
+import 'package:mobile_hexy/app.dart';
+import 'package:mobile_hexy/data/models/home_catalog.dart';
+import 'package:mobile_hexy/data/models/catalog_brand.dart';
+import 'package:mobile_hexy/data/models/catalog_category.dart';
+import 'package:mobile_hexy/data/models/product_list_request.dart';
+import 'package:mobile_hexy/presentation/widgets/shimmer_skeletons.dart';
 import 'package:mobile_hexy/presentation/viewmodel/stationery_home_view_model.dart';
+import 'package:mobile_hexy/presentation/viewmodel/main_view_model.dart';
 
 class StationeryHomePage extends GetView<StationeryHomeViewModel> {
   const StationeryHomePage({super.key});
@@ -27,21 +31,42 @@ class StationeryHomePage extends GetView<StationeryHomeViewModel> {
                   SliverToBoxAdapter(
                     child: _Section(
                       title: 'Categories',
-                      child: _CategoryList(
-                        items: controller.catalog.categories,
+                      onArrowTap: () =>
+                          Get.find<MainViewModel>().openCategories(),
+                      child: Obx(
+                        () => _HomeCategoriesContent(
+                          items: controller.homeCategories,
+                          loading: controller.isCategoriesLoading.value,
+                          error: controller.categoriesError.value,
+                          onRetry: controller.loadCategories,
+                          onTap: (category) => Get.find<MainViewModel>()
+                              .openCategories(categoryName: category.name),
+                        ),
                       ),
                     ),
                   ),
                   SliverToBoxAdapter(
                     child: _Section(
                       title: 'Top Brands',
-                      child: _BrandList(items: controller.catalog.brands),
+                      onArrowTap: () => Get.toNamed<void>(AppRoutes.brands),
+                      child: Obx(
+                        () => _HomeBrandsContent(
+                          items: controller.brands,
+                          loading: controller.isBrandsLoading.value,
+                          error: controller.brandsError.value,
+                          onRetry: controller.loadBrands,
+                        ),
+                      ),
                     ),
                   ),
                   SliverToBoxAdapter(
                     child: _Section(
                       title: 'Best Sellers',
                       badge: 'HOT',
+                      onArrowTap: () => Get.toNamed<void>(
+                        AppRoutes.productList,
+                        arguments: const ProductListRequest.bestSellers(),
+                      ),
                       child: Obx(
                         () => _RemoteProductContent(
                           items: controller.bestSellers,
@@ -60,6 +85,10 @@ class StationeryHomePage extends GetView<StationeryHomeViewModel> {
                     child: _Section(
                       title: 'New Arrivals',
                       badge: 'NEW',
+                      onArrowTap: () => Get.toNamed<void>(
+                        AppRoutes.productList,
+                        arguments: const ProductListRequest.newArrivals(),
+                      ),
                       child: Obx(
                         () => _RemoteProductContent(
                           items: controller.newArrivals,
@@ -85,6 +114,10 @@ class StationeryHomePage extends GetView<StationeryHomeViewModel> {
                         hasMore: controller.hasMoreFlashSale.value,
                         onRetry: controller.loadFlashSale,
                         onLoadMore: controller.loadMoreFlashSale,
+                        onViewAll: () => Get.toNamed<void>(
+                          AppRoutes.productList,
+                          arguments: const ProductListRequest.flashSale(),
+                        ),
                       ),
                     ),
                   ),
@@ -92,6 +125,10 @@ class StationeryHomePage extends GetView<StationeryHomeViewModel> {
                     child: _Section(
                       title: 'Recommended For You',
                       badge: '✨',
+                      onArrowTap: () => Get.toNamed<void>(
+                        AppRoutes.productList,
+                        arguments: const ProductListRequest.recommended(),
+                      ),
                       child: Obx(
                         () => _RecommendedContent(
                           items: controller.recommendedProducts,
@@ -306,9 +343,15 @@ class _HeroCard extends StatelessWidget {
 }
 
 class _Section extends StatelessWidget {
-  const _Section({required this.title, required this.child, this.badge});
+  const _Section({
+    required this.title,
+    required this.child,
+    this.badge,
+    this.onArrowTap,
+  });
   final String title;
   final String? badge;
+  final VoidCallback? onArrowTap;
   final Widget child;
   @override
   Widget build(BuildContext context) => Padding(
@@ -333,9 +376,21 @@ class _Section extends StatelessWidget {
                 _LabelBadge(value: badge!),
               ],
               const Spacer(),
-              Icon(
-                Icons.chevron_right_rounded,
-                color: Theme.of(context).colorScheme.onSurface,
+              IconButton(
+                key: switch (title) {
+                  'Categories' => const Key('home-categories-arrow'),
+                  'Best Sellers' => const Key('home-best-sellers-arrow'),
+                  'New Arrivals' => const Key('home-new-arrivals-arrow'),
+                  'Recommended For You' => const Key('home-recommended-arrow'),
+                  _ => null,
+                },
+                onPressed: onArrowTap,
+                visualDensity: VisualDensity.compact,
+                tooltip: onArrowTap == null ? null : 'View $title',
+                icon: Icon(
+                  Icons.chevron_right_rounded,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
               ),
             ],
           ),
@@ -346,9 +401,133 @@ class _Section extends StatelessWidget {
   );
 }
 
+class _HomeCategoriesContent extends StatelessWidget {
+  const _HomeCategoriesContent({
+    required this.items,
+    required this.loading,
+    required this.error,
+    required this.onRetry,
+    required this.onTap,
+  });
+
+  final List<CatalogCategory> items;
+  final bool loading;
+  final String? error;
+  final VoidCallback onRetry;
+  final ValueChanged<CatalogCategory> onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    if (loading) {
+      return const HorizontalProductShimmer(height: 104, itemWidth: 72);
+    }
+    if (error != null) {
+      return _HomeTaxonomyError(message: error!, onRetry: onRetry);
+    }
+    if (items.isEmpty) {
+      return const _HomeTaxonomyEmpty(message: 'No categories found.');
+    }
+    return _CategoryList(items: items, onTap: onTap);
+  }
+}
+
+class _HomeBrandsContent extends StatelessWidget {
+  const _HomeBrandsContent({
+    required this.items,
+    required this.loading,
+    required this.error,
+    required this.onRetry,
+  });
+
+  final List<CatalogBrand> items;
+  final bool loading;
+  final String? error;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    if (loading) {
+      return const HorizontalProductShimmer(height: 86, itemWidth: 64);
+    }
+    if (error != null) {
+      return _HomeTaxonomyError(message: error!, onRetry: onRetry);
+    }
+    if (items.isEmpty) {
+      return const _HomeTaxonomyEmpty(message: 'No brands found.');
+    }
+    return _BrandList(items: items);
+  }
+}
+
+class _HomeTaxonomyError extends StatelessWidget {
+  const _HomeTaxonomyError({required this.message, required this.onRetry});
+
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    height: 86,
+    child: Center(
+      child: TextButton.icon(
+        onPressed: onRetry,
+        icon: const Icon(Icons.refresh_rounded),
+        label: Text(message.tr),
+      ),
+    ),
+  );
+}
+
+class _HomeTaxonomyEmpty extends StatelessWidget {
+  const _HomeTaxonomyEmpty({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) =>
+      SizedBox(height: 86, child: Center(child: Text(message.tr)));
+}
+
+class _CategoryImage extends StatelessWidget {
+  const _CategoryImage({required this.item});
+
+  final CatalogCategory item;
+
+  @override
+  Widget build(BuildContext context) => item.imageUrl.isEmpty
+      ? const ColoredBox(
+          color: Color(0xFFF3F4F6),
+          child: Icon(Icons.category_outlined),
+        )
+      : Image.network(
+          item.imageUrl,
+          fit: BoxFit.cover,
+          errorBuilder: (_, _, _) => const ColoredBox(
+            color: Color(0xFFF3F4F6),
+            child: Icon(Icons.category_outlined),
+          ),
+        );
+}
+
+class _BrandImage extends StatelessWidget {
+  const _BrandImage({required this.item});
+
+  final CatalogBrand item;
+
+  @override
+  Widget build(BuildContext context) => item.imageUrl.isEmpty
+      ? const Icon(Icons.sell_outlined)
+      : Image.network(
+          item.imageUrl,
+          fit: BoxFit.contain,
+          errorBuilder: (_, _, _) => const Icon(Icons.sell_outlined),
+        );
+}
+
 class _CategoryList extends StatelessWidget {
-  const _CategoryList({required this.items});
-  final List<HomeCategory> items;
+  const _CategoryList({required this.items, required this.onTap});
+  final List<CatalogCategory> items;
+  final ValueChanged<CatalogCategory> onTap;
   @override
   Widget build(BuildContext context) => SizedBox(
     height: 104,
@@ -359,37 +538,40 @@ class _CategoryList extends StatelessWidget {
       separatorBuilder: (_, _) => const SizedBox(width: 12),
       itemBuilder: (_, index) => SizedBox(
         width: 72,
-        child: Column(
-          children: [
-            Container(
-              width: 64,
-              height: 64,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x201F1C4D),
-                    blurRadius: 10,
-                    offset: Offset(0, 3),
-                  ),
-                ],
+        child: InkWell(
+          key: Key('home-category-${items[index].name}'),
+          onTap: () => onTap(items[index]),
+          borderRadius: BorderRadius.circular(12),
+          child: Column(
+            children: [
+              Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x201F1C4D),
+                      blurRadius: 10,
+                      offset: Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: ClipOval(child: _CategoryImage(item: items[index])),
               ),
-              child: ClipOval(
-                child: Image.asset(items[index].imageAsset, fit: BoxFit.cover),
+              const SizedBox(height: 7),
+              Text(
+                items[index].name.tr,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
-            ),
-            const SizedBox(height: 7),
-            Text(
-              items[index].name.tr,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurface,
-                fontSize: 10,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     ),
@@ -398,7 +580,7 @@ class _CategoryList extends StatelessWidget {
 
 class _BrandList extends StatelessWidget {
   const _BrandList({required this.items});
-  final List<HomeCategory> items;
+  final List<CatalogBrand> items;
   @override
   Widget build(BuildContext context) => SizedBox(
     height: 86,
@@ -420,7 +602,7 @@ class _BrandList extends StatelessWidget {
                 border: Border.all(color: Theme.of(context).dividerColor),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Image.asset(items[index].imageAsset, fit: BoxFit.contain),
+              child: _BrandImage(item: items[index]),
             ),
             const SizedBox(height: 5),
             Text(
@@ -665,10 +847,12 @@ class _FlashSaleSection extends StatelessWidget {
     required this.items,
     this.onLoadMore,
     this.loadingMore = false,
+    required this.onViewAll,
   });
   final List<HomeProduct> items;
   final VoidCallback? onLoadMore;
   final bool loadingMore;
+  final VoidCallback onViewAll;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -689,6 +873,15 @@ class _FlashSaleSection extends StatelessWidget {
                   color: StationeryHomePage._pink,
                   fontSize: 25,
                   fontWeight: FontWeight.w900,
+                ),
+              ),
+              IconButton(
+                key: const Key('home-flash-sale-arrow'),
+                onPressed: onViewAll,
+                tooltip: 'View Flash Sale',
+                icon: const Icon(
+                  Icons.chevron_right_rounded,
+                  color: StationeryHomePage._pink,
                 ),
               ),
               Spacer(),
@@ -737,6 +930,7 @@ class _FlashSaleContent extends StatelessWidget {
     required this.hasMore,
     required this.onRetry,
     required this.onLoadMore,
+    required this.onViewAll,
   });
 
   final List<HomeProduct> items;
@@ -746,6 +940,7 @@ class _FlashSaleContent extends StatelessWidget {
   final bool hasMore;
   final VoidCallback onRetry;
   final VoidCallback onLoadMore;
+  final VoidCallback onViewAll;
 
   @override
   Widget build(BuildContext context) {
@@ -774,6 +969,7 @@ class _FlashSaleContent extends StatelessWidget {
       items: items,
       onLoadMore: hasMore ? onLoadMore : null,
       loadingMore: loadingMore,
+      onViewAll: onViewAll,
     );
   }
 }
@@ -1043,107 +1239,115 @@ class _RecommendedCard extends StatelessWidget {
   final HomeProduct product;
 
   @override
-  Widget build(BuildContext context) => Container(
-    width: 158,
-    decoration: BoxDecoration(
-      color: Theme.of(context).colorScheme.surface,
-      borderRadius: BorderRadius.circular(14),
-      boxShadow: const [
-        BoxShadow(
-          color: Color(0x12000000),
-          blurRadius: 10,
-          offset: Offset(0, 4),
-        ),
-      ],
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Stack(
-          children: [
-            ClipRRect(
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(14),
-              ),
-              child: Container(
-                color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                width: double.infinity,
-                height: 112,
-                padding: const EdgeInsets.all(8),
-                child: _RemoteOrAssetImage(product: product),
-              ),
-            ),
-            Positioned(
-              right: 8,
-              top: 8,
-              child: Container(
-                width: 30,
-                height: 30,
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surface,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.favorite_border_rounded,
-                  color: StationeryHomePage._pink,
-                  size: 18,
-                ),
-              ),
-            ),
-          ],
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(10, 9, 10, 8),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+  Widget build(BuildContext context) => InkWell(
+    key: Key('recommended-product-${product.id}'),
+    onTap: product.id.isEmpty
+        ? null
+        : () =>
+              Get.toNamed<void>(AppRoutes.productDetail, arguments: product.id),
+    borderRadius: BorderRadius.circular(14),
+    child: Container(
+      width: 158,
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x12000000),
+            blurRadius: 10,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Stack(
             children: [
-              Text(
-                product.name.tr,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurface,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
+              ClipRRect(
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(14),
+                ),
+                child: Container(
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                  width: double.infinity,
+                  height: 112,
+                  padding: const EdgeInsets.all(8),
+                  child: _RemoteOrAssetImage(product: product),
                 ),
               ),
-              const SizedBox(height: 6),
-              Text(
-                '★★★★★'.tr,
-                style: TextStyle(color: Color(0xFFF59E0B), fontSize: 11),
-              ),
-              const SizedBox(height: 3),
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      product.price,
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.primary,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
+              Positioned(
+                right: 8,
+                top: 8,
+                child: Container(
+                  width: 30,
+                  height: 30,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surface,
+                    shape: BoxShape.circle,
                   ),
-                  Container(
-                    width: 30,
-                    height: 30,
-                    decoration: const BoxDecoration(
-                      color: StationeryHomePage._pink,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.shopping_cart_outlined,
-                      color: Colors.white,
-                      size: 16,
-                    ),
+                  child: const Icon(
+                    Icons.favorite_border_rounded,
+                    color: StationeryHomePage._pink,
+                    size: 18,
                   ),
-                ],
+                ),
               ),
             ],
           ),
-        ),
-      ],
+          Padding(
+            padding: const EdgeInsets.fromLTRB(10, 9, 10, 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  product.name.tr,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  '★★★★★'.tr,
+                  style: TextStyle(color: Color(0xFFF59E0B), fontSize: 11),
+                ),
+                const SizedBox(height: 3),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        product.price,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.primary,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                    Container(
+                      width: 30,
+                      height: 30,
+                      decoration: const BoxDecoration(
+                        color: StationeryHomePage._pink,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.shopping_cart_outlined,
+                        color: Colors.white,
+                        size: 16,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     ),
   );
 }

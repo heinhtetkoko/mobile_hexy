@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:mobile_hexy/app/routes/app_routes.dart';
-import 'package:mobile_hexy/app/theme/app_colors.dart';
-import 'package:mobile_hexy/domain/entities/catalog_product.dart';
-import 'package:mobile_hexy/core/widgets/shimmer_skeletons.dart';
+import 'package:mobile_hexy/app.dart';
+import 'package:mobile_hexy/core/theme/app_colors.dart';
+import 'package:mobile_hexy/data/models/catalog_product.dart';
+import 'package:mobile_hexy/presentation/widgets/shimmer_skeletons.dart';
 import 'package:mobile_hexy/presentation/viewmodel/product_list_view_model.dart';
 
 class ProductListPage extends GetView<ProductListViewModel> {

@@ -53,7 +53,7 @@ dev_dependencies:
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: assets/icons/hexy_launcher_icon.png
+  image_path: assets/images/Frame_hexy.png
   remove_alpha_ios: true
 
 # For information on the generic Dart part of this file, see the
@@ -63,20 +63,16 @@ flutter_launcher_icons:
 flutter:
 
   assets:
-    - assets/images/splash_screen.png
-    - assets/images/onboarding_1.png
-    - assets/images/onboarding_2.png
-    - assets/images/onboarding_3.png
-    - assets/images/stationery_home_screen.png
-    - assets/images/figma_home/
-    - assets/images/product_detail/
-    - assets/images/wishlist/
-    - assets/images/profile/
+    - assets/images/
     - assets/images/cart/
     - assets/images/checkout/
-    - assets/images/payment_success/
-    - assets/images/product_list/
     - assets/images/contact/
+    - assets/images/figma_home/
+    - assets/images/payment_success/
+    - assets/images/product_detail/
+    - assets/images/product_list/
+    - assets/images/profile/
+    - assets/images/wishlist/
 
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in

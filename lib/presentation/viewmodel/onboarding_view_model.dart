@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:mobile_hexy/app/routes/app_routes.dart';
-import 'package:mobile_hexy/core/navigation/app_navigator.dart';
-import 'package:mobile_hexy/domain/entities/onboarding_slide.dart';
+import 'package:mobile_hexy/core/base/base_view_model.dart';
+import 'package:mobile_hexy/app.dart';
+import 'package:mobile_hexy/core/services/app_navigator.dart';
+import 'package:mobile_hexy/data/models/onboarding_slide.dart';
 import 'package:mobile_hexy/domain/usecases/get_onboarding_slides.dart';
 
-class OnboardingViewModel extends GetxController {
+class OnboardingViewModel extends BaseViewModel {
   OnboardingViewModel({
     required GetOnboardingSlides getSlides,
     required AppNavigator navigator,

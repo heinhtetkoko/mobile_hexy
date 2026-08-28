@@ -1,8 +1,9 @@
 import 'package:get/get.dart';
+import 'package:mobile_hexy/core/base/base_view_model.dart';
 import 'package:mobile_hexy/data/datasources/categories_remote_data_source.dart';
-import 'package:mobile_hexy/domain/entities/catalog_category.dart';
+import 'package:mobile_hexy/data/models/catalog_category.dart';
 
-class CategoriesViewModel extends GetxController {
+class CategoriesViewModel extends BaseViewModel {
   CategoriesViewModel(this._remoteDataSource);
 
   final CategoriesRemoteDataSource _remoteDataSource;
@@ -11,7 +12,7 @@ class CategoriesViewModel extends GetxController {
   final subcategories = <CatalogCategory>[].obs;
   final isLoading = false.obs;
   final isSubcategoriesLoading = false.obs;
-  final errorMessage = RxnString();
+  String? _pendingCategoryName;
 
   @override
   void onInit() {
@@ -25,9 +26,12 @@ class CategoriesViewModel extends GetxController {
     try {
       final result = await _remoteDataSource.fetchCategories();
       categories.assignAll(result);
-      selectedIndex.value = 0;
-      if (result.isNotEmpty) {
-        await _loadSubcategories(result.first);
+      if (result.isNotEmpty && _pendingCategoryName != null) {
+        final pendingName = _pendingCategoryName!;
+        _pendingCategoryName = null;
+        await selectCategoryByName(pendingName);
+      } else if (result.isNotEmpty) {
+        await selectCategory(0);
       } else {
         subcategories.clear();
       }
@@ -42,6 +46,26 @@ class CategoriesViewModel extends GetxController {
     if (index < 0 || index >= categories.length) return;
     selectedIndex.value = index;
     await _loadSubcategories(categories[index]);
+  }
+
+  Future<void> selectCategoryByName(String name) async {
+    if (categories.isEmpty) {
+      _pendingCategoryName = name;
+      if (!isLoading.value) await loadCategories();
+      return;
+    }
+
+    final target = _normalize(name);
+    var index = categories.indexWhere(
+      (category) => _normalize(category.name) == target,
+    );
+    if (index < 0) {
+      index = categories.indexWhere((category) {
+        final candidate = _normalize(category.name);
+        return candidate.contains(target) || target.contains(candidate);
+      });
+    }
+    if (index >= 0) await selectCategory(index);
   }
 
   Future<void> _loadSubcategories(CatalogCategory category) async {
@@ -63,4 +87,12 @@ class CategoriesViewModel extends GetxController {
   bool _isSelected(CatalogCategory category) =>
       categories.length > selectedIndex.value &&
       categories[selectedIndex.value].id == category.id;
+
+  String _normalize(String value) {
+    final normalized = value.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+    if (normalized.endsWith('ies')) {
+      return '${normalized.substring(0, normalized.length - 3)}y';
+    }
+    return normalized.replaceFirst(RegExp(r's$'), '');
+  }
 }

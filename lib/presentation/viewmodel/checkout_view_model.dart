@@ -1,9 +1,10 @@
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
-import 'package:mobile_hexy/app/routes/app_routes.dart';
+import 'package:mobile_hexy/core/base/base_view_model.dart';
+import 'package:mobile_hexy/app.dart';
 import 'package:mobile_hexy/presentation/viewmodel/cart_view_model.dart';
 
-class CheckoutViewModel extends GetxController {
+class CheckoutViewModel extends BaseViewModel {
   CheckoutViewModel(this.cart);
 
   final CartViewModel cart;

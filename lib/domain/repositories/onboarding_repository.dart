@@ -1,4 +1,4 @@
-import 'package:mobile_hexy/domain/entities/onboarding_slide.dart';
+import 'package:mobile_hexy/data/models/onboarding_slide.dart';
 
 abstract interface class OnboardingRepository {
   List<OnboardingSlide> getSlides();

@@ -1,62 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:mobile_hexy/app/theme/app_colors.dart';
+import 'package:mobile_hexy/core/theme/app_colors.dart';
+import 'package:mobile_hexy/presentation/viewmodel/change_password_view_model.dart';
 
-class ChangePasswordPage extends StatefulWidget {
+class ChangePasswordPage extends GetView<ChangePasswordViewModel> {
   const ChangePasswordPage({super.key});
-  @override
-  State<ChangePasswordPage> createState() => _ChangePasswordPageState();
-}
-
-class _ChangePasswordPageState extends State<ChangePasswordPage> {
-  final current = TextEditingController(),
-      password = TextEditingController(),
-      confirm = TextEditingController();
-  final hidden = [true, true, true];
-  bool get length => password.text.length >= 8;
-  bool get upper => password.text.contains(RegExp('[A-Z]'));
-  bool get number => password.text.contains(RegExp('[0-9]'));
-  bool get special => password.text.contains(RegExp(r'[^A-Za-z0-9]'));
-  bool get matches => password.text.isNotEmpty && password.text == confirm.text;
-  @override
-  void dispose() {
-    current.dispose();
-    password.dispose();
-    confirm.dispose();
-    super.dispose();
-  }
-
-  void save() {
-    if (current.text.isEmpty || !length || !upper || !number || !matches) {
-      Get.snackbar(
-        'Check your password',
-        'Complete the requirements and make sure passwords match.',
-        snackPosition: SnackPosition.BOTTOM,
-      );
-      return;
-    }
-    Get.snackbar(
-      'Password changed',
-      'Your password has been saved.',
-      snackPosition: SnackPosition.BOTTOM,
-    );
-  }
 
   @override
-  Widget build(BuildContext context) {
-    final strength = [length, upper, number, special].where((v) => v).length;
-    return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: const _ChildBar2(),
-      body: ListView(
+  Widget build(BuildContext context) => Scaffold(
+    backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+    appBar: const _ChildBar2(),
+    body: Obx(() {
+      controller.revision.value;
+      final strength = controller.strength;
+      return ListView(
         padding: const EdgeInsets.all(20),
         children: [
           _PasswordField(
             label: 'Current Password',
-            controller: current,
-            hidden: hidden[0],
+            controller: controller.current,
+            hidden: controller.currentHidden.value,
             icon: Icons.lock_outline,
-            onEye: () => setState(() => hidden[0] = !hidden[0]),
+            onEye: controller.currentHidden.toggle,
           ),
           Align(
             alignment: Alignment.centerRight,
@@ -71,11 +36,11 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
           const SizedBox(height: 8),
           _PasswordField(
             label: 'New Password',
-            controller: password,
-            hidden: hidden[1],
+            controller: controller.password,
+            hidden: controller.passwordHidden.value,
             icon: Icons.shield_outlined,
-            onEye: () => setState(() => hidden[1] = !hidden[1]),
-            onChanged: (_) => setState(() {}),
+            onEye: controller.passwordHidden.toggle,
+            onChanged: controller.updateRequirements,
           ),
           const SizedBox(height: 10),
           Row(
@@ -106,32 +71,36 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
             ],
           ),
           const SizedBox(height: 8),
-          _Req('At least 8 characters', length),
-          _Req('Uppercase letter', upper),
-          _Req('Number', number),
-          _Req('Special character', special),
+          _Req('At least 8 characters', controller.hasLength),
+          _Req('Uppercase letter', controller.hasUppercase),
+          _Req('Number', controller.hasNumber),
+          _Req('Special character', controller.hasSpecial),
           const SizedBox(height: 18),
           _PasswordField(
             label: 'Confirm Password',
-            controller: confirm,
-            hidden: hidden[2],
+            controller: controller.confirm,
+            hidden: controller.confirmHidden.value,
             icon: Icons.check_circle_outline,
-            onEye: () => setState(() => hidden[2] = !hidden[2]),
-            onChanged: (_) => setState(() {}),
+            onEye: controller.confirmHidden.toggle,
+            onChanged: controller.updateRequirements,
           ),
           const SizedBox(height: 8),
           Row(
             children: [
               Icon(
-                matches ? Icons.check_circle : Icons.circle_outlined,
-                color: matches ? AppColors.success : const Color(0xFF9CA3AF),
+                controller.matches ? Icons.check_circle : Icons.circle_outlined,
+                color: controller.matches
+                    ? AppColors.success
+                    : const Color(0xFF9CA3AF),
                 size: 15,
               ),
               const SizedBox(width: 6),
               Text(
-                matches ? 'Passwords match' : 'Passwords must match',
+                controller.matches ? 'Passwords match' : 'Passwords must match',
                 style: TextStyle(
-                  color: matches ? AppColors.success : const Color(0xFF9CA3AF),
+                  color: controller.matches
+                      ? AppColors.success
+                      : const Color(0xFF9CA3AF),
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
                 ),
@@ -142,15 +111,25 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
           SizedBox(
             height: 52,
             child: FilledButton.icon(
-              onPressed: save,
-              icon: const Icon(Icons.check),
-              label: Text('Save'.tr),
+              onPressed: controller.isSaving.value ? null : controller.save,
+              icon: controller.isSaving.value
+                  ? const SizedBox.square(
+                      dimension: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Icon(Icons.check),
+              label: Text(
+                controller.isSaving.value ? 'Saving...'.tr : 'Save'.tr,
+              ),
             ),
           ),
         ],
-      ),
-    );
-  }
+      );
+    }),
+  );
 }
 
 class _PasswordField extends StatelessWidget {

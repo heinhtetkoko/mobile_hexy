@@ -1,10 +1,41 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:mobile_hexy/app/routes/app_routes.dart';
+import 'package:mobile_hexy/core/base/base_view_model.dart';
+import 'package:mobile_hexy/app.dart';
+import 'package:mobile_hexy/domain/usecases/logout_user.dart';
+import 'package:mobile_hexy/domain/usecases/get_profile.dart';
+import 'package:mobile_hexy/extensions/show_logout_sheet.dart';
+import 'package:mobile_hexy/data/models/profile_summary.dart';
 
-class ProfileViewModel extends GetxController {
+class ProfileViewModel extends BaseViewModel {
+  ProfileViewModel(this._logoutUser, this._getProfile);
+
+  final LogoutUser _logoutUser;
+  final GetProfile _getProfile;
   final darkModeEnabled = Get.isDarkMode.obs;
   final currentLanguage = 'English'.obs;
+  final isLoggingOut = false.obs;
+  final profile = Rxn<ProfileSummary>();
+  final isProfileLoading = false.obs;
+  final profileError = RxnString();
+
+  @override
+  void onInit() {
+    super.onInit();
+    loadProfile();
+  }
+
+  Future<void> loadProfile() async {
+    isProfileLoading.value = true;
+    profileError.value = null;
+    try {
+      profile.value = await _getProfile();
+    } catch (_) {
+      profileError.value = 'Could not load your profile.';
+    } finally {
+      isProfileLoading.value = false;
+    }
+  }
 
   void toggleDarkMode(bool enabled) {
     darkModeEnabled.value = enabled;
@@ -88,12 +119,26 @@ class ProfileViewModel extends GetxController {
     Get.back<void>();
   }
 
-  void logOut() {
-    Get.snackbar(
-      'Log out',
-      'Log out action selected.',
-      snackPosition: SnackPosition.BOTTOM,
-      duration: const Duration(seconds: 2),
-    );
+  Future<void> confirmLogout() async {
+    if (isLoggingOut.value) return;
+    final confirmed = await showLogoutSheet();
+    if (confirmed) await logout();
+  }
+
+  Future<void> logout() async {
+    if (isLoggingOut.value) return;
+    isLoggingOut.value = true;
+    try {
+      await _logoutUser();
+      Get.offAllNamed<void>(AppRoutes.login);
+    } catch (_) {
+      Get.snackbar(
+        'Unable to log out',
+        'Please try again.',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    } finally {
+      isLoggingOut.value = false;
+    }
   }
 }

@@ -1,28 +1,43 @@
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
+import 'package:mobile_hexy/core/base/base_view_model.dart';
 import 'package:mobile_hexy/data/datasources/best_sellers_remote_data_source.dart';
+import 'package:mobile_hexy/data/datasources/brands_remote_data_source.dart';
+import 'package:mobile_hexy/data/datasources/categories_remote_data_source.dart';
 import 'package:mobile_hexy/data/datasources/home_products_remote_data_source.dart';
 import 'package:mobile_hexy/data/datasources/new_arrivals_remote_data_source.dart';
-import 'package:mobile_hexy/core/constants/api_constants.dart';
-import 'package:mobile_hexy/domain/entities/home_catalog.dart';
+import 'package:mobile_hexy/core/networks/api_endpoints.dart';
+import 'package:mobile_hexy/data/models/home_catalog.dart';
+import 'package:mobile_hexy/data/models/catalog_brand.dart';
+import 'package:mobile_hexy/data/models/catalog_category.dart';
 import 'package:mobile_hexy/domain/usecases/get_home_catalog.dart';
 
-class StationeryHomeViewModel extends GetxController {
+class StationeryHomeViewModel extends BaseViewModel {
   StationeryHomeViewModel(
     this._getHomeCatalog,
     this._bestSellersDataSource,
     this._newArrivalsDataSource,
     this._homeProductsDataSource,
+    this._categoriesDataSource,
+    this._brandsDataSource,
   );
 
   final GetHomeCatalog _getHomeCatalog;
   final BestSellersRemoteDataSource _bestSellersDataSource;
   final NewArrivalsRemoteDataSource _newArrivalsDataSource;
   final HomeProductsRemoteDataSource _homeProductsDataSource;
+  final CategoriesRemoteDataSource _categoriesDataSource;
+  final BrandsRemoteDataSource _brandsDataSource;
   final activeBanner = 0.obs;
   final searchQuery = ''.obs;
   final bannerController = PageController(viewportFraction: .94);
   late final HomeCatalog catalog;
+  final homeCategories = <CatalogCategory>[].obs;
+  final isCategoriesLoading = false.obs;
+  final categoriesError = RxnString();
+  final brands = <CatalogBrand>[].obs;
+  final isBrandsLoading = false.obs;
+  final brandsError = RxnString();
   final bestSellers = <HomeProduct>[].obs;
   final isBestSellersLoading = false.obs;
   final isBestSellersLoadingMore = false.obs;
@@ -55,10 +70,36 @@ class StationeryHomeViewModel extends GetxController {
   void onInit() {
     super.onInit();
     catalog = _getHomeCatalog();
+    loadCategories();
+    loadBrands();
     loadBestSellers();
     loadNewArrivals();
     loadFlashSale();
     loadRecommendedProducts();
+  }
+
+  Future<void> loadCategories() async {
+    isCategoriesLoading.value = true;
+    categoriesError.value = null;
+    try {
+      homeCategories.assignAll(await _categoriesDataSource.fetchCategories());
+    } catch (_) {
+      categoriesError.value = 'Could not load categories.';
+    } finally {
+      isCategoriesLoading.value = false;
+    }
+  }
+
+  Future<void> loadBrands() async {
+    isBrandsLoading.value = true;
+    brandsError.value = null;
+    try {
+      brands.assignAll(await _brandsDataSource.fetchBrands());
+    } catch (_) {
+      brandsError.value = 'Could not load brands.';
+    } finally {
+      isBrandsLoading.value = false;
+    }
   }
 
   Future<void> loadFlashSale() async {
@@ -66,7 +107,7 @@ class StationeryHomeViewModel extends GetxController {
     flashSaleError.value = null;
     try {
       final result = await _homeProductsDataSource.fetch(
-        path: ApiConstants.flashSale,
+        path: ApiEndpoints.flashSale,
         programType: '',
         page: 1,
         limit: remoteProductPageLimit,
@@ -86,7 +127,7 @@ class StationeryHomeViewModel extends GetxController {
     isFlashSaleLoadingMore.value = true;
     try {
       final result = await _homeProductsDataSource.fetch(
-        path: ApiConstants.flashSale,
+        path: ApiEndpoints.flashSale,
         programType: '',
         page: _flashSalePage + 1,
         limit: remoteProductPageLimit,
@@ -106,7 +147,7 @@ class StationeryHomeViewModel extends GetxController {
     recommendedError.value = null;
     try {
       final result = await _homeProductsDataSource.fetch(
-        path: ApiConstants.recommendedProducts,
+        path: ApiEndpoints.recommendedProducts,
         page: 1,
         limit: remoteProductPageLimit,
       );
@@ -125,7 +166,7 @@ class StationeryHomeViewModel extends GetxController {
     isRecommendedLoadingMore.value = true;
     try {
       final result = await _homeProductsDataSource.fetch(
-        path: ApiConstants.recommendedProducts,
+        path: ApiEndpoints.recommendedProducts,
         page: _recommendedPage + 1,
         limit: remoteProductPageLimit,
       );

@@ -1,7 +1,7 @@
-import 'package:mobile_hexy/core/constants/app_constants.dart';
-import 'package:mobile_hexy/core/storage/secure_storage.dart';
+import 'package:mobile_hexy/core/services/app_constants.dart';
+import 'package:mobile_hexy/core/services/secure_storage.dart';
 import 'package:mobile_hexy/data/datasources/auth_remote_data_source.dart';
-import 'package:mobile_hexy/domain/entities/auth_session.dart';
+import 'package:mobile_hexy/data/models/auth_session.dart';
 import 'package:mobile_hexy/domain/repositories/auth_repository.dart';
 
 class AuthRepositoryImpl implements AuthRepository {
@@ -25,4 +25,25 @@ class AuthRepositoryImpl implements AuthRepository {
     );
     return session;
   }
+
+  @override
+  Future<AuthSession> signup({
+    required String username,
+    required String email,
+    required String password,
+  }) async {
+    final session = await _remoteDataSource.signup(
+      username: username,
+      email: email,
+      password: password,
+    );
+    await _secureStorage.write(
+      AppConstants.accessTokenKey,
+      session.accessToken,
+    );
+    return session;
+  }
+
+  @override
+  Future<void> logout() => _secureStorage.remove(AppConstants.accessTokenKey);
 }

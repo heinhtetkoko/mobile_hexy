@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:mobile_hexy/app/theme/app_colors.dart';
-import 'package:mobile_hexy/domain/entities/wishlist_item.dart';
+import 'package:mobile_hexy/core/theme/app_colors.dart';
+import 'package:mobile_hexy/data/models/wishlist_item.dart';
 import 'package:mobile_hexy/presentation/viewmodel/wishlist_view_model.dart';
 
 class WishlistPage extends GetView<WishlistViewModel> {

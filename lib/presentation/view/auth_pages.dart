@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:mobile_hexy/app/routes/app_routes.dart';
+import 'package:mobile_hexy/app.dart';
 import 'package:mobile_hexy/presentation/viewmodel/auth_view_model.dart';
 
 const _authNavy = Color(0xFF1E1B4B);
@@ -33,9 +33,30 @@ class LoginPage extends GetView<AuthViewModel> {
               onVisibility: controller.togglePassword,
             ),
           ),
-          _LinkRow(
-            label: 'Forgot Password?',
-            onTap: () => Get.toNamed<void>(AppRoutes.forgotPassword),
+          Row(
+            children: [
+              Obx(
+                () => Checkbox(
+                  value: controller.rememberLogin.value,
+                  onChanged: controller.setRememberLogin,
+                  activeColor: _authPink,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(5),
+                  ),
+                  visualDensity: VisualDensity.compact,
+                ),
+              ),
+              const Expanded(
+                child: Text(
+                  'Remember me',
+                  style: TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
+                ),
+              ),
+              _LinkRow(
+                label: 'Forgot Password?',
+                onTap: () => Get.toNamed<void>(AppRoutes.forgotPassword),
+              ),
+            ],
           ),
           const SizedBox(height: 20),
           Obx(
@@ -66,7 +87,7 @@ class RegisterPage extends GetView<AuthViewModel> {
   @override
   Widget build(BuildContext context) => _AuthScaffold(
     child: _AuthCard(
-      height: 680,
+      height: 740,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -94,12 +115,24 @@ class RegisterPage extends GetView<AuthViewModel> {
               onVisibility: controller.togglePassword,
             ),
           ),
-          _LinkRow(
-            label: 'Forgot Password?',
-            onTap: () => Get.toNamed<void>(AppRoutes.forgotPassword),
+          const SizedBox(height: 12),
+          Obx(
+            () => _AuthField(
+              controller: controller.confirmPassword,
+              hint: 'Confirm Password',
+              icon: Icons.lock_outline_rounded,
+              obscureText: controller.confirmPasswordHidden.value,
+              onVisibility: controller.toggleConfirmPassword,
+            ),
           ),
           const SizedBox(height: 18),
-          _PrimaryButton(label: 'Sign Up', onPressed: controller.register),
+          Obx(
+            () => _PrimaryButton(
+              label: 'Sign Up',
+              onPressed: controller.register,
+              loading: controller.isRegistering.value,
+            ),
+          ),
           const SizedBox(height: 24),
           const _DividerLabel('Or login with'),
           const SizedBox(height: 24),

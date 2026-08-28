@@ -1,9 +1,10 @@
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
-import 'package:mobile_hexy/app/routes/app_routes.dart';
-import 'package:mobile_hexy/domain/entities/cart_item.dart';
+import 'package:mobile_hexy/core/base/base_view_model.dart';
+import 'package:mobile_hexy/app.dart';
+import 'package:mobile_hexy/data/models/cart_item.dart';
 
-class CartViewModel extends GetxController {
+class CartViewModel extends BaseViewModel {
   final items = <CartItem>[
     const CartItem(
       id: 'STA-1001',

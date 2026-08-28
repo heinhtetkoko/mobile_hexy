@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
-import 'package:mobile_hexy/app/app.dart';
-import 'package:mobile_hexy/app/routes/app_pages.dart';
-import 'package:mobile_hexy/app/routes/app_routes.dart';
+import 'package:mobile_hexy/app.dart';
 import 'package:mobile_hexy/presentation/view/stationery_home_page.dart';
 import 'package:mobile_hexy/presentation/view/onboarding_page.dart';
 import 'package:mobile_hexy/presentation/view/splash_page.dart';
-import 'package:mobile_hexy/injection/dependency_injection.dart';
+import 'package:mobile_hexy/presentation/viewmodel/onboarding_view_model.dart';
+import 'package:mobile_hexy/core/services/initial_binding.dart';
 
 void main() {
   setUp(Get.reset);
@@ -33,6 +32,23 @@ void main() {
     }
 
     expect(find.byType(StationeryHomePage), findsOneWidget);
+  });
+
+  testWidgets('onboarding advances only from its button', (tester) async {
+    await tester.pumpWidget(_testApp(AppRoutes.onboarding));
+    final viewModel = Get.find<OnboardingViewModel>();
+
+    await tester.tapAt(const Offset(24, 200));
+    await tester.pump();
+    expect(viewModel.currentPage.value, 0);
+
+    await tester.drag(find.byType(PageView), const Offset(-300, 0));
+    await tester.pumpAndSettle();
+    expect(viewModel.currentPage.value, 0);
+
+    await tester.tap(find.byKey(const Key('onboarding-next-button')));
+    await tester.pumpAndSettle();
+    expect(viewModel.currentPage.value, 1);
   });
 
   testWidgets('updates the selected bottom navigation tab', (tester) async {

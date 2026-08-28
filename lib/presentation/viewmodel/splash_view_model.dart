@@ -1,11 +1,11 @@
 import 'dart:async';
 
 import 'package:flutter/services.dart';
-import 'package:get/get.dart';
-import 'package:mobile_hexy/app/routes/app_routes.dart';
-import 'package:mobile_hexy/core/navigation/app_navigator.dart';
+import 'package:mobile_hexy/core/base/base_view_model.dart';
+import 'package:mobile_hexy/app.dart';
+import 'package:mobile_hexy/core/services/app_navigator.dart';
 
-class SplashViewModel extends GetxController {
+class SplashViewModel extends BaseViewModel {
   SplashViewModel(this._navigator);
   final AppNavigator _navigator;
   Timer? _timer;

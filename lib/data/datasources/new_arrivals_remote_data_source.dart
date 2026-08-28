@@ -1,6 +1,6 @@
-import 'package:dio/dio.dart';
-import 'package:mobile_hexy/core/constants/api_constants.dart';
-import 'package:mobile_hexy/domain/entities/home_catalog.dart';
+import 'package:mobile_hexy/core/networks/api_endpoints.dart';
+import 'package:mobile_hexy/core/networks/api_service.dart';
+import 'package:mobile_hexy/data/models/home_catalog.dart';
 
 class NewArrivalsResult {
   const NewArrivalsResult({
@@ -15,18 +15,17 @@ class NewArrivalsResult {
 }
 
 class NewArrivalsRemoteDataSource {
-  const NewArrivalsRemoteDataSource(this._dio);
+  const NewArrivalsRemoteDataSource(this._apiService);
 
-  final Dio _dio;
+  final ApiService _apiService;
 
   Future<NewArrivalsResult> fetch({
     required int page,
     required int limit,
   }) async {
-    final response = await _dio.get<dynamic>(
-      ApiConstants.newArrivals,
+    final response = await _apiService.get<dynamic>(
+      ApiEndpoints.newArrivals,
       queryParameters: {'page': page, 'limit': limit},
-      options: Options(extra: {ApiConstants.requiresAuthKey: false}),
     );
     final body = response.data;
     if (body is! Map || body['success'] != true || body['data'] is! List) {

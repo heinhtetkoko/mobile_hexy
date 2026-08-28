@@ -1,7 +1,8 @@
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
+import 'package:mobile_hexy/core/base/base_view_model.dart';
 
-class AddressFormViewModel extends GetxController {
+class AddressFormViewModel extends BaseViewModel {
   bool get isEditing => Get.parameters['mode'] == 'edit';
 
   final addressType = 'Home'.obs;

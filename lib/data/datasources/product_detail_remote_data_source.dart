@@ -1,16 +1,15 @@
-import 'package:dio/dio.dart';
-import 'package:mobile_hexy/core/constants/api_constants.dart';
-import 'package:mobile_hexy/domain/entities/product_detail.dart';
+import 'package:mobile_hexy/core/networks/api_endpoints.dart';
+import 'package:mobile_hexy/core/networks/api_service.dart';
+import 'package:mobile_hexy/data/models/product_detail.dart';
 
 class ProductDetailRemoteDataSource {
-  const ProductDetailRemoteDataSource(this._dio);
+  const ProductDetailRemoteDataSource(this._apiService);
 
-  final Dio _dio;
+  final ApiService _apiService;
 
   Future<ProductDetail> fetch(int id) async {
-    final response = await _dio.get<dynamic>(
-      ApiConstants.productDetail(id),
-      options: Options(extra: {ApiConstants.requiresAuthKey: false}),
+    final response = await _apiService.get<dynamic>(
+      ApiEndpoints.productDetail(id),
     );
     final body = response.data;
     if (body is! Map || body['success'] != true || body['data'] is! Map) {

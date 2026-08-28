@@ -1,4 +1,4 @@
-import 'package:mobile_hexy/domain/entities/auth_session.dart';
+import 'package:mobile_hexy/data/models/auth_session.dart';
 import 'package:mobile_hexy/domain/repositories/auth_repository.dart';
 
 class LoginUser {

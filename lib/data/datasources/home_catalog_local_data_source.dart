@@ -1,4 +1,4 @@
-import 'package:mobile_hexy/domain/entities/home_catalog.dart';
+import 'package:mobile_hexy/data/models/home_catalog.dart';
 
 class HomeCatalogLocalDataSource {
   const HomeCatalogLocalDataSource();
