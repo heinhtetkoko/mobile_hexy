@@ -45,6 +45,7 @@ class ProductListViewModel extends BaseViewModel {
   int _categoryId = 0;
   int _page = 1;
   ProductListMode? _mode;
+  Worker? _searchWorker;
 
   @override
   void onInit() {
@@ -63,12 +64,28 @@ class ProductListViewModel extends BaseViewModel {
         ProductListMode.newArrivals => 'New Arrivals',
         ProductListMode.flashSale => 'Flash Sale',
         ProductListMode.recommended => 'Recommended For You',
+        ProductListMode.search => 'All Products',
       };
       activeFilters.value = 0;
+      if (_mode == ProductListMode.search) {
+        query.value = category.query;
+        searching.value = true;
+        _searchWorker = debounce<String>(
+          query,
+          (_) => loadProducts(),
+          time: const Duration(milliseconds: 400),
+        );
+      }
       loadProducts();
     } else {
       errorMessage.value = 'No category selected.';
     }
+  }
+
+  @override
+  void onClose() {
+    _searchWorker?.dispose();
+    super.onClose();
   }
 
   Future<void> loadProducts() async {
@@ -179,6 +196,7 @@ class ProductListViewModel extends BaseViewModel {
   */
 
   List<CatalogProduct> get filteredProducts {
+    if (_mode == ProductListMode.search) return products;
     final value = query.value.trim().toLowerCase();
     return products.where((product) {
       final matchesQuery =
@@ -303,6 +321,17 @@ class ProductListViewModel extends BaseViewModel {
           limit: pageLimit,
         );
         return _catalogResult(result.products, result.page, result.hasNext);
+      case ProductListMode.search:
+        final result = await _remoteDataSource.searchProducts(
+          query: query.value.trim(),
+          page: page,
+          limit: pageLimit,
+        );
+        return (
+          products: result.products,
+          page: result.page,
+          hasNext: result.hasNext,
+        );
     }
   }
 

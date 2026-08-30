@@ -9,6 +9,7 @@ class ProductDetailViewModel extends BaseViewModel {
   final ProductDetailRemoteDataSource _remoteDataSource;
   final selectedImage = 0.obs;
   final selectedVariantId = RxnInt();
+  final selectedVariantValues = <String, int>{}.obs;
   final quantity = 1.obs;
   final isFavorite = false.obs;
   final product = Rxn<ProductDetail>();
@@ -32,9 +33,28 @@ class ProductDetailViewModel extends BaseViewModel {
       final result = await _remoteDataSource.fetch(id);
       product.value = result;
       selectedImage.value = 0;
-      selectedVariantId.value = result.variants.isEmpty
+      final variantValues = result.variantSections.expand(
+        (section) => section.values,
+      );
+      final selectedValues = variantValues.where((value) => value.selected);
+      selectedVariantId.value = selectedValues.isNotEmpty
+          ? selectedValues.first.variantId
+          : variantValues.isEmpty
           ? null
-          : result.variants.first.id;
+          : variantValues.first.variantId;
+      selectedVariantValues.assignAll({
+        for (final section in result.variantSections)
+          if (section.values.any((value) => value.available))
+            section.key:
+                section.values
+                    .firstWhereOrNull(
+                      (value) => value.selected && value.available,
+                    )
+                    ?.id ??
+                section.values.firstWhere((value) => value.available).id,
+      });
+      quantity.value = result.defaultQuantity;
+      isFavorite.value = result.wishlist;
     } catch (_) {
       errorMessage.value = 'Could not load product details. Please try again.';
     } finally {
@@ -42,8 +62,23 @@ class ProductDetailViewModel extends BaseViewModel {
     }
   }
 
-  void increment() => quantity.value++;
+  void increment() {
+    final detail = product.value;
+    if (detail == null) return;
+    final next = quantity.value + detail.quantityStep;
+    if (next <= detail.quantityMax) quantity.value = next;
+  }
+
   void decrement() {
-    if (quantity.value > 1) quantity.value--;
+    final detail = product.value;
+    if (detail == null) return;
+    final next = quantity.value - detail.quantityStep;
+    if (next >= detail.quantityMin) quantity.value = next;
+  }
+
+  void selectVariantValue(String sectionKey, ProductVariantValue value) {
+    if (!value.available) return;
+    selectedVariantValues[sectionKey] = value.id;
+    if (value.variantId != null) selectedVariantId.value = value.variantId;
   }
 }

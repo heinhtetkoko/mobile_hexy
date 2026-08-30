@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:mobile_hexy/app.dart';
+import 'package:mobile_hexy/data/models/product_detail.dart';
 import 'package:mobile_hexy/presentation/widgets/shimmer_skeletons.dart';
 import 'package:mobile_hexy/presentation/viewmodel/product_detail_view_model.dart';
 
@@ -46,7 +48,21 @@ class ProductDetailPage extends GetView<ProductDetailViewModel> {
                         SliverToBoxAdapter(
                           child: _Description(controller: controller),
                         ),
-                        const SliverToBoxAdapter(child: _SimilarProducts()),
+                        SliverToBoxAdapter(
+                          child: _Specifications(controller: controller),
+                        ),
+                        SliverToBoxAdapter(
+                          child: _ProductRecommendations(
+                            title: 'Related Products',
+                            products: product.relatedProducts,
+                          ),
+                        ),
+                        SliverToBoxAdapter(
+                          child: _ProductRecommendations(
+                            title: 'You Might Also Like',
+                            products: product.youMightAlsoLike,
+                          ),
+                        ),
                         const SliverToBoxAdapter(child: SizedBox(height: 16)),
                       ],
                     ),
@@ -110,7 +126,7 @@ class _Header extends StatelessWidget {
             ),
           ),
         ),
-        const _CartBadge(),
+        _CartBadge(quantity: controller.product.value?.cartQuantity ?? 0),
         const SizedBox(width: 8),
       ],
     ),
@@ -118,7 +134,8 @@ class _Header extends StatelessWidget {
 }
 
 class _CartBadge extends StatelessWidget {
-  const _CartBadge();
+  const _CartBadge({required this.quantity});
+  final int quantity;
   @override
   Widget build(BuildContext context) => Stack(
     clipBehavior: Clip.none,
@@ -130,27 +147,28 @@ class _CartBadge extends StatelessWidget {
         ),
         icon: const Icon(Icons.shopping_cart_outlined, size: 19),
       ),
-      Positioned(
-        right: 2,
-        top: 0,
-        child: Container(
-          width: 16,
-          height: 16,
-          alignment: Alignment.center,
-          decoration: const BoxDecoration(
-            color: ProductDetailPage._pink,
-            shape: BoxShape.circle,
-          ),
-          child: Text(
-            '3'.tr,
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
+      if (quantity > 0)
+        Positioned(
+          right: 2,
+          top: 0,
+          child: Container(
+            width: 16,
+            height: 16,
+            alignment: Alignment.center,
+            decoration: const BoxDecoration(
+              color: ProductDetailPage._pink,
+              shape: BoxShape.circle,
+            ),
+            child: Text(
+              '$quantity',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
         ),
-      ),
     ],
   );
 }
@@ -163,53 +181,83 @@ class _Gallery extends StatelessWidget {
     final images = controller.product.value!.imageUrls;
     return Column(
       children: [
-        Obx(
-          () => SizedBox(
-            height: 300,
-            width: double.infinity,
-            child: images.isEmpty
-                ? const Icon(Icons.image_not_supported_outlined, size: 64)
-                : Image.network(
-                    images[controller.selectedImage.value],
-                    fit: BoxFit.contain,
-                    errorBuilder: (_, _, _) => const Icon(
-                      Icons.image_not_supported_outlined,
-                      size: 64,
-                    ),
+        Obx(() {
+          final selectedImage = controller.selectedImage.value;
+          return Stack(
+            children: [
+              Container(
+                height: 300,
+                width: double.infinity,
+                color: Colors.white,
+                padding: const EdgeInsets.all(24),
+                child: images.isEmpty
+                    ? const Icon(Icons.image_not_supported_outlined, size: 64)
+                    : Image.network(
+                        images[selectedImage],
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, _, _) => const Icon(
+                          Icons.image_not_supported_outlined,
+                          size: 64,
+                        ),
+                      ),
+              ),
+              if (images.isNotEmpty)
+                Positioned(
+                  right: 16,
+                  top: 8,
+                  child: _GalleryBadge(
+                    label: '${selectedImage + 1} / ${images.length}',
                   ),
-          ),
-        ),
+                ),
+              Positioned(
+                right: 16,
+                bottom: 14,
+                child: Material(
+                  color: ProductDetailPage._pink,
+                  shape: const CircleBorder(),
+                  child: IconButton(
+                    onPressed: () {},
+                    color: Colors.white,
+                    icon: const Icon(Icons.open_in_full_rounded, size: 18),
+                  ),
+                ),
+              ),
+            ],
+          );
+        }),
         if (images.length > 1)
           SizedBox(
-            height: 60,
+            height: 68,
             child: Obx(() {
               final selectedImage = controller.selectedImage.value;
               return ListView.separated(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,
-                  vertical: 4,
+                  vertical: 6,
                 ),
                 scrollDirection: Axis.horizontal,
                 itemCount: images.length,
-                separatorBuilder: (_, _) => const SizedBox(width: 8),
+                separatorBuilder: (_, _) => const SizedBox(width: 10),
                 itemBuilder: (_, index) => GestureDetector(
                   onTap: () => controller.selectedImage.value = index,
                   child: Container(
-                    width: 52,
-                    height: 52,
-                    padding: const EdgeInsets.all(2),
+                    width: 54,
+                    padding: const EdgeInsets.all(4),
                     decoration: BoxDecoration(
+                      color: const Color(0xFFF5F6F8),
                       border: Border.all(
                         color: selectedImage == index
-                            ? ProductDetailPage._pink
+                            ? ProductDetailPage._ink
                             : Colors.transparent,
-                        width: 2,
+                        width: 1.5,
                       ),
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(9),
                     ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(5),
-                      child: Image.network(images[index], fit: BoxFit.cover),
+                    child: Image.network(
+                      images[index],
+                      fit: BoxFit.contain,
+                      errorBuilder: (_, _, _) =>
+                          const Icon(Icons.image_not_supported_outlined),
                     ),
                   ),
                 ),
@@ -219,6 +267,28 @@ class _Gallery extends StatelessWidget {
       ],
     );
   }
+}
+
+class _GalleryBadge extends StatelessWidget {
+  const _GalleryBadge({required this.label});
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+    decoration: BoxDecoration(
+      color: const Color(0xB81F2024),
+      borderRadius: BorderRadius.circular(16),
+    ),
+    child: Text(
+      label,
+      style: const TextStyle(
+        color: Colors.white,
+        fontSize: 11,
+        fontWeight: FontWeight.w700,
+      ),
+    ),
+  );
 }
 
 class _ProductInfo extends StatelessWidget {
@@ -235,9 +305,11 @@ class _ProductInfo extends StatelessWidget {
           Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: product.categories
-                .map((name) => _Tag(label: name, active: true))
-                .toList(),
+            children: [
+              if (product.brand.isNotEmpty)
+                _Tag(label: product.brand, active: true),
+              ...product.categories.map((name) => _Tag(label: name)),
+            ],
           ),
           const SizedBox(height: 16),
           Text(
@@ -405,40 +477,77 @@ class _Variants extends StatelessWidget {
   final ProductDetailViewModel controller;
   @override
   Widget build(BuildContext context) {
-    final variants = controller.product.value!.variants;
-    if (variants.length <= 1) return const SizedBox.shrink();
+    final sections = controller.product.value!.variantSections
+        .map(
+          (section) => (
+            section: section,
+            values: section.values
+                .where((value) => value.available)
+                .toList(growable: false),
+          ),
+        )
+        .where((item) => item.values.isNotEmpty)
+        .toList(growable: false);
+    if (sections.isEmpty) return const SizedBox.shrink();
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Variants'.tr,
-            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 10),
-          Obx(
-            () => Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: variants.map((variant) {
-                final selected =
-                    controller.selectedVariantId.value == variant.id;
-                return ChoiceChip(
-                  label: Text(variant.name),
-                  selected: selected,
-                  onSelected: (_) =>
-                      controller.selectedVariantId.value = variant.id,
-                  selectedColor: ProductDetailPage._ink,
-                  labelStyle: TextStyle(
-                    fontSize: 11,
-                    color: selected ? Colors.white : null,
+        children: sections.map((item) {
+          final section = item.section;
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${section.attribute}:',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
                   ),
-                );
-              }).toList(),
+                ),
+                const SizedBox(height: 10),
+                Obx(() {
+                  final selectedValueId =
+                      controller.selectedVariantValues[section.key];
+                  return Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: item.values.map((value) {
+                      final selected = selectedValueId == value.id;
+                      return ChoiceChip(
+                        label: Text(value.name),
+                        selected: selected,
+                        showCheckmark: false,
+                        onSelected: (_) =>
+                            controller.selectVariantValue(section.key, value),
+                        selectedColor: ProductDetailPage._ink,
+                        backgroundColor: const Color(0xFFF5F6F8),
+                        disabledColor: const Color(0xFFF0F1F3),
+                        side: BorderSide.none,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        labelStyle: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: selected
+                              ? Colors.white
+                              : Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      );
+                    }).toList(),
+                  );
+                }),
+              ],
             ),
-          ),
-        ],
+          );
+        }).toList(),
       ),
     );
   }
@@ -476,10 +585,211 @@ class _Description extends StatelessWidget {
   );
 }
 
-class _SimilarProducts extends StatelessWidget {
-  const _SimilarProducts();
+class _ProductRecommendations extends StatelessWidget {
+  const _ProductRecommendations({required this.title, required this.products});
+
+  final String title;
+  final List<ProductDetailCard> products;
+
   @override
-  Widget build(BuildContext context) => const SizedBox.shrink();
+  Widget build(BuildContext context) {
+    if (products.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    title.tr,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+                const Icon(
+                  Icons.arrow_forward_rounded,
+                  color: Color(0xFF9CA3AF),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 218,
+            child: ListView.separated(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              scrollDirection: Axis.horizontal,
+              itemCount: products.length,
+              separatorBuilder: (_, _) => const SizedBox(width: 12),
+              itemBuilder: (_, index) =>
+                  _RecommendationCard(product: products[index]),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RecommendationCard extends StatelessWidget {
+  const _RecommendationCard({required this.product});
+  final ProductDetailCard product;
+
+  @override
+  Widget build(BuildContext context) => InkWell(
+    onTap: () =>
+        Get.toNamed<void>(AppRoutes.productDetail, arguments: product.id),
+    borderRadius: BorderRadius.circular(14),
+    child: SizedBox(
+      width: 132,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Stack(
+            children: [
+              Container(
+                height: 112,
+                width: 132,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF5F6F8),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: product.imageUrl.isEmpty
+                    ? const Icon(Icons.image_not_supported_outlined)
+                    : Image.network(product.imageUrl, fit: BoxFit.contain),
+              ),
+              if (product.discountPercent > 0)
+                Positioned(
+                  left: 0,
+                  top: 8,
+                  child: _DiscountBadge(percent: product.discountPercent),
+                ),
+              const Positioned(
+                right: 7,
+                top: 7,
+                child: Icon(
+                  Icons.favorite_border_rounded,
+                  color: ProductDetailPage._pink,
+                  size: 20,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            product.name,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 4),
+          Row(
+            children: List.generate(
+              5,
+              (index) => Icon(
+                index < product.rating.round()
+                    ? Icons.star_rounded
+                    : Icons.star_border_rounded,
+                color: const Color(0xFFFBBF24),
+                size: 12,
+              ),
+            ),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            product.formattedPrice,
+            style: const TextStyle(
+              color: ProductDetailPage._pink,
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+class _Specifications extends StatelessWidget {
+  const _Specifications({required this.controller});
+
+  final ProductDetailViewModel controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final specifications = controller.product.value!.specifications;
+    if (specifications.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Specifications'.tr,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface,
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              children: specifications.indexed.map((entry) {
+                final (index, specification) = entry;
+                return Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              specification.label,
+                              style: TextStyle(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: Text(
+                              specification.value,
+                              textAlign: TextAlign.end,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (index < specifications.length - 1)
+                      const Divider(height: 1),
+                  ],
+                );
+              }).toList(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _BottomActions extends StatelessWidget {
@@ -512,7 +822,7 @@ class _BottomActions extends StatelessWidget {
           ),
           const SizedBox(width: 10),
           Expanded(
-            child: FilledButton(
+            child: FilledButton.icon(
               onPressed: () {},
               style: FilledButton.styleFrom(
                 backgroundColor: ProductDetailPage._ink,
@@ -521,16 +831,17 @@ class _BottomActions extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              child: Text(
+              icon: const Icon(Icons.shopping_cart_outlined, size: 18),
+              label: Text(
                 'Add to Cart'.tr,
                 maxLines: 1,
-                overflow: TextOverflow.visible,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ),
           const SizedBox(width: 8),
           Expanded(
-            child: FilledButton(
+            child: FilledButton.icon(
               onPressed: () {},
               style: FilledButton.styleFrom(
                 backgroundColor: ProductDetailPage._pink,
@@ -539,10 +850,11 @@ class _BottomActions extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              child: Text(
+              icon: const Icon(Icons.bolt_rounded, size: 18),
+              label: Text(
                 'Buy Now'.tr,
                 maxLines: 1,
-                overflow: TextOverflow.visible,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ),

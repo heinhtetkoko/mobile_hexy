@@ -23,7 +23,12 @@ class StationeryHomePage extends GetView<StationeryHomeViewModel> {
         bottom: false,
         child: Column(
           children: [
-            _Header(onSearch: controller.updateSearch),
+            _Header(
+              onSearchTap: () => Get.toNamed<void>(
+                AppRoutes.productList,
+                arguments: const ProductListRequest.search(),
+              ),
+            ),
             Expanded(
               child: RefreshIndicator(
                 onRefresh: controller.refreshHome,
@@ -164,8 +169,8 @@ class StationeryHomePage extends GetView<StationeryHomeViewModel> {
 }
 
 class _Header extends StatelessWidget {
-  const _Header({required this.onSearch});
-  final ValueChanged<String> onSearch;
+  const _Header({required this.onSearchTap});
+  final VoidCallback onSearchTap;
 
   @override
   Widget build(BuildContext context) => Column(
@@ -203,7 +208,8 @@ class _Header extends StatelessWidget {
       Padding(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
         child: TextField(
-          onChanged: onSearch,
+          readOnly: true,
+          onTap: onSearchTap,
           decoration: InputDecoration(
             hintText: 'Search products here'.tr,
             prefixIcon: Icon(
@@ -905,12 +911,20 @@ class _FlashSaleSection extends StatelessWidget {
           padding: EdgeInsets.symmetric(horizontal: 20),
           child: Row(
             children: [
-              Text(
-                'Flash Sale'.tr,
-                style: TextStyle(
-                  color: StationeryHomePage._pink,
-                  fontSize: 25,
-                  fontWeight: FontWeight.w900,
+              InkWell(
+                key: const Key('home-flash-sale-title'),
+                onTap: onViewAll,
+                borderRadius: BorderRadius.circular(8),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Text(
+                    'Flash Sale'.tr,
+                    style: TextStyle(
+                      color: StationeryHomePage._pink,
+                      fontSize: 25,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
                 ),
               ),
               IconButton(
@@ -950,6 +964,10 @@ class _FlashSaleSection extends StatelessWidget {
                 product: items[index],
                 stockLeft: const [2, 6, 1][index % 3],
                 progress: const [.8, .4, .9][index % 3],
+                onTap: () => Get.toNamed<void>(
+                  AppRoutes.productDetail,
+                  arguments: items[index].id,
+                ),
               );
             },
           ),
@@ -1041,118 +1059,124 @@ class _FlashSaleCard extends StatelessWidget {
     required this.product,
     required this.stockLeft,
     required this.progress,
+    required this.onTap,
   });
   final HomeProduct product;
   final int stockLeft;
   final double progress;
+  final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => Container(
-    width: 202,
-    padding: const EdgeInsets.all(13),
-    decoration: BoxDecoration(
-      color: Theme.of(context).colorScheme.surface,
-      borderRadius: BorderRadius.circular(22),
-      boxShadow: const [
-        BoxShadow(
-          color: Color(0x16000000),
-          blurRadius: 12,
-          offset: Offset(0, 6),
-        ),
-      ],
-    ),
-    child: Stack(
-      clipBehavior: Clip.none,
-      children: [
-        Positioned(
-          left: -3,
-          top: -3,
-          child: Container(
-            width: 66,
-            height: 22,
-            decoration: const BoxDecoration(
-              color: StationeryHomePage._pink,
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(18),
-                topRight: Radius.circular(14),
+  Widget build(BuildContext context) => GestureDetector(
+    behavior: HitTestBehavior.opaque,
+    onTap: onTap,
+    child: Container(
+      width: 202,
+      padding: const EdgeInsets.all(13),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x16000000),
+            blurRadius: 12,
+            offset: Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned(
+            left: -3,
+            top: -3,
+            child: Container(
+              width: 66,
+              height: 22,
+              decoration: const BoxDecoration(
+                color: StationeryHomePage._pink,
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(18),
+                  topRight: Radius.circular(14),
+                ),
               ),
             ),
           ),
-        ),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(14),
-              child: Container(
-                width: double.infinity,
-                height: 136,
-                padding: const EdgeInsets.all(12),
-                color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                child: _RemoteOrAssetImage(product: product),
-              ),
-            ),
-            const SizedBox(height: 11),
-            Text(
-              product.name.tr,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurface,
-                fontSize: 15,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            const SizedBox(height: 7),
-            Text(
-              product.price,
-              style: const TextStyle(
-                color: StationeryHomePage._pink,
-                fontSize: 19,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-            const SizedBox(height: 9),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: LinearProgressIndicator(
-                value: progress,
-                minHeight: 6,
-                color: StationeryHomePage._pink,
-                backgroundColor: Theme.of(context).dividerColor,
-              ),
-            ),
-            const SizedBox(height: 5),
-            Text(
-              '$stockLeft left!'.tr,
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-                fontSize: 11,
-              ),
-            ),
-            const Spacer(),
-            SizedBox(
-              width: double.infinity,
-              height: 36,
-              child: FilledButton(
-                onPressed: () {},
-                style: FilledButton.styleFrom(
-                  backgroundColor: StationeryHomePage._pink,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(13),
-                  ),
-                  textStyle: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                  ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(14),
+                child: Container(
+                  width: double.infinity,
+                  height: 136,
+                  padding: const EdgeInsets.all(12),
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                  child: _RemoteOrAssetImage(product: product),
                 ),
-                child: Text('Add to Cart'.tr),
               ),
-            ),
-          ],
-        ),
-      ],
+              const SizedBox(height: 11),
+              Text(
+                product.name.tr,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 7),
+              Text(
+                product.price,
+                style: const TextStyle(
+                  color: StationeryHomePage._pink,
+                  fontSize: 19,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 9),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: LinearProgressIndicator(
+                  value: progress,
+                  minHeight: 6,
+                  color: StationeryHomePage._pink,
+                  backgroundColor: Theme.of(context).dividerColor,
+                ),
+              ),
+              const SizedBox(height: 5),
+              Text(
+                '$stockLeft left!'.tr,
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  fontSize: 11,
+                ),
+              ),
+              const Spacer(),
+              SizedBox(
+                width: double.infinity,
+                height: 36,
+                child: FilledButton(
+                  onPressed: () {},
+                  style: FilledButton.styleFrom(
+                    backgroundColor: StationeryHomePage._pink,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(13),
+                    ),
+                    textStyle: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  child: Text('Add to Cart'.tr),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     ),
   );
 }
