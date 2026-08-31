@@ -108,6 +108,12 @@ class MyOrdersViewModel extends BaseViewModel {
   }
 
   List<OrderSummary> get filteredOrders {
+    return _matchingOrders().take(visibleCount.value).toList();
+  }
+
+  bool get hasMoreOrders => visibleCount.value < _matchingOrders().length;
+
+  List<OrderSummary> _matchingOrders() {
     final query = searchQuery.value.trim().toLowerCase();
     final result =
         orders
@@ -123,7 +129,7 @@ class MyOrdersViewModel extends BaseViewModel {
                 ? b.date.compareTo(a.date)
                 : a.date.compareTo(b.date),
           );
-    return result.take(visibleCount.value).toList();
+    return result;
   }
 
   void selectStatus(String status) {
@@ -141,7 +147,10 @@ class MyOrdersViewModel extends BaseViewModel {
 
   void setSearch(String value) => searchQuery.value = value;
   void setSort(bool latest) => latestFirst.value = latest;
-  void loadMore() => visibleCount.value += 5;
+  void loadMore() {
+    if (hasMoreOrders) visibleCount.value += 5;
+  }
+
   void performAction(String action, OrderSummary order) => Get.snackbar(
     action,
     'Order #${order.number}',

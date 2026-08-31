@@ -40,49 +40,64 @@ class ProductListPage extends GetView<ProductListViewModel> {
                 );
               }
               final products = controller.filteredProducts;
-              return CustomScrollView(
-                slivers: [
-                  if (products.isEmpty)
-                    SliverFillRemaining(
-                      child: Center(child: Text('No products found'.tr)),
-                    )
-                  else
-                    SliverPadding(
-                      padding: const EdgeInsets.all(16),
-                      sliver: SliverGrid.builder(
-                        itemCount: products.length,
-                        gridDelegate:
-                            const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 2,
-                              crossAxisSpacing: 12,
-                              mainAxisSpacing: 12,
-                              childAspectRatio: .82,
+              return NotificationListener<ScrollNotification>(
+                onNotification: (notification) {
+                  if (controller.hasNextPage.value &&
+                      !controller.isLoadingMore.value &&
+                      notification.metrics.extentAfter < 320) {
+                    controller.loadMore();
+                  }
+                  return false;
+                },
+                child: CustomScrollView(
+                  slivers: [
+                    if (products.isEmpty)
+                      SliverFillRemaining(
+                        child: Center(child: Text('No products found'.tr)),
+                      )
+                    else
+                      SliverPadding(
+                        padding: const EdgeInsets.all(16),
+                        sliver: SliverGrid.builder(
+                          itemCount: products.length,
+                          gridDelegate:
+                              const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 2,
+                                crossAxisSpacing: 12,
+                                mainAxisSpacing: 12,
+                                childAspectRatio: .82,
+                              ),
+                          itemBuilder: (_, index) => _ProductCard(
+                            product: products[index],
+                            favorite: controller.favorites.contains(
+                              products[index].id,
                             ),
-                        itemBuilder: (_, index) => _ProductCard(
-                          product: products[index],
-                          favorite: controller.favorites.contains(
-                            products[index].id,
-                          ),
-                          onFavorite: () =>
-                              controller.toggleFavorite(products[index].id),
-                          onCart: () => controller.addToCart(products[index]),
-                          onOpen: () => Get.toNamed<void>(
-                            AppRoutes.productDetail,
-                            arguments: products[index].id,
+                            onFavorite: () =>
+                                controller.toggleFavorite(products[index].id),
+                            onCart: () => controller.addToCart(products[index]),
+                            onOpen: () => Get.toNamed<void>(
+                              AppRoutes.productDetail,
+                              arguments: products[index].id,
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  if (controller.hasNextPage.value ||
-                      controller.isLoadingMore.value)
-                    SliverToBoxAdapter(
-                      child: _LoadMore(
-                        onTap: controller.loadMore,
-                        loading: controller.isLoadingMore.value,
+                    if (controller.isLoadingMore.value)
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.all(20),
+                          child: Center(
+                            child: SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          ),
+                        ),
                       ),
-                    ),
-                  const SliverToBoxAdapter(child: SizedBox(height: 24)),
-                ],
+                    const SliverToBoxAdapter(child: SizedBox(height: 24)),
+                  ],
+                ),
               );
             }),
           ),
@@ -102,21 +117,21 @@ class _Header extends StatelessWidget {
     padding: const EdgeInsets.symmetric(horizontal: 16),
     decoration: BoxDecoration(
       color: Theme.of(context).colorScheme.surface,
-      boxShadow: [
-        BoxShadow(
-          color: Color(0x0A000000),
-          blurRadius: 2,
-          offset: Offset(0, 1),
-        ),
-      ],
+      border: Border(bottom: BorderSide(color: Theme.of(context).dividerColor)),
     ),
     child: Obx(
       () => controller.searching.value
           ? Row(
               children: [
-                IconButton(
-                  onPressed: () => controller.searching.value = false,
-                  icon: Icon(Icons.arrow_back_rounded),
+                SizedBox(
+                  width: 48,
+                  child: IconButton(
+                    onPressed: () {
+                      controller.searching.value = false;
+                      controller.query.value = '';
+                    },
+                    icon: const Icon(Icons.arrow_back_rounded, size: 20),
+                  ),
                 ),
                 Expanded(
                   child: TextField(
@@ -132,9 +147,15 @@ class _Header extends StatelessWidget {
             )
           : Row(
               children: [
-                _CircleButton(
-                  icon: Icons.chevron_left_rounded,
-                  onTap: Get.back,
+                SizedBox(
+                  width: 70,
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: IconButton(
+                      onPressed: Get.back,
+                      icon: const Icon(Icons.arrow_back_rounded, size: 20),
+                    ),
+                  ),
                 ),
                 Expanded(
                   child: Text(
@@ -147,45 +168,18 @@ class _Header extends StatelessWidget {
                     ),
                   ),
                 ),
-                _CircleButton(
-                  icon: Icons.search_rounded,
-                  onTap: () => controller.searching.value = true,
-                ),
-                const SizedBox(width: 10),
-                Badge(
-                  label: Text('3'.tr),
-                  child: _CircleButton(
-                    icon: Icons.shopping_cart_outlined,
-                    onTap: () {},
+                SizedBox(
+                  width: 70,
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: IconButton(
+                      onPressed: () => controller.searching.value = true,
+                      icon: const Icon(Icons.search_rounded, size: 21),
+                    ),
                   ),
                 ),
               ],
             ),
-    ),
-  );
-}
-
-class _CircleButton extends StatelessWidget {
-  const _CircleButton({required this.icon, required this.onTap});
-  final IconData icon;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) => Material(
-    color: AppColors.surface,
-    shape: const CircleBorder(),
-    child: InkWell(
-      customBorder: const CircleBorder(),
-      onTap: onTap,
-      child: SizedBox(
-        width: 36,
-        height: 36,
-        child: Icon(
-          icon,
-          size: 19,
-          color: Theme.of(context).colorScheme.onSurface,
-        ),
-      ),
     ),
   );
 }
@@ -249,23 +243,6 @@ class _FilterSheet extends StatelessWidget {
   const _FilterSheet({required this.controller});
   final ProductListViewModel controller;
 
-  static const categories = [
-    'Pens',
-    'Notebooks',
-    'Paper',
-    'Files',
-    'Art',
-    'Accessories',
-  ];
-  static const brands = [
-    'Pilot',
-    'Zebra',
-    'Deli',
-    'Faber-Castell',
-    'Pentel',
-    'Uni-ball',
-  ];
-
   @override
   Widget build(BuildContext context) => SafeArea(
     top: false,
@@ -328,14 +305,14 @@ class _FilterSheet extends StatelessWidget {
                 () => Wrap(
                   spacing: 8,
                   runSpacing: 8,
-                  children: categories.map((category) {
+                  children: controller.filterCategories.map((category) {
                     final selected =
-                        controller.pendingCategory.value == category;
+                        controller.pendingCategory.value == category.name;
                     return ChoiceChip(
                       selected: selected,
                       showCheckmark: false,
-                      onSelected: (_) =>
-                          controller.pendingCategory.value = category,
+                      onSelected: (_) => controller.pendingCategory.value =
+                          selected ? '' : category.name,
                       selectedColor: AppColors.primary,
                       backgroundColor: AppColors.surface,
                       side: BorderSide(
@@ -343,7 +320,7 @@ class _FilterSheet extends StatelessWidget {
                             ? AppColors.primary
                             : const Color(0xFFE5E7EB),
                       ),
-                      label: Text(category.tr),
+                      label: Text(category.name.tr),
                       labelStyle: TextStyle(
                         color: selected
                             ? Colors.white
@@ -361,13 +338,15 @@ class _FilterSheet extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
               child: Obx(
                 () => Wrap(
-                  children: brands.map((brand) {
-                    final selected = controller.pendingBrands.contains(brand);
+                  children: controller.filterBrands.map((brand) {
+                    final selected = controller.pendingBrands.contains(
+                      brand.name,
+                    );
                     return SizedBox(
                       width: MediaQuery.sizeOf(context).width / 2 - 16,
                       height: 40,
                       child: InkWell(
-                        onTap: () => controller.togglePendingBrand(brand),
+                        onTap: () => controller.togglePendingBrand(brand.name),
                         child: Row(
                           children: [
                             Icon(
@@ -381,7 +360,7 @@ class _FilterSheet extends StatelessWidget {
                             ),
                             const SizedBox(width: 8),
                             Text(
-                              brand,
+                              brand.name,
                               style: TextStyle(
                                 color: Theme.of(context).colorScheme.onSurface,
                                 fontSize: 14,
@@ -433,6 +412,22 @@ class _FilterSheet extends StatelessWidget {
                           controller.pendingPriceRange.value = value,
                     ),
                   ],
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Obx(
+                () => SwitchListTile.adaptive(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(
+                    'In Stock Only'.tr,
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  value: controller.pendingInStockOnly.value,
+                  activeThumbColor: AppColors.primary,
+                  onChanged: (value) =>
+                      controller.pendingInStockOnly.value = value,
                 ),
               ),
             ),
@@ -504,10 +499,8 @@ class _SortBySheet extends StatelessWidget {
     'New Arrivals',
     'Price: Low to High',
     'Price: High to Low',
-    'Highest Rating',
     'Biggest Discount',
     'A–Z',
-    'Z–A',
   ];
 
   @override
@@ -848,30 +841,6 @@ class _ProductCard extends StatelessWidget {
           ),
         ],
       ),
-    ),
-  );
-}
-
-class _LoadMore extends StatelessWidget {
-  const _LoadMore({required this.onTap, required this.loading});
-  final VoidCallback onTap;
-  final bool loading;
-  @override
-  Widget build(BuildContext context) => Center(
-    child: OutlinedButton(
-      onPressed: loading ? null : onTap,
-      style: OutlinedButton.styleFrom(
-        backgroundColor: const Color(0xFFEEF2FF),
-        foregroundColor: AppColors.primary,
-        shape: const StadiumBorder(),
-      ),
-      child: loading
-          ? const SizedBox(
-              width: 18,
-              height: 18,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            )
-          : Text('Load More Products'.tr),
     ),
   );
 }

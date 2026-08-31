@@ -51,6 +51,10 @@ class ProfileViewModel extends BaseViewModel {
       'Personal Information' => AppRoutes.personalInformation,
       'Change Password' => AppRoutes.changePassword,
       'Contact Us' => AppRoutes.contactUs,
+      'FAQ' => AppRoutes.faq,
+      'About Us' => AppRoutes.aboutUs,
+      'Privacy Policy' => AppRoutes.privacyPolicy,
+      'Terms & Conditions' => AppRoutes.termsConditions,
       'My Orders' => AppRoutes.myOrders,
       'Pending' => AppRoutes.myOrders,
       'Processing' => AppRoutes.myOrders,
@@ -69,7 +73,7 @@ class ProfileViewModel extends BaseViewModel {
       return;
     }
     if (label == 'Shipping Addresses') {
-      Get.toNamed<void>(AppRoutes.addressForm);
+      Get.toNamed<void>(AppRoutes.shippingAddresses);
       return;
     }
     Get.snackbar(

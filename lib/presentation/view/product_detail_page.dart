@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:mobile_hexy/app.dart';
 import 'package:mobile_hexy/data/models/product_detail.dart';
+import 'package:mobile_hexy/data/models/product_list_request.dart';
 import 'package:mobile_hexy/presentation/widgets/shimmer_skeletons.dart';
 import 'package:mobile_hexy/presentation/viewmodel/product_detail_view_model.dart';
 
@@ -35,6 +36,7 @@ class ProductDetailPage extends GetView<ProductDetailViewModel> {
                   : product == null
                   ? const Center(child: Text('Product not found.'))
                   : CustomScrollView(
+                      controller: controller.scrollController,
                       slivers: [
                         SliverToBoxAdapter(
                           child: _Gallery(controller: controller),
@@ -111,7 +113,9 @@ class _Header extends StatelessWidget {
         ),
         Obx(
           () => IconButton(
-            onPressed: () => controller.isFavorite.toggle(),
+            onPressed: controller.isUpdatingWishlist.value
+                ? null
+                : controller.toggleWishlist,
             style: IconButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.surface,
             ),
@@ -216,7 +220,16 @@ class _Gallery extends StatelessWidget {
                   color: ProductDetailPage._pink,
                   shape: const CircleBorder(),
                   child: IconButton(
-                    onPressed: () {},
+                    onPressed: images.isEmpty
+                        ? null
+                        : () => showDialog<void>(
+                            context: context,
+                            barrierColor: Colors.black,
+                            builder: (_) => _FullScreenGallery(
+                              images: images,
+                              initialIndex: selectedImage,
+                            ),
+                          ),
                     color: Colors.white,
                     icon: const Icon(Icons.open_in_full_rounded, size: 18),
                   ),
@@ -286,6 +299,150 @@ class _GalleryBadge extends StatelessWidget {
         color: Colors.white,
         fontSize: 11,
         fontWeight: FontWeight.w700,
+      ),
+    ),
+  );
+}
+
+class _FullScreenGallery extends StatefulWidget {
+  const _FullScreenGallery({required this.images, required this.initialIndex});
+
+  final List<String> images;
+  final int initialIndex;
+
+  @override
+  State<_FullScreenGallery> createState() => _FullScreenGalleryState();
+}
+
+class _FullScreenGalleryState extends State<_FullScreenGallery> {
+  late final PageController _pageController;
+  final TransformationController _transformationController =
+      TransformationController();
+  late int _currentIndex;
+  double _zoom = 1;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentIndex = widget.initialIndex;
+    _pageController = PageController(initialPage: widget.initialIndex);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    _transformationController.dispose();
+    super.dispose();
+  }
+
+  void _setZoom(double value) {
+    final next = value.clamp(1.0, 4.0);
+    setState(() => _zoom = next);
+    _transformationController.value = Matrix4.diagonal3Values(next, next, 1);
+  }
+
+  void _resetZoom() => _setZoom(1);
+
+  @override
+  Widget build(BuildContext context) => Material(
+    color: Colors.black,
+    child: SafeArea(
+      child: Stack(
+        children: [
+          PageView.builder(
+            controller: _pageController,
+            physics: _zoom > 1
+                ? const NeverScrollableScrollPhysics()
+                : const PageScrollPhysics(),
+            itemCount: widget.images.length,
+            onPageChanged: (index) {
+              _resetZoom();
+              setState(() => _currentIndex = index);
+            },
+            itemBuilder: (_, index) => InteractiveViewer(
+              transformationController: index == _currentIndex
+                  ? _transformationController
+                  : null,
+              minScale: 1,
+              maxScale: 4,
+              onInteractionEnd: (_) {
+                if (index != _currentIndex) return;
+                final scale = _transformationController.value
+                    .getMaxScaleOnAxis()
+                    .clamp(1.0, 4.0);
+                setState(() => _zoom = scale);
+              },
+              child: Center(
+                child: Image.network(
+                  widget.images[index],
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, _, _) => const Icon(
+                    Icons.image_not_supported_outlined,
+                    color: Colors.white54,
+                    size: 72,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            left: 12,
+            right: 12,
+            top: 8,
+            child: Row(
+              children: [
+                IconButton.filledTonal(
+                  onPressed: () => Navigator.of(context).pop(),
+                  icon: const Icon(Icons.close_rounded),
+                ),
+                const Spacer(),
+                _GalleryBadge(
+                  label: '${_currentIndex + 1} / ${widget.images.length}',
+                ),
+              ],
+            ),
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 20,
+            child: Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                decoration: BoxDecoration(
+                  color: const Color(0xCC1F2024),
+                  borderRadius: BorderRadius.circular(28),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      tooltip: 'Zoom out',
+                      onPressed: _zoom <= 1 ? null : () => _setZoom(_zoom - .5),
+                      color: Colors.white,
+                      disabledColor: Colors.white38,
+                      icon: const Icon(Icons.remove_rounded),
+                    ),
+                    TextButton(
+                      onPressed: _resetZoom,
+                      child: Text(
+                        '${(_zoom * 100).round()}%',
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: 'Zoom in',
+                      onPressed: _zoom >= 4 ? null : () => _setZoom(_zoom + .5),
+                      color: Colors.white,
+                      disabledColor: Colors.white38,
+                      icon: const Icon(Icons.add_rounded),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     ),
   );
@@ -612,18 +769,28 @@ class _ProductRecommendations extends StatelessWidget {
                     ),
                   ),
                 ),
-                const Icon(
-                  Icons.arrow_forward_rounded,
-                  color: Color(0xFF9CA3AF),
+                IconButton(
+                  key: Key(
+                    'view-all-${title.toLowerCase().replaceAll(' ', '-')}',
+                  ),
+                  tooltip: 'View all $title',
+                  onPressed: () => Get.toNamed<void>(
+                    AppRoutes.productList,
+                    arguments: const ProductListRequest.search(),
+                  ),
+                  icon: const Icon(
+                    Icons.arrow_forward_rounded,
+                    color: Color(0xFF9CA3AF),
+                  ),
                 ),
               ],
             ),
           ),
           const SizedBox(height: 12),
           SizedBox(
-            height: 218,
+            height: 234,
             child: ListView.separated(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               scrollDirection: Axis.horizontal,
               itemCount: products.length,
               separatorBuilder: (_, _) => const SizedBox(width: 12),
@@ -643,11 +810,23 @@ class _RecommendationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => InkWell(
-    onTap: () =>
-        Get.toNamed<void>(AppRoutes.productDetail, arguments: product.id),
-    borderRadius: BorderRadius.circular(14),
-    child: SizedBox(
+    key: Key('recommendation-product-${product.id}'),
+    onTap: () => Get.find<ProductDetailViewModel>().openProduct(product.id),
+    borderRadius: BorderRadius.circular(18),
+    child: Container(
       width: 132,
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x14000000),
+            blurRadius: 12,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -655,7 +834,7 @@ class _RecommendationCard extends StatelessWidget {
             children: [
               Container(
                 height: 112,
-                width: 132,
+                width: double.infinity,
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: const Color(0xFFF5F6F8),
@@ -822,20 +1001,33 @@ class _BottomActions extends StatelessWidget {
           ),
           const SizedBox(width: 10),
           Expanded(
-            child: FilledButton.icon(
-              onPressed: () {},
-              style: FilledButton.styleFrom(
-                backgroundColor: ProductDetailPage._ink,
-                padding: const EdgeInsets.symmetric(horizontal: 10),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+            child: Obx(
+              () => FilledButton.icon(
+                onPressed: controller.isAddingToCart.value
+                    ? null
+                    : controller.addToCart,
+                style: FilledButton.styleFrom(
+                  backgroundColor: ProductDetailPage._ink,
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
-              ),
-              icon: const Icon(Icons.shopping_cart_outlined, size: 18),
-              label: Text(
-                'Add to Cart'.tr,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+                icon: controller.isAddingToCart.value
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Icon(Icons.shopping_cart_outlined, size: 18),
+                label: Text(
+                  'Add to Cart'.tr,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ),
           ),

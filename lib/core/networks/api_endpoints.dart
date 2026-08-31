@@ -2,7 +2,7 @@ abstract final class ApiEndpoints {
   static const baseUrl = String.fromEnvironment(
     'API_BASE_URL',
     defaultValue:
-        'https://heinhtetkoko-odooecommerce-main-37186590.dev.odoo.com/',
+        'https://heinhtetkoko-odooecommerce-main-37214843.dev.odoo.com/',
   );
   static const login = 'api/v1/auth/token';
   static const signup = 'api/v1/auth/signup';
@@ -18,8 +18,22 @@ abstract final class ApiEndpoints {
   static const flashSale = 'api/v1/flash-sale';
   static const recommendedProducts = 'api/v1/recommended-products';
   static const productSearch = 'api/v1/product/search';
+  static const allProducts = 'api/v1/products';
+  static const cart = 'api/v1/cart';
+  static const wishlist = 'api/v1/wishlist';
+  static const contactUs = 'api/v1/contact-us';
+  static const faqs = 'api/v1/faqs';
+  static const aboutUs = 'api/v1/pages/about-us';
+  static const privacyPolicy = 'api/v1/pages/privacy-policy';
+  static const termsConditions = 'api/v1/pages/terms-conditions';
+  static const addressOptions = 'api/v1/profile/address-options';
+  static const locationStates = 'api/v1/locations/states';
+  static const locationCities = 'api/v1/locations/cities';
+  static const shippingAddresses = 'api/v1/profile/addresses';
+  static String shippingAddress(Object id) => 'api/v1/profile/addresses/$id';
   static String productDetail(Object id) => 'api/v1/products/$id';
   static const requiresAuthKey = 'requiresAuth';
+  static const redirectOnUnauthorizedKey = 'redirectOnUnauthorized';
   static const connectTimeout = Duration(seconds: 15);
   static const receiveTimeout = Duration(seconds: 15);
   static const sendTimeout = Duration(seconds: 15);

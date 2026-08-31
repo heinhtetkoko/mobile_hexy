@@ -4,6 +4,8 @@ import 'package:mobile_hexy/presentation/viewmodel/product_detail_view_model.dar
 class ProductDetailBinding extends Bindings {
   @override
   void dependencies() {
-    Get.lazyPut(() => ProductDetailViewModel(Get.find()));
+    Get.lazyPut(
+      () => ProductDetailViewModel(Get.find(), Get.find(), Get.find()),
+    );
   }
 }

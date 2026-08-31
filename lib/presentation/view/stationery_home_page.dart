@@ -80,6 +80,7 @@ class StationeryHomePage extends GetView<StationeryHomeViewModel> {
                         child: Obx(
                           () => _RemoteProductContent(
                             items: controller.bestSellers,
+                            useReferenceCard: true,
                             loading: controller.isBestSellersLoading.value,
                             loadingMore:
                                 controller.isBestSellersLoadingMore.value,
@@ -87,6 +88,7 @@ class StationeryHomePage extends GetView<StationeryHomeViewModel> {
                             hasMore: controller.hasMoreBestSellers.value,
                             onRetry: controller.loadBestSellers,
                             onLoadMore: controller.loadMoreBestSellers,
+                            onAddToCart: controller.addToCart,
                           ),
                         ),
                       ),
@@ -102,6 +104,7 @@ class StationeryHomePage extends GetView<StationeryHomeViewModel> {
                         child: Obx(
                           () => _RemoteProductContent(
                             items: controller.newArrivals,
+                            useReferenceCard: true,
                             loading: controller.isNewArrivalsLoading.value,
                             loadingMore:
                                 controller.isNewArrivalsLoadingMore.value,
@@ -109,6 +112,7 @@ class StationeryHomePage extends GetView<StationeryHomeViewModel> {
                             hasMore: controller.hasMoreNewArrivals.value,
                             onRetry: controller.loadNewArrivals,
                             onLoadMore: controller.loadMoreNewArrivals,
+                            onAddToCart: controller.addToCart,
                           ),
                         ),
                       ),
@@ -200,8 +204,6 @@ class _Header extends StatelessWidget {
             ),
             const Spacer(),
             _BadgeIcon(icon: Icons.notifications_none_rounded, count: '3'),
-            const SizedBox(width: 14),
-            _BadgeIcon(icon: Icons.shopping_cart_outlined, count: '2'),
           ],
         ),
       ),
@@ -669,115 +671,228 @@ class _ProductList extends StatelessWidget {
     required this.items,
     this.onLoadMore,
     this.loadingMore = false,
+    this.useReferenceCard = false,
+    required this.onAddToCart,
   });
   final List<HomeProduct> items;
   final VoidCallback? onLoadMore;
   final bool loadingMore;
+  final bool useReferenceCard;
+  final ValueChanged<HomeProduct> onAddToCart;
   @override
-  Widget build(BuildContext context) => SizedBox(
-    height: 186,
-    child: ListView.separated(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      scrollDirection: Axis.horizontal,
-      itemCount: items.length + (onLoadMore == null ? 0 : 1),
-      separatorBuilder: (_, _) => const SizedBox(width: 12),
-      itemBuilder: (_, index) {
-        if (index == items.length) {
-          return SizedBox(
-            width: 110,
-            child: Center(
-              child: OutlinedButton(
-                onPressed: loadingMore ? null : onLoadMore,
-                child: loadingMore
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Text('Load more'),
-              ),
-            ),
-          );
+  Widget build(BuildContext context) => Container(
+    color: useReferenceCard ? Colors.white : null,
+    height: useReferenceCard ? 200 : 186,
+    child: NotificationListener<ScrollNotification>(
+      onNotification: (notification) {
+        if (onLoadMore != null &&
+            !loadingMore &&
+            notification.metrics.extentAfter < 180) {
+          onLoadMore!();
         }
-        return _ProductCard(product: items[index]);
+        return false;
       },
+      child: ListView.separated(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        scrollDirection: Axis.horizontal,
+        itemCount: items.length + (loadingMore ? 1 : 0),
+        separatorBuilder: (_, _) => const SizedBox(width: 12),
+        itemBuilder: (_, index) => index == items.length
+            ? const _HorizontalLoadingIndicator()
+            : _ProductCard(
+                product: items[index],
+                useReferenceCard: useReferenceCard,
+                onAddToCart: () => onAddToCart(items[index]),
+              ),
+      ),
     ),
   );
 }
 
 class _ProductCard extends StatelessWidget {
-  const _ProductCard({required this.product});
+  const _ProductCard({
+    required this.product,
+    required this.onAddToCart,
+    this.useReferenceCard = false,
+  });
   final HomeProduct product;
+  final bool useReferenceCard;
+  final VoidCallback onAddToCart;
   @override
-  Widget build(BuildContext context) => InkWell(
-    onTap: product.id.isEmpty
-        ? null
-        : () => Get.toNamed(AppRoutes.productDetail, arguments: product.id),
-    borderRadius: BorderRadius.circular(12),
-    child: Container(
-      width: 142,
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x16000000),
-            blurRadius: 9,
-            offset: Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Center(
-              child: product.imageUrl?.isNotEmpty == true
-                  ? Image.network(
-                      product.imageUrl!,
-                      fit: BoxFit.contain,
-                      errorBuilder: (_, _, _) => const Icon(
-                        Icons.image_not_supported_outlined,
-                        size: 36,
+  Widget build(BuildContext context) => _PressBounce(
+    enabled: useReferenceCard,
+    child: InkWell(
+      onTap: product.id.isEmpty
+          ? null
+          : () => Get.toNamed(AppRoutes.productDetail, arguments: product.id),
+      borderRadius: BorderRadius.circular(useReferenceCard ? 18 : 12),
+      child: Container(
+        width: 142,
+        margin: useReferenceCard
+            ? const EdgeInsets.symmetric(vertical: 12)
+            : null,
+        padding: EdgeInsets.all(useReferenceCard ? 0 : 8),
+        decoration: BoxDecoration(
+          color: useReferenceCard
+              ? Colors.white
+              : Theme.of(context).colorScheme.surface,
+          borderRadius: BorderRadius.circular(useReferenceCard ? 18 : 12),
+          border: useReferenceCard
+              ? Border.all(color: const Color(0xFFF0F0F0))
+              : null,
+          boxShadow: [
+            BoxShadow(
+              color: useReferenceCard
+                  ? const Color(0x0D000000)
+                  : const Color(0x16000000),
+              blurRadius: useReferenceCard ? 12 : 9,
+              offset: Offset(0, useReferenceCard ? 4 : 3),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: useReferenceCard
+                  ? ClipRRect(
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(17),
+                      ),
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: product.imageUrl?.isNotEmpty == true
+                            ? Image.network(
+                                product.imageUrl!,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, _, _) => const Icon(
+                                  Icons.image_not_supported_outlined,
+                                  size: 40,
+                                ),
+                              )
+                            : Image.asset(
+                                product.imageAsset,
+                                fit: BoxFit.cover,
+                              ),
                       ),
                     )
-                  : Image.asset(product.imageAsset, fit: BoxFit.contain),
+                  : Center(
+                      child: product.imageUrl?.isNotEmpty == true
+                          ? Image.network(
+                              product.imageUrl!,
+                              fit: BoxFit.contain,
+                              errorBuilder: (_, _, _) => const Icon(
+                                Icons.image_not_supported_outlined,
+                                size: 36,
+                              ),
+                            )
+                          : Image.asset(
+                              product.imageAsset,
+                              fit: BoxFit.contain,
+                            ),
+                    ),
             ),
-          ),
-          const SizedBox(height: 5),
-          Text(
-            product.name.tr,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.onSurface,
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  product.price,
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.primary,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w800,
-                  ),
+            const SizedBox(height: 5),
+            Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: useReferenceCard ? 16 : 0,
+              ),
+              child: Text(
+                product.name.tr,
+                maxLines: useReferenceCard ? 1 : 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface,
+                  fontSize: 11,
+                  fontWeight: useReferenceCard
+                      ? FontWeight.w800
+                      : FontWeight.w700,
                 ),
               ),
-              const Icon(
-                Icons.add_shopping_cart_outlined,
-                color: StationeryHomePage._pink,
-                size: 19,
+            ),
+            SizedBox(height: useReferenceCard ? 8 : 4),
+            Padding(
+              padding: EdgeInsets.fromLTRB(
+                useReferenceCard ? 16 : 0,
+                0,
+                useReferenceCard ? 16 : 0,
+                useReferenceCard ? 12 : 0,
               ),
-            ],
-          ),
-        ],
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      product.price,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.primary,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                  GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: onAddToCart,
+                    child: useReferenceCard
+                        ? Container(
+                            width: 24,
+                            height: 24,
+                            decoration: const BoxDecoration(
+                              color: StationeryHomePage._pink,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.shopping_cart_outlined,
+                              color: Colors.white,
+                              size: 16,
+                            ),
+                          )
+                        : const Padding(
+                            padding: EdgeInsets.all(4),
+                            child: Icon(
+                              Icons.add_shopping_cart_outlined,
+                              color: StationeryHomePage._pink,
+                              size: 19,
+                            ),
+                          ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
+    ),
+  );
+}
+
+class _PressBounce extends StatefulWidget {
+  const _PressBounce({required this.enabled, required this.child});
+  final bool enabled;
+  final Widget child;
+
+  @override
+  State<_PressBounce> createState() => _PressBounceState();
+}
+
+class _PressBounceState extends State<_PressBounce> {
+  bool _pressed = false;
+
+  void _setPressed(bool value) {
+    if (!widget.enabled || _pressed == value) return;
+    setState(() => _pressed = value);
+  }
+
+  @override
+  Widget build(BuildContext context) => Listener(
+    onPointerDown: (_) => _setPressed(true),
+    onPointerUp: (_) => _setPressed(false),
+    onPointerCancel: (_) => _setPressed(false),
+    child: AnimatedScale(
+      scale: _pressed ? .97 : 1,
+      duration: const Duration(milliseconds: 180),
+      curve: _pressed ? Curves.easeOut : Curves.easeOutBack,
+      child: widget.child,
     ),
   );
 }
@@ -791,6 +906,8 @@ class _RemoteProductContent extends StatelessWidget {
     required this.hasMore,
     required this.onRetry,
     required this.onLoadMore,
+    required this.onAddToCart,
+    this.useReferenceCard = false,
   });
 
   final List<HomeProduct> items;
@@ -800,6 +917,8 @@ class _RemoteProductContent extends StatelessWidget {
   final bool hasMore;
   final VoidCallback onRetry;
   final VoidCallback onLoadMore;
+  final ValueChanged<HomeProduct> onAddToCart;
+  final bool useReferenceCard;
 
   @override
   Widget build(BuildContext context) {
@@ -826,6 +945,8 @@ class _RemoteProductContent extends StatelessWidget {
     }
     return _ProductList(
       items: items,
+      useReferenceCard: useReferenceCard,
+      onAddToCart: onAddToCart,
       onLoadMore: hasMore ? onLoadMore : null,
       loadingMore: loadingMore,
     );
@@ -948,28 +1069,32 @@ class _FlashSaleSection extends StatelessWidget {
         const SizedBox(height: 14),
         SizedBox(
           height: 308,
-          child: ListView.separated(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            scrollDirection: Axis.horizontal,
-            itemCount: items.length + (onLoadMore == null ? 0 : 1),
-            separatorBuilder: (_, _) => const SizedBox(width: 12),
-            itemBuilder: (_, index) {
-              if (index == items.length) {
-                return _HorizontalLoadMore(
-                  onTap: onLoadMore!,
-                  loading: loadingMore,
-                );
+          child: NotificationListener<ScrollNotification>(
+            onNotification: (notification) {
+              if (onLoadMore != null &&
+                  !loadingMore &&
+                  notification.metrics.extentAfter < 180) {
+                onLoadMore!();
               }
-              return _FlashSaleCard(
-                product: items[index],
-                stockLeft: const [2, 6, 1][index % 3],
-                progress: const [.8, .4, .9][index % 3],
-                onTap: () => Get.toNamed<void>(
-                  AppRoutes.productDetail,
-                  arguments: items[index].id,
-                ),
-              );
+              return false;
             },
+            child: ListView.separated(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              scrollDirection: Axis.horizontal,
+              itemCount: items.length + (loadingMore ? 1 : 0),
+              separatorBuilder: (_, _) => const SizedBox(width: 12),
+              itemBuilder: (_, index) => index == items.length
+                  ? const _HorizontalLoadingIndicator()
+                  : _FlashSaleCard(
+                      product: items[index],
+                      stockLeft: const [2, 6, 1][index % 3],
+                      progress: const [.8, .4, .9][index % 3],
+                      onTap: () => Get.toNamed<void>(
+                        AppRoutes.productDetail,
+                        arguments: items[index].id,
+                      ),
+                    ),
+            ),
           ),
         ),
       ],
@@ -1194,14 +1319,24 @@ class _RecommendedList extends StatelessWidget {
   @override
   Widget build(BuildContext context) => SizedBox(
     height: 218,
-    child: ListView.separated(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      scrollDirection: Axis.horizontal,
-      itemCount: items.length + (onLoadMore == null ? 0 : 1),
-      separatorBuilder: (_, _) => const SizedBox(width: 12),
-      itemBuilder: (_, index) => index == items.length
-          ? _HorizontalLoadMore(onTap: onLoadMore!, loading: loadingMore)
-          : _RecommendedCard(product: items[index]),
+    child: NotificationListener<ScrollNotification>(
+      onNotification: (notification) {
+        if (onLoadMore != null &&
+            !loadingMore &&
+            notification.metrics.extentAfter < 180) {
+          onLoadMore!();
+        }
+        return false;
+      },
+      child: ListView.separated(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        scrollDirection: Axis.horizontal,
+        itemCount: items.length + (loadingMore ? 1 : 0),
+        separatorBuilder: (_, _) => const SizedBox(width: 12),
+        itemBuilder: (_, index) => index == items.length
+            ? const _HorizontalLoadingIndicator()
+            : _RecommendedCard(product: items[index]),
+      ),
     ),
   );
 }
@@ -1256,25 +1391,17 @@ class _RecommendedContent extends StatelessWidget {
   }
 }
 
-class _HorizontalLoadMore extends StatelessWidget {
-  const _HorizontalLoadMore({required this.onTap, required this.loading});
-
-  final VoidCallback onTap;
-  final bool loading;
+class _HorizontalLoadingIndicator extends StatelessWidget {
+  const _HorizontalLoadingIndicator();
 
   @override
-  Widget build(BuildContext context) => SizedBox(
-    width: 110,
+  Widget build(BuildContext context) => const SizedBox(
+    width: 52,
     child: Center(
-      child: OutlinedButton(
-        onPressed: loading ? null : onTap,
-        child: loading
-            ? const SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              )
-            : const Text('Load more'),
+      child: SizedBox(
+        width: 20,
+        height: 20,
+        child: CircularProgressIndicator(strokeWidth: 2),
       ),
     ),
   );

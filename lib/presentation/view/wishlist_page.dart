@@ -17,7 +17,14 @@ class WishlistPage extends GetView<WishlistViewModel> {
           Obx(() => _WishlistHeader(itemCount: controller.items.length)),
           Expanded(
             child: Obx(
-              () => controller.items.isEmpty
+              () => controller.isLoading.value
+                  ? const Center(child: CircularProgressIndicator())
+                  : controller.errorMessage.value != null
+                  ? _WishlistError(
+                      message: controller.errorMessage.value!,
+                      onRetry: controller.loadWishlist,
+                    )
+                  : controller.items.isEmpty
                   ? const _EmptyWishlist()
                   : ListView.builder(
                       padding: EdgeInsets.zero,
@@ -56,7 +63,7 @@ class _WishlistHeader extends StatelessWidget {
     ),
     child: Row(
       children: [
-        const SizedBox(width: 64),
+        const SizedBox(width: 70),
         Expanded(
           child: Text(
             'Wishlist'.tr,
@@ -69,13 +76,24 @@ class _WishlistHeader extends StatelessWidget {
           ),
         ),
         SizedBox(
-          width: 64,
-          child: Text(
-            '$itemCount ${itemCount == 1 ? 'item'.tr : 'items'.tr}',
-            textAlign: TextAlign.right,
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-              fontSize: 12,
+          width: 70,
+          child: Align(
+            alignment: Alignment.centerRight,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEEF2FF),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                '$itemCount ${itemCount == 1 ? 'Item'.tr : 'Items'.tr}',
+                maxLines: 1,
+                style: const TextStyle(
+                  color: AppColors.primary,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
             ),
           ),
         ),
@@ -107,12 +125,30 @@ class _WishlistCard extends StatelessWidget {
       children: [
         ClipRRect(
           borderRadius: BorderRadius.circular(12),
-          child: Image.asset(
-            item.imageAsset,
-            width: 84,
-            height: 84,
-            fit: BoxFit.cover,
-          ),
+          child: item.imageUrl?.isNotEmpty == true
+              ? Image.network(
+                  item.imageUrl!,
+                  width: 84,
+                  height: 84,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, _, _) => const SizedBox(
+                    width: 84,
+                    height: 84,
+                    child: Icon(Icons.image_not_supported_outlined),
+                  ),
+                )
+              : item.imageAsset.isNotEmpty
+              ? Image.asset(
+                  item.imageAsset,
+                  width: 84,
+                  height: 84,
+                  fit: BoxFit.cover,
+                )
+              : const SizedBox(
+                  width: 84,
+                  height: 84,
+                  child: Icon(Icons.image_not_supported_outlined),
+                ),
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -176,6 +212,25 @@ class _WishlistCard extends StatelessWidget {
             ),
           ),
         ),
+      ],
+    ),
+  );
+}
+
+class _WishlistError extends StatelessWidget {
+  const _WishlistError({required this.message, required this.onRetry});
+
+  final String message;
+  final Future<void> Function() onRetry;
+
+  @override
+  Widget build(BuildContext context) => Center(
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(message, textAlign: TextAlign.center),
+        const SizedBox(height: 12),
+        FilledButton(onPressed: onRetry, child: Text('Retry'.tr)),
       ],
     ),
   );

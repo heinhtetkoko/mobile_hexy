@@ -26,6 +26,8 @@ class AuthRemoteDataSource {
         throw const ServerException('The server returned an empty response.');
       }
       return AuthSessionModel.fromJson(body);
+    } on ServerException {
+      rethrow;
     } on Exception catch (error) {
       throw ServerException(error.toString().replaceFirst('Exception: ', ''));
     }

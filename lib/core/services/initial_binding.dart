@@ -10,12 +10,17 @@ import 'package:mobile_hexy/core/services/ui_service.dart';
 import 'package:mobile_hexy/core/services/ui_service_impl.dart';
 import 'package:mobile_hexy/core/services/secure_storage.dart';
 import 'package:mobile_hexy/core/services/secure_storage_impl.dart';
+import 'package:mobile_hexy/core/services/token_expiration_handler.dart';
 import 'package:mobile_hexy/data/datasources/auth_remote_data_source.dart';
 import 'package:mobile_hexy/data/datasources/best_sellers_remote_data_source.dart';
 import 'package:mobile_hexy/data/datasources/banners_remote_data_source.dart';
 import 'package:mobile_hexy/data/datasources/brands_remote_data_source.dart';
 import 'package:mobile_hexy/data/datasources/categories_remote_data_source.dart';
 import 'package:mobile_hexy/data/datasources/category_products_remote_data_source.dart';
+import 'package:mobile_hexy/data/datasources/cart_remote_data_source.dart';
+import 'package:mobile_hexy/data/datasources/wishlist_remote_data_source.dart';
+import 'package:mobile_hexy/data/datasources/support_content_remote_data_source.dart';
+import 'package:mobile_hexy/data/datasources/shipping_address_remote_data_source.dart';
 import 'package:mobile_hexy/data/datasources/home_catalog_local_data_source.dart';
 import 'package:mobile_hexy/data/datasources/home_products_remote_data_source.dart';
 import 'package:mobile_hexy/data/datasources/new_arrivals_remote_data_source.dart';
@@ -53,9 +58,14 @@ class InitialBinding extends Bindings {
       const SecureStorageImpl(FlutterSecureStorage()),
       permanent: true,
     );
+    final tokenExpirationHandler = Get.put(
+      TokenExpirationHandler(Get.find<SecureStorage>()),
+      permanent: true,
+    );
     final dio = DioClient.create(
       accessTokenProvider: () =>
           Get.find<SecureStorage>().read(AppConstants.accessTokenKey),
+      onUnauthorized: tokenExpirationHandler.handle,
     );
     Get.put<Dio>(dio, permanent: true);
     Get.put<ApiService>(ApiService(dio), permanent: true);
@@ -66,6 +76,10 @@ class InitialBinding extends Bindings {
     Get.lazyPut(() => BannersRemoteDataSource(Get.find()), fenix: true);
     Get.lazyPut(() => BrandsRemoteDataSource(Get.find()), fenix: true);
     Get.lazyPut(() => CategoriesRemoteDataSource(Get.find()), fenix: true);
+    Get.lazyPut(() => CartRemoteDataSource(Get.find()), fenix: true);
+    Get.put(WishlistRemoteDataSource(Get.find()), permanent: true);
+    Get.lazyPut(() => SupportContentRemoteDataSource(Get.find()), fenix: true);
+    Get.lazyPut(() => ShippingAddressRemoteDataSource(Get.find()), fenix: true);
     Get.lazyPut(
       () => CategoryProductsRemoteDataSource(Get.find()),
       fenix: true,

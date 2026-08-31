@@ -1,56 +1,78 @@
 import 'package:get/get.dart';
 import 'package:mobile_hexy/core/base/base_view_model.dart';
+import 'package:mobile_hexy/data/datasources/wishlist_remote_data_source.dart';
+import 'package:mobile_hexy/data/datasources/cart_remote_data_source.dart';
 import 'package:mobile_hexy/data/models/wishlist_item.dart';
 
 class WishlistViewModel extends BaseViewModel {
-  final items = <WishlistItem>[
-    const WishlistItem(
-      id: 'pencil-set',
-      name: 'Staedtler Noris Pencil Set 12pcs',
-      price: 'Ks 4,500',
-      imageAsset: 'assets/images/wishlist/pencil_set.png',
-    ),
-    const WishlistItem(
-      id: 'composition-notebook',
-      name: 'Mead Composition Notebook',
-      price: 'Ks 2,800',
-      imageAsset: 'assets/images/wishlist/composition_notebook.png',
-    ),
-    const WishlistItem(
-      id: 'gel-pen',
-      name: 'Pilot G2 Gel Pen Blue',
-      price: 'Ks 1,200',
-      imageAsset: 'assets/images/wishlist/gel_pen.png',
-    ),
-    const WishlistItem(
-      id: 'magic-tape',
-      name: 'Scotch Magic Tape 3-Pack',
-      price: 'Ks 3,500',
-      imageAsset: 'assets/images/wishlist/magic_tape.png',
-    ),
-    const WishlistItem(
-      id: 'eraser-set',
-      name: 'Faber-Castell Eraser Set',
-      price: 'Ks 900',
-      imageAsset: 'assets/images/wishlist/eraser_set.png',
-    ),
-    const WishlistItem(
-      id: 'index-cards',
-      name: 'Oxford Index Cards 100pk',
-      price: 'Ks 1,800',
-      imageAsset: 'assets/images/wishlist/index_cards.png',
-    ),
-  ].obs;
+  WishlistViewModel(this._remoteDataSource, this._cartRemoteDataSource);
 
-  void removeItem(WishlistItem item) =>
-      items.removeWhere((wishlistItem) => wishlistItem.id == item.id);
+  final WishlistRemoteDataSource _remoteDataSource;
+  final CartRemoteDataSource _cartRemoteDataSource;
+  final items = <WishlistItem>[].obs;
+  final isLoading = false.obs;
+  final updatingIds = <String>{}.obs;
 
-  void addToCart(WishlistItem item) {
+  @override
+  void onInit() {
+    super.onInit();
+    loadWishlist();
+  }
+
+  Future<void> loadWishlist() async {
+    isLoading.value = true;
+    errorMessage.value = null;
+    try {
+      final result = await _remoteDataSource.fetchWishlist();
+      items.assignAll(result.items);
+    } catch (error) {
+      errorMessage.value = error.toString().replaceFirst('Exception: ', '');
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  Future<void> removeItem(WishlistItem item) async {
+    if (updatingIds.contains(item.id)) return;
+    updatingIds.add(item.id);
+    try {
+      final result = await _remoteDataSource.remove(
+        wishlistId: item.id,
+        productId: item.productId,
+      );
+      items.assignAll(result.items);
+    } catch (error) {
+      _showError(error);
+    } finally {
+      updatingIds.remove(item.id);
+    }
+  }
+
+  Future<void> addToCart(WishlistItem item) async {
+    if (updatingIds.contains(item.id)) return;
+    updatingIds.add(item.id);
+    try {
+      final result = await _remoteDataSource.moveToCart(item.productId);
+      items.assignAll(result.items);
+      await _cartRemoteDataSource.fetchCart();
+      Get.snackbar(
+        'Added to cart',
+        item.name,
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    } catch (error) {
+      _showError(error);
+    } finally {
+      updatingIds.remove(item.id);
+    }
+  }
+
+  void _showError(Object error) {
+    if (Get.currentRoute == '/login') return;
     Get.snackbar(
-      'Added to cart',
-      item.name,
+      'Could not update wishlist',
+      error.toString().replaceFirst('Exception: ', ''),
       snackPosition: SnackPosition.BOTTOM,
-      duration: const Duration(seconds: 2),
     );
   }
 }

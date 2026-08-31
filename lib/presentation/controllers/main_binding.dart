@@ -20,11 +20,14 @@ class MainBinding extends Bindings {
         Get.find(),
         Get.find(),
         Get.find(),
+        Get.find(),
       ),
     );
     Get.lazyPut(() => CategoriesViewModel(Get.find()));
-    Get.lazyPut(CartViewModel.new);
-    Get.lazyPut(WishlistViewModel.new);
+    if (!Get.isRegistered<CartViewModel>()) {
+      Get.put(CartViewModel(Get.find()), permanent: true);
+    }
+    Get.lazyPut(() => WishlistViewModel(Get.find(), Get.find()));
     Get.lazyPut(
       () => ProfileViewModel(Get.find<LogoutUser>(), Get.find<GetProfile>()),
     );

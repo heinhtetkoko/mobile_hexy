@@ -6,8 +6,8 @@ import 'package:mobile_hexy/presentation/view/stationery_home_page.dart';
 import 'package:mobile_hexy/presentation/view/wishlist_page.dart';
 import 'package:mobile_hexy/presentation/view/profile_page.dart';
 import 'package:mobile_hexy/presentation/viewmodel/main_view_model.dart';
-import 'package:mobile_hexy/presentation/viewmodel/cart_view_model.dart';
-import 'package:mobile_hexy/presentation/viewmodel/wishlist_view_model.dart';
+import 'package:mobile_hexy/data/datasources/wishlist_remote_data_source.dart';
+import 'package:mobile_hexy/data/datasources/cart_remote_data_source.dart';
 
 class MainView extends GetView<MainViewModel> {
   const MainView({super.key});
@@ -62,9 +62,10 @@ class MainView extends GetView<MainViewModel> {
               icon: Obx(
                 () => Badge(
                   isLabelVisible:
-                      Get.find<WishlistViewModel>().items.isNotEmpty,
+                      Get.find<WishlistRemoteDataSource>().badgeCount.value > 0,
                   label: Text(
-                    '${Get.find<WishlistViewModel>().items.length}'.tr,
+                    '${Get.find<WishlistRemoteDataSource>().badgeCount.value}'
+                        .tr,
                   ),
                   child: const Icon(
                     Icons.favorite_border_rounded,
@@ -75,9 +76,10 @@ class MainView extends GetView<MainViewModel> {
               activeIcon: Obx(
                 () => Badge(
                   isLabelVisible:
-                      Get.find<WishlistViewModel>().items.isNotEmpty,
+                      Get.find<WishlistRemoteDataSource>().badgeCount.value > 0,
                   label: Text(
-                    '${Get.find<WishlistViewModel>().items.length}'.tr,
+                    '${Get.find<WishlistRemoteDataSource>().badgeCount.value}'
+                        .tr,
                   ),
                   child: const Icon(
                     Icons.favorite_rounded,
@@ -90,8 +92,11 @@ class MainView extends GetView<MainViewModel> {
             BottomNavigationBarItem(
               icon: Obx(
                 () => Badge(
-                  isLabelVisible: Get.find<CartViewModel>().items.isNotEmpty,
-                  label: Text('${Get.find<CartViewModel>().items.length}'.tr),
+                  isLabelVisible:
+                      Get.find<CartRemoteDataSource>().badgeCount.value > 0,
+                  label: Text(
+                    '${Get.find<CartRemoteDataSource>().badgeCount.value}'.tr,
+                  ),
                   child: const Icon(
                     Icons.shopping_cart_outlined,
                     key: Key('bottom-nav-cart'),
@@ -100,8 +105,11 @@ class MainView extends GetView<MainViewModel> {
               ),
               activeIcon: Obx(
                 () => Badge(
-                  isLabelVisible: Get.find<CartViewModel>().items.isNotEmpty,
-                  label: Text('${Get.find<CartViewModel>().items.length}'.tr),
+                  isLabelVisible:
+                      Get.find<CartRemoteDataSource>().badgeCount.value > 0,
+                  label: Text(
+                    '${Get.find<CartRemoteDataSource>().badgeCount.value}'.tr,
+                  ),
                   child: const Icon(
                     Icons.shopping_cart,
                     key: Key('active-tab-cart'),

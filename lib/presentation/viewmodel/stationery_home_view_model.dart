@@ -9,6 +9,7 @@ import 'package:mobile_hexy/data/datasources/brands_remote_data_source.dart';
 import 'package:mobile_hexy/data/datasources/categories_remote_data_source.dart';
 import 'package:mobile_hexy/data/datasources/home_products_remote_data_source.dart';
 import 'package:mobile_hexy/data/datasources/new_arrivals_remote_data_source.dart';
+import 'package:mobile_hexy/data/datasources/cart_remote_data_source.dart';
 import 'package:mobile_hexy/core/networks/api_endpoints.dart';
 import 'package:mobile_hexy/data/models/home_catalog.dart';
 import 'package:mobile_hexy/data/models/catalog_brand.dart';
@@ -24,6 +25,7 @@ class StationeryHomeViewModel extends BaseViewModel {
     this._categoriesDataSource,
     this._brandsDataSource,
     this._bannersDataSource,
+    this._cartRemoteDataSource,
   );
 
   final GetHomeCatalog _getHomeCatalog;
@@ -33,6 +35,8 @@ class StationeryHomeViewModel extends BaseViewModel {
   final CategoriesRemoteDataSource _categoriesDataSource;
   final BrandsRemoteDataSource _brandsDataSource;
   final BannersRemoteDataSource _bannersDataSource;
+  final CartRemoteDataSource _cartRemoteDataSource;
+  final addingToCartIds = <String>{}.obs;
   final activeBanner = 0.obs;
   final searchQuery = ''.obs;
   final bannerController = PageController();
@@ -73,6 +77,34 @@ class StationeryHomeViewModel extends BaseViewModel {
   final hasMoreRecommended = false.obs;
   int _recommendedPage = 1;
   static const remoteProductPageLimit = 10;
+
+  Future<void> addToCart(HomeProduct product) async {
+    final productId = int.tryParse(product.id);
+    if (productId == null ||
+        productId <= 0 ||
+        addingToCartIds.contains(product.id)) {
+      return;
+    }
+    addingToCartIds.add(product.id);
+    try {
+      await _cartRemoteDataSource.addProduct(productId: productId, quantity: 1);
+      Get.snackbar(
+        'Added to cart',
+        product.name,
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    } catch (error) {
+      if (Get.currentRoute != '/login') {
+        Get.snackbar(
+          'Could not add to cart',
+          error.toString().replaceFirst('Exception: ', ''),
+          snackPosition: SnackPosition.BOTTOM,
+        );
+      }
+    } finally {
+      addingToCartIds.remove(product.id);
+    }
+  }
 
   @override
   void onInit() {

@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:mobile_hexy/core/networks/api_endpoints.dart';
 import 'package:mobile_hexy/core/networks/api_service.dart';
 import 'package:mobile_hexy/data/models/catalog_product.dart';
@@ -27,6 +28,7 @@ class CategoryProductsRemoteDataSource {
     final response = await _apiService.get<dynamic>(
       'api/v1/categories/$categoryId/products',
       queryParameters: {'page': page, 'limit': limit},
+      options: Options(extra: const {ApiEndpoints.requiresAuthKey: false}),
     );
     final body = response.data;
     if (body is! Map || body['success'] != true || body['data'] is! List) {
@@ -55,6 +57,7 @@ class CategoryProductsRemoteDataSource {
     final response = await _apiService.get<dynamic>(
       ApiEndpoints.productSearch,
       queryParameters: {'q': query, 'page': page, 'limit': limit},
+      options: Options(extra: const {ApiEndpoints.requiresAuthKey: false}),
     );
     final body = response.data;
     if (body is! Map || body['success'] != true || body['data'] is! List) {
@@ -74,15 +77,71 @@ class CategoryProductsRemoteDataSource {
     );
   }
 
+  Future<CategoryProductsResult> fetchAllProducts({
+    required String query,
+    required int? categoryId,
+    required int? brandId,
+    required double? minPrice,
+    required double? maxPrice,
+    required bool? inStock,
+    required String sort,
+    required int page,
+    required int limit,
+  }) async {
+    final response = await _apiService.get<dynamic>(
+      ApiEndpoints.allProducts,
+      queryParameters: {
+        'q': query,
+        'category_id': ?categoryId,
+        'brand_id': ?brandId,
+        'min_price': ?minPrice,
+        'max_price': ?maxPrice,
+        'in_stock': ?inStock,
+        'sort': sort,
+        'page': page,
+        'limit': limit,
+      },
+    );
+    final body = response.data;
+    if (body is! Map || body['success'] != true || body['data'] is! List) {
+      throw const FormatException('Could not load products.');
+    }
+    final products = (body['data'] as List)
+        .whereType<Map>()
+        .map(_parseProduct)
+        .toList(growable: false);
+    final meta = body['meta'];
+    return CategoryProductsResult(
+      products: products,
+      page: meta is Map
+          ? int.tryParse(meta['page']?.toString() ?? '') ?? page
+          : page,
+      hasNext: meta is Map && meta['has_next'] == true,
+    );
+  }
+
   CatalogProduct _parseProduct(Map<dynamic, dynamic> json) {
     final currency = json['currency'];
     final symbol = currency is Map ? currency['symbol']?.toString() ?? '' : '';
-    final price = double.tryParse(json['price']?.toString() ?? '') ?? 0;
+    final price =
+        double.tryParse(
+          (json['current_price'] ?? json['sale_price'] ?? json['price'])
+                  ?.toString() ??
+              '',
+        ) ??
+        0;
     final compareAt = double.tryParse(
-      json['compare_at_price']?.toString() ?? '',
+      (json['original_price'] ?? json['list_price'] ?? json['compare_at_price'])
+              ?.toString() ??
+          '',
     );
     final discount =
-        int.tryParse(json['discount_percent']?.toString() ?? '') ?? 0;
+        int.tryParse(
+          (json['discount_percentage'] ?? json['discount_percent'])
+                  ?.toString() ??
+              '',
+        ) ??
+        0;
     return CatalogProduct(
       id: json['id']?.toString() ?? '',
       name: json['name']?.toString() ?? '',

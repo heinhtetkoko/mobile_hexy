@@ -16,13 +16,14 @@ import 'package:mobile_hexy/presentation/controllers/product_list_binding.dart';
 import 'package:mobile_hexy/presentation/controllers/personal_information_binding.dart';
 import 'package:mobile_hexy/presentation/controllers/change_password_binding.dart';
 import 'package:mobile_hexy/presentation/controllers/splash_binding.dart';
+import 'package:mobile_hexy/presentation/controllers/shipping_addresses_binding.dart';
 import 'package:mobile_hexy/presentation/view/address_form_page.dart';
 import 'package:mobile_hexy/presentation/view/auth_pages.dart';
 import 'package:mobile_hexy/presentation/view/brands_page.dart';
 import 'package:mobile_hexy/presentation/view/categories_page.dart';
 import 'package:mobile_hexy/presentation/view/change_password_page.dart';
 import 'package:mobile_hexy/presentation/view/checkout_page.dart';
-import 'package:mobile_hexy/presentation/view/contact_us_page.dart';
+import 'package:mobile_hexy/presentation/view/support_content_page.dart';
 import 'package:mobile_hexy/presentation/view/main_view.dart';
 import 'package:mobile_hexy/presentation/view/my_orders_page.dart';
 import 'package:mobile_hexy/presentation/view/onboarding_page.dart';
@@ -31,6 +32,7 @@ import 'package:mobile_hexy/presentation/view/personal_information_page.dart';
 import 'package:mobile_hexy/presentation/view/product_detail_page.dart';
 import 'package:mobile_hexy/presentation/view/product_list_page.dart';
 import 'package:mobile_hexy/presentation/view/splash_page.dart';
+import 'package:mobile_hexy/presentation/view/shipping_addresses_page.dart';
 
 class HexyApp extends StatelessWidget {
   const HexyApp({super.key});
@@ -61,10 +63,15 @@ abstract final class AppRoutes {
   static const checkout = '/checkout';
   static const paymentSuccess = '/payment-success';
   static const addressForm = '/address';
+  static const shippingAddresses = '/shipping-addresses';
   static const productList = '/products';
   static const personalInformation = '/personal-information';
   static const changePassword = '/change-password';
   static const contactUs = '/contact-us';
+  static const faq = '/faq';
+  static const aboutUs = '/about-us';
+  static const privacyPolicy = '/privacy-policy';
+  static const termsConditions = '/terms-conditions';
   static const myOrders = '/my-orders';
   static const login = '/login';
   static const register = '/register';
@@ -118,6 +125,11 @@ abstract final class AppPages {
       binding: AddressFormBinding(),
     ),
     GetPage(
+      name: AppRoutes.shippingAddresses,
+      page: ShippingAddressesPage.new,
+      binding: ShippingAddressesBinding(),
+    ),
+    GetPage(
       name: AppRoutes.productList,
       page: ProductListPage.new,
       binding: ProductListBinding(),
@@ -132,7 +144,11 @@ abstract final class AppPages {
       page: ChangePasswordPage.new,
       binding: ChangePasswordBinding(),
     ),
-    GetPage(name: AppRoutes.contactUs, page: ContactUsPage.new),
+    GetPage(name: AppRoutes.contactUs, page: SupportContentPage.contact),
+    GetPage(name: AppRoutes.faq, page: SupportContentPage.faq),
+    GetPage(name: AppRoutes.aboutUs, page: SupportContentPage.about),
+    GetPage(name: AppRoutes.privacyPolicy, page: SupportContentPage.privacy),
+    GetPage(name: AppRoutes.termsConditions, page: SupportContentPage.terms),
     GetPage(
       name: AppRoutes.myOrders,
       page: MyOrdersPage.new,

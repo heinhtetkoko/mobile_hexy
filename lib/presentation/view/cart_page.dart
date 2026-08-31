@@ -30,34 +30,49 @@ class CartPage extends GetView<CartViewModel> {
           Obx(() => _CartHeader(count: controller.items.length)),
           Expanded(
             child: Obx(
-              () => controller.items.isEmpty
+              () => controller.isLoading.value && controller.items.isEmpty
+                  ? const Center(child: CircularProgressIndicator())
+                  : controller.errorMessage.value != null &&
+                        controller.items.isEmpty
+                  ? _CartError(
+                      message: controller.errorMessage.value!,
+                      onRetry: controller.loadCart,
+                    )
+                  : controller.items.isEmpty
                   ? const _EmptyCart()
-                  : ListView(
-                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
-                      children: [
-                        ...controller.items.map(
-                          (item) => Padding(
-                            padding: const EdgeInsets.only(bottom: 12),
-                            child: _CartItemCard(
-                              item: item,
-                              onIncrement: () => controller.increment(item),
-                              onDecrement: () => controller.decrement(item),
-                              onRemove: () => controller.remove(item),
+                  : RefreshIndicator(
+                      onRefresh: controller.loadCart,
+                      child: ListView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
+                        children: [
+                          ...controller.items.map(
+                            (item) => Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: _CartItemCard(
+                                item: item,
+                                onIncrement: () => controller.increment(item),
+                                onDecrement: () => controller.decrement(item),
+                                onRemove: () => controller.remove(item),
+                              ),
                             ),
                           ),
-                        ),
-                        _CouponCard(controller: controller),
-                        const SizedBox(height: 12),
-                        _OrderSummary(controller: controller),
-                        const SizedBox(height: 12),
-                        _AddressCard(
-                          onEdit: () => Get.toNamed<void>(
-                            '${AppRoutes.addressForm}?mode=edit',
+                          _CouponCard(controller: controller),
+                          const SizedBox(height: 12),
+                          _OrderSummary(controller: controller),
+                          const SizedBox(height: 12),
+                          _AddressCard(
+                            address: controller.shippingAddress.value,
+                            onEdit: () => Get.toNamed<dynamic>(
+                              AppRoutes.shippingAddresses,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 12),
-                        _ShippingMethod(controller: controller),
-                      ],
+                          if (controller.shippingMethods.isNotEmpty) ...[
+                            const SizedBox(height: 12),
+                            _ShippingMethod(controller: controller),
+                          ],
+                        ],
+                      ),
                     ),
             ),
           ),
@@ -85,13 +100,7 @@ class _CartHeader extends StatelessWidget {
     padding: const EdgeInsets.symmetric(horizontal: 16),
     decoration: BoxDecoration(
       color: Theme.of(context).colorScheme.surface,
-      boxShadow: [
-        BoxShadow(
-          color: Color(0x08000000),
-          blurRadius: 6,
-          offset: Offset(0, 4),
-        ),
-      ],
+      border: Border(bottom: BorderSide(color: Theme.of(context).dividerColor)),
     ),
     child: Row(
       children: [
@@ -167,12 +176,22 @@ class _CartItemCard extends StatelessWidget {
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(12),
-              child: Image.asset(
-                item.imageAsset,
-                width: 72,
-                height: 72,
-                fit: BoxFit.cover,
-              ),
+              child: item.imageUrl != null && item.imageUrl!.isNotEmpty
+                  ? Image.network(
+                      item.imageUrl!,
+                      width: 72,
+                      height: 72,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, _, _) => const _CartImageFallback(),
+                    )
+                  : item.imageAsset.isNotEmpty
+                  ? Image.asset(
+                      item.imageAsset,
+                      width: 72,
+                      height: 72,
+                      fit: BoxFit.cover,
+                    )
+                  : const _CartImageFallback(),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -397,48 +416,90 @@ class _OrderSummary extends StatelessWidget {
   final CartViewModel controller;
 
   @override
-  Widget build(BuildContext context) => _Panel(
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Order Summary'.tr,
-          style: TextStyle(
-            color: Theme.of(context).colorScheme.onSurface,
-            fontSize: 16,
-            fontWeight: FontWeight.w800,
+  Widget build(BuildContext context) => Obx(() {
+    final apiRows = controller.orderSummaryRows.toList(growable: false);
+    final rows = apiRows.isNotEmpty
+        ? apiRows
+        : [
+            CartSummaryRow(
+              key: 'subtotal',
+              label: 'Subtotal',
+              amount: controller.subtotal,
+              isTotal: false,
+              isDiscount: false,
+            ),
+            CartSummaryRow(
+              key: 'shipping',
+              label: 'Shipping',
+              amount: controller.shipping,
+              isTotal: false,
+              isDiscount: false,
+            ),
+            CartSummaryRow(
+              key: 'discount',
+              label: 'Discount',
+              amount: controller.discount,
+              isTotal: false,
+              isDiscount: true,
+            ),
+            CartSummaryRow(
+              key: 'grand_total',
+              label: 'Grand Total',
+              amount: controller.grandTotal,
+              isTotal: true,
+              isDiscount: false,
+            ),
+          ];
+    return _Panel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Order Summary'.tr,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface,
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
+            ),
           ),
-        ),
-        _SummaryRow('Subtotal', CartPage.money(controller.subtotal)),
-        _SummaryRow('Shipping', CartPage.money(controller.shipping)),
-        _SummaryRow(
-          'Discount',
-          '−${CartPage.money(controller.discount)}',
-          green: true,
-        ),
-        Padding(
-          padding: const EdgeInsets.only(top: 14),
-          child: Row(
-            children: [
-              Text(
-                'Grand Total'.tr,
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+          for (final row in rows.where((row) => !row.isTotal))
+            _SummaryRow(row.label, _summaryDisplay(row), green: row.isDiscount),
+          for (final row in rows.where((row) => row.isTotal))
+            Padding(
+              padding: const EdgeInsets.only(top: 14),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      row.label.tr,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    _summaryDisplay(row),
+                    style: const TextStyle(
+                      color: AppColors.primary,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
               ),
-              const Spacer(),
-              Text(
-                CartPage.money(controller.grandTotal),
-                style: TextStyle(
-                  color: AppColors.primary,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    ),
-  );
+            ),
+        ],
+      ),
+    );
+  });
+
+  String _summaryDisplay(CartSummaryRow row) {
+    final formatted = row.formattedValue?.trim();
+    if (formatted != null && formatted.isNotEmpty) return formatted;
+    final value = CartPage.money(row.amount.abs());
+    return row.isDiscount && row.amount != 0 ? '−$value' : value;
+  }
 }
 
 class _SummaryRow extends StatelessWidget {
@@ -478,7 +539,8 @@ class _SummaryRow extends StatelessWidget {
 }
 
 class _AddressCard extends StatelessWidget {
-  const _AddressCard({required this.onEdit});
+  const _AddressCard({required this.address, required this.onEdit});
+  final CartShippingAddress? address;
   final VoidCallback onEdit;
 
   @override
@@ -532,28 +594,34 @@ class _AddressCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'John Smith'.tr,
+                      address?.name.isNotEmpty == true
+                          ? address!.name
+                          : 'Select a shipping address'.tr,
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
-                    SizedBox(height: 4),
-                    Text(
-                      '09-123456789'.tr,
-                      style: TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 12,
+                    if (address?.phone.isNotEmpty == true) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        address!.phone,
+                        style: const TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 12,
+                        ),
                       ),
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      'No.25, Main Street, Sanchaung Township, Yangon'.tr,
-                      style: TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 12,
+                    ],
+                    if (address?.address.isNotEmpty == true) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        address!.address,
+                        style: const TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 12,
+                        ),
                       ),
-                    ),
+                    ],
                   ],
                 ),
               ),
@@ -590,20 +658,20 @@ class _ShippingMethod extends StatelessWidget {
         const SizedBox(height: 12),
         Obx(
           () => Column(
-            children: [
-              _MethodTile(
-                selected: controller.deliverySelected.value,
-                title: 'Delivery',
-                subtitle: 'Est. 2-3 days',
-                price: '3,000 Ks',
-                onTap: () => controller.deliverySelected.value = true,
-              ),
-              _MethodTile(
-                selected: !controller.deliverySelected.value,
-                title: 'Pickup at Store',
-                onTap: () => controller.deliverySelected.value = false,
-              ),
-            ],
+            children: controller.shippingMethods
+                .map(
+                  (method) => _MethodTile(
+                    selected:
+                        controller.selectedShippingMethodId.value == method.id,
+                    title: method.name,
+                    subtitle: method.description,
+                    price: method.price > 0
+                        ? CartPage.money(method.price)
+                        : null,
+                    onTap: () => controller.selectShippingMethod(method),
+                  ),
+                )
+                .toList(),
           ),
         ),
       ],
@@ -784,6 +852,50 @@ class _EmptyCart extends StatelessWidget {
           ),
         ),
       ],
+    ),
+  );
+}
+
+class _CartImageFallback extends StatelessWidget {
+  const _CartImageFallback();
+
+  @override
+  Widget build(BuildContext context) => Container(
+    width: 72,
+    height: 72,
+    color: const Color(0xFFF3F4F6),
+    alignment: Alignment.center,
+    child: const Icon(
+      Icons.inventory_2_outlined,
+      color: Color(0xFF9CA3AF),
+      size: 28,
+    ),
+  );
+}
+
+class _CartError extends StatelessWidget {
+  const _CartError({required this.message, required this.onRetry});
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) => Center(
+    child: Padding(
+      padding: const EdgeInsets.all(28),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            Icons.cloud_off_outlined,
+            color: Color(0xFF9CA3AF),
+            size: 52,
+          ),
+          const SizedBox(height: 12),
+          Text(message, textAlign: TextAlign.center),
+          const SizedBox(height: 16),
+          FilledButton(onPressed: onRetry, child: const Text('Try Again')),
+        ],
+      ),
     ),
   );
 }

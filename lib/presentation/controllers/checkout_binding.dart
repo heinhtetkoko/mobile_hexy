@@ -6,7 +6,7 @@ class CheckoutBinding extends Bindings {
   @override
   void dependencies() {
     if (!Get.isRegistered<CartViewModel>()) {
-      Get.lazyPut(CartViewModel.new);
+      Get.put(CartViewModel(Get.find()), permanent: true);
     }
     Get.lazyPut(() => CheckoutViewModel(Get.find()));
   }

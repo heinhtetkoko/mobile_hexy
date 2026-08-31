@@ -9,8 +9,8 @@ class ApiLogInterceptor extends Interceptor {
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
     debugPrint('┌── API REQUEST ─────────────────────────────');
     debugPrint('│ ${options.method} ${options.uri}');
-    debugPrint('│ Headers: ${_encode(options.headers)}');
-    debugPrint('│ Body: ${_encode(options.data)}');
+    debugPrint('│ Headers: ${_encode(_redact(options.headers))}');
+    debugPrint('│ Body: ${_encode(_redact(options.data))}');
     debugPrint('└────────────────────────────────────────────');
     handler.next(options);
   }
@@ -35,8 +35,10 @@ class ApiLogInterceptor extends Interceptor {
     debugPrint('│ Type: ${err.type.name}');
     debugPrint('│ Message: ${err.message ?? 'none'}');
     debugPrint('│ Cause: ${err.error ?? 'none'}');
-    debugPrint('│ Request headers: ${_encode(err.requestOptions.headers)}');
-    debugPrint('│ Request body: ${_encode(err.requestOptions.data)}');
+    debugPrint(
+      '│ Request headers: ${_encode(_redact(err.requestOptions.headers))}',
+    );
+    debugPrint('│ Request body: ${_encode(_redact(err.requestOptions.data))}');
     debugPrint('│ Response body: ${_encode(err.response?.data)}');
     debugPrint('└────────────────────────────────────────────');
     handler.next(err);
@@ -49,5 +51,27 @@ class ApiLogInterceptor extends Interceptor {
     } on JsonUnsupportedObjectError {
       return value.toString();
     }
+  }
+
+  Object? _redact(Object? value) {
+    if (value is Map) {
+      return value.map((key, item) {
+        final normalizedKey = key.toString().toLowerCase();
+        const sensitiveKeys = {
+          'authorization',
+          'password',
+          'access_token',
+          'refresh_token',
+          'id_token',
+          'token',
+        };
+        return MapEntry(
+          key,
+          sensitiveKeys.contains(normalizedKey) ? '***' : _redact(item),
+        );
+      });
+    }
+    if (value is List) return value.map(_redact).toList(growable: false);
+    return value;
   }
 }

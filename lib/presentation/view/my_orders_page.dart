@@ -137,31 +137,21 @@ class MyOrdersPage extends GetView<MyOrdersViewModel> {
             Expanded(
               child: orders.isEmpty
                   ? _EmptyOrders(query: controller.searchQuery.value)
-                  : ListView.separated(
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
-                      itemCount: orders.length + 1,
-                      separatorBuilder: (_, _) => const SizedBox(height: 12),
-                      itemBuilder: (_, index) {
-                        if (index == orders.length) {
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(
-                              vertical: 28,
-                              horizontal: 64,
-                            ),
-                            child: OutlinedButton(
-                              onPressed: controller.loadMore,
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: colors.primary,
-                                side: BorderSide(color: colors.primary),
-                                shape: const StadiumBorder(),
-                                minimumSize: const Size.fromHeight(44),
-                              ),
-                              child: Text('Load More Orders'.tr),
-                            ),
-                          );
+                  : NotificationListener<ScrollNotification>(
+                      onNotification: (notification) {
+                        if (controller.hasMoreOrders &&
+                            notification.metrics.extentAfter < 240) {
+                          controller.loadMore();
                         }
-                        return _OrderCard(order: orders[index]);
+                        return false;
                       },
+                      child: ListView.separated(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
+                        itemCount: orders.length,
+                        separatorBuilder: (_, _) => const SizedBox(height: 12),
+                        itemBuilder: (_, index) =>
+                            _OrderCard(order: orders[index]),
+                      ),
                     ),
             ),
           ],

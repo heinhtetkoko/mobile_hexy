@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:mobile_hexy/core/theme/app_colors.dart';
 import 'package:mobile_hexy/presentation/viewmodel/change_password_view_model.dart';
+import 'package:mobile_hexy/presentation/widgets/clean_app_bar.dart';
 
 class ChangePasswordPage extends GetView<ChangePasswordViewModel> {
   const ChangePasswordPage({super.key});
@@ -9,7 +10,7 @@ class ChangePasswordPage extends GetView<ChangePasswordViewModel> {
   @override
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-    appBar: const _ChildBar2(),
+    appBar: const CleanAppBar(title: 'Change Password'),
     body: Obx(() {
       controller.revision.value;
       final strength = controller.strength;
@@ -203,33 +204,6 @@ class _Req extends StatelessWidget {
           style: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 12),
         ),
       ],
-    ),
-  );
-}
-
-class _ChildBar2 extends StatelessWidget implements PreferredSizeWidget {
-  const _ChildBar2();
-  @override
-  Size get preferredSize => const Size.fromHeight(56);
-  @override
-  Widget build(BuildContext context) => AppBar(
-    backgroundColor: Colors.white,
-    surfaceTintColor: Colors.white,
-    centerTitle: true,
-    leading: Padding(
-      padding: const EdgeInsets.all(10),
-      child: Material(
-        color: AppColors.surface,
-        shape: const CircleBorder(),
-        child: IconButton(
-          onPressed: Get.back,
-          icon: const Icon(Icons.chevron_left),
-        ),
-      ),
-    ),
-    title: Text(
-      'Change Password'.tr,
-      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
     ),
   );
 }

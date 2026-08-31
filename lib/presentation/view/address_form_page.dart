@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:mobile_hexy/core/theme/app_colors.dart';
 import 'package:mobile_hexy/presentation/viewmodel/address_form_view_model.dart';
+import 'package:mobile_hexy/presentation/widgets/clean_app_bar.dart';
 
 class AddressFormPage extends GetView<AddressFormViewModel> {
   const AddressFormPage({super.key});
@@ -11,16 +12,29 @@ class AddressFormPage extends GetView<AddressFormViewModel> {
   @override
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+    appBar: CleanAppBar(
+      title: controller.isEditing ? 'Edit Address' : 'New Address',
+    ),
     body: SafeArea(
       bottom: false,
       child: Column(
         children: [
-          _Header(isEditing: controller.isEditing),
           Expanded(
             child: ListView(
               keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
               padding: const EdgeInsets.all(16),
               children: [
+                _TextField(
+                  label: 'Address Name*',
+                  controller: controller.nameController,
+                ),
+                const SizedBox(height: 16),
+                _TextField(
+                  label: 'Phone Number*',
+                  controller: controller.phoneController,
+                  keyboardType: TextInputType.phone,
+                ),
+                const SizedBox(height: 24),
                 Text(
                   'Address Type'.tr,
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
@@ -78,8 +92,12 @@ class AddressFormPage extends GetView<AddressFormViewModel> {
                   () => _DropdownField(
                     label: 'State / Region*',
                     value: controller.region.value,
-                    items: AddressFormViewModel.regions,
-                    onChanged: (value) => controller.region.value = value!,
+                    items: {
+                      ...controller.states.map((item) => item.name),
+                      if (controller.region.value != null)
+                        controller.region.value!,
+                    }.toList(),
+                    onChanged: controller.selectRegion,
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -88,7 +106,11 @@ class AddressFormPage extends GetView<AddressFormViewModel> {
                     label: 'City / Township*',
                     value: controller.township.value,
                     hint: 'Select township',
-                    items: AddressFormViewModel.townships,
+                    items: {
+                      ...controller.cities.map((item) => item.name),
+                      if (controller.township.value != null)
+                        controller.township.value!,
+                    }.toList(),
                     onChanged: (value) => controller.township.value = value,
                   ),
                 ),
@@ -168,80 +190,43 @@ class AddressFormPage extends GetView<AddressFormViewModel> {
             child: SizedBox(
               width: double.infinity,
               height: 52,
-              child: FilledButton.icon(
-                key: const Key('save-address'),
-                onPressed: controller.save,
-                style: FilledButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  shape: const StadiumBorder(),
-                  textStyle: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
+              child: Obx(
+                () => FilledButton.icon(
+                  key: const Key('save-address'),
+                  onPressed: controller.isSaving.value ? null : controller.save,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    shape: const StadiumBorder(),
+                    textStyle: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
-                ),
-                iconAlignment: IconAlignment.end,
-                icon: Icon(Icons.check_rounded, size: 18),
-                label: Text(
-                  controller.isEditing ? 'Update Address' : 'Save Address',
+                  iconAlignment: IconAlignment.end,
+                  icon: controller.isSaving.value
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Icon(Icons.check_rounded, size: 18),
+                  label: Text(
+                    controller.isSaving.value
+                        ? 'Saving...'
+                        : controller.isEditing
+                        ? 'Update Address'
+                        : 'Save Address',
+                  ),
                 ),
               ),
             ),
           ),
         ],
       ),
-    ),
-  );
-}
-
-class _Header extends StatelessWidget {
-  const _Header({required this.isEditing});
-  final bool isEditing;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    height: 56,
-    padding: const EdgeInsets.symmetric(horizontal: 16),
-    decoration: BoxDecoration(
-      color: Theme.of(context).colorScheme.surface,
-      boxShadow: [
-        BoxShadow(
-          color: Color(0x08000000),
-          blurRadius: 6,
-          offset: Offset(0, 4),
-        ),
-      ],
-    ),
-    child: Row(
-      children: [
-        SizedBox(
-          width: 70,
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: Material(
-              color: AppColors.surface,
-              shape: const CircleBorder(),
-              child: IconButton(
-                key: const Key('address-back'),
-                onPressed: Get.back,
-                icon: Icon(Icons.arrow_back_rounded, size: 18),
-              ),
-            ),
-          ),
-        ),
-        Expanded(
-          child: Text(
-            isEditing ? 'Edit Address' : 'New Address',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.onSurface,
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ),
-        const SizedBox(width: 70),
-      ],
     ),
   );
 }
@@ -300,11 +285,13 @@ class _TextField extends StatelessWidget {
     required this.controller,
     this.minLines = 1,
     this.maxLines = 1,
+    this.keyboardType,
   });
   final String label;
   final TextEditingController controller;
   final int minLines;
   final int maxLines;
+  final TextInputType? keyboardType;
 
   @override
   Widget build(BuildContext context) => Column(
@@ -323,6 +310,7 @@ class _TextField extends StatelessWidget {
         controller: controller,
         minLines: minLines,
         maxLines: maxLines,
+        keyboardType: keyboardType,
         style: TextStyle(
           color: Theme.of(context).colorScheme.onSurface,
           fontSize: 14,

@@ -5,11 +5,16 @@ import 'package:mobile_hexy/data/datasources/category_products_remote_data_sourc
 import 'package:mobile_hexy/data/datasources/best_sellers_remote_data_source.dart';
 import 'package:mobile_hexy/data/datasources/home_products_remote_data_source.dart';
 import 'package:mobile_hexy/data/datasources/new_arrivals_remote_data_source.dart';
+import 'package:mobile_hexy/data/datasources/brands_remote_data_source.dart';
+import 'package:mobile_hexy/data/datasources/categories_remote_data_source.dart';
+import 'package:mobile_hexy/data/datasources/cart_remote_data_source.dart';
+import 'package:mobile_hexy/data/datasources/wishlist_remote_data_source.dart';
 import 'package:mobile_hexy/core/networks/api_endpoints.dart';
 import 'package:mobile_hexy/data/models/catalog_category.dart';
 import 'package:mobile_hexy/data/models/catalog_product.dart';
 import 'package:mobile_hexy/data/models/product_list_request.dart';
 import 'package:mobile_hexy/data/models/home_catalog.dart';
+import 'package:mobile_hexy/data/models/catalog_brand.dart';
 
 class ProductListViewModel extends BaseViewModel {
   ProductListViewModel(
@@ -17,26 +22,35 @@ class ProductListViewModel extends BaseViewModel {
     this._bestSellersDataSource,
     this._newArrivalsDataSource,
     this._homeProductsDataSource,
+    this._cartRemoteDataSource,
+    this._wishlistRemoteDataSource,
   );
 
   final CategoryProductsRemoteDataSource _remoteDataSource;
   final BestSellersRemoteDataSource _bestSellersDataSource;
   final NewArrivalsRemoteDataSource _newArrivalsDataSource;
   final HomeProductsRemoteDataSource _homeProductsDataSource;
+  final CartRemoteDataSource _cartRemoteDataSource;
+  final WishlistRemoteDataSource _wishlistRemoteDataSource;
   static const pageLimit = 10;
 
   final query = ''.obs;
   final searching = false.obs;
   final sortLabel = 'Sort by'.obs;
   final pendingSort = 'Default Sorting'.obs;
-  final activeFilters = 3.obs;
+  final activeFilters = 0.obs;
   final selectedCategory = ''.obs;
   final pendingCategory = ''.obs;
   final selectedBrands = <String>{}.obs;
   final pendingBrands = <String>{}.obs;
-  final priceRange = const RangeValues(1000, 10000).obs;
-  final pendingPriceRange = const RangeValues(1000, 10000).obs;
+  final priceRange = const RangeValues(0, 15000).obs;
+  final pendingPriceRange = const RangeValues(0, 15000).obs;
+  final inStockOnly = false.obs;
+  final pendingInStockOnly = false.obs;
+  final filterCategories = <CatalogCategory>[].obs;
+  final filterBrands = <CatalogBrand>[].obs;
   final favorites = <String>{}.obs;
+  final addingToCartIds = <String>{}.obs;
   final products = <CatalogProduct>[].obs;
   final isLoading = false.obs;
   final isLoadingMore = false.obs;
@@ -50,6 +64,7 @@ class ProductListViewModel extends BaseViewModel {
   @override
   void onInit() {
     super.onInit();
+    _loadFilterOptions();
     final category = Get.arguments;
     if (category is CatalogCategory) {
       _categoryId = category.id;
@@ -79,6 +94,19 @@ class ProductListViewModel extends BaseViewModel {
       loadProducts();
     } else {
       errorMessage.value = 'No category selected.';
+    }
+  }
+
+  Future<void> _loadFilterOptions() async {
+    try {
+      final results = await Future.wait([
+        Get.find<CategoriesRemoteDataSource>().fetchCategories(),
+        Get.find<BrandsRemoteDataSource>().fetchBrands(),
+      ]);
+      filterCategories.assignAll(results[0] as List<CatalogCategory>);
+      filterBrands.assignAll(results[1] as List<CatalogBrand>);
+    } catch (_) {
+      // Product loading remains available if filter metadata cannot be loaded.
     }
   }
 
@@ -205,14 +233,51 @@ class ProductListViewModel extends BaseViewModel {
     }).toList();
   }
 
-  void toggleFavorite(String id) =>
-      favorites.contains(id) ? favorites.remove(id) : favorites.add(id);
+  Future<void> toggleFavorite(String id) async {
+    final productId = int.tryParse(id);
+    if (productId == null || productId <= 0) return;
+    try {
+      final result = await _wishlistRemoteDataSource.toggle(productId);
+      final active = result.items.any((item) => item.productId == productId);
+      active ? favorites.add(id) : favorites.remove(id);
+    } catch (error) {
+      if (Get.currentRoute != '/login') {
+        Get.snackbar(
+          'Could not update wishlist',
+          error.toString().replaceFirst('Exception: ', ''),
+          snackPosition: SnackPosition.BOTTOM,
+        );
+      }
+    }
+  }
 
-  void addToCart(CatalogProduct product) => Get.snackbar(
-    'Added to cart',
-    product.name,
-    snackPosition: SnackPosition.BOTTOM,
-  );
+  Future<void> addToCart(CatalogProduct product) async {
+    final productId = int.tryParse(product.id);
+    if (productId == null ||
+        productId <= 0 ||
+        addingToCartIds.contains(product.id)) {
+      return;
+    }
+    addingToCartIds.add(product.id);
+    try {
+      await _cartRemoteDataSource.addProduct(productId: productId, quantity: 1);
+      Get.snackbar(
+        'Added to cart',
+        product.name,
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    } catch (error) {
+      if (Get.currentRoute != '/login') {
+        Get.snackbar(
+          'Could not add to cart',
+          error.toString().replaceFirst('Exception: ', ''),
+          snackPosition: SnackPosition.BOTTOM,
+        );
+      }
+    } finally {
+      addingToCartIds.remove(product.id);
+    }
+  }
 
   void beginSort() {
     pendingSort.value = sortLabel.value == 'Sort by'
@@ -220,38 +285,46 @@ class ProductListViewModel extends BaseViewModel {
         : sortLabel.value;
   }
 
-  void applySort() {
+  Future<void> applySort() async {
     sortLabel.value = pendingSort.value == 'Default Sorting'
         ? 'Sort by'
         : pendingSort.value;
     Get.back<void>();
+    await loadProducts();
   }
 
   void beginFilter() {
     pendingCategory.value = selectedCategory.value;
     pendingBrands.assignAll(selectedBrands);
     pendingPriceRange.value = priceRange.value;
+    pendingInStockOnly.value = inStockOnly.value;
   }
 
   void togglePendingBrand(String brand) => pendingBrands.contains(brand)
       ? pendingBrands.remove(brand)
-      : pendingBrands.add(brand);
+      : pendingBrands.assignAll([brand]);
 
   void resetPendingFilters() {
     pendingCategory.value = '';
     pendingBrands.clear();
     pendingPriceRange.value = const RangeValues(0, 15000);
+    pendingInStockOnly.value = false;
   }
 
   int get pendingFilterCount =>
-      (pendingCategory.value.isEmpty ? 0 : 1) + pendingBrands.length;
+      (pendingCategory.value.isEmpty ? 0 : 1) +
+      pendingBrands.length +
+      (pendingPriceRange.value == const RangeValues(0, 15000) ? 0 : 1) +
+      (pendingInStockOnly.value ? 1 : 0);
 
-  void applyFilters() {
+  Future<void> applyFilters() async {
     selectedCategory.value = pendingCategory.value;
     selectedBrands.assignAll(pendingBrands);
     priceRange.value = pendingPriceRange.value;
+    inStockOnly.value = pendingInStockOnly.value;
     activeFilters.value = pendingFilterCount;
     Get.back<void>();
+    await loadProducts();
   }
 
   Future<void> loadMore() async {
@@ -322,8 +395,20 @@ class ProductListViewModel extends BaseViewModel {
         );
         return _catalogResult(result.products, result.page, result.hasNext);
       case ProductListMode.search:
-        final result = await _remoteDataSource.searchProducts(
+        final selectedCategoryId = filterCategories
+            .firstWhereOrNull((item) => item.name == selectedCategory.value)
+            ?.id;
+        final selectedBrandId = filterBrands
+            .firstWhereOrNull((item) => selectedBrands.contains(item.name))
+            ?.id;
+        final result = await _remoteDataSource.fetchAllProducts(
           query: query.value.trim(),
+          categoryId: selectedCategoryId,
+          brandId: selectedBrandId,
+          minPrice: priceRange.value.start <= 0 ? null : priceRange.value.start,
+          maxPrice: priceRange.value.end >= 15000 ? null : priceRange.value.end,
+          inStock: inStockOnly.value ? true : null,
+          sort: _sortValue,
           page: page,
           limit: pageLimit,
         );
@@ -334,6 +419,16 @@ class ProductListViewModel extends BaseViewModel {
         );
     }
   }
+
+  String get _sortValue => switch (sortLabel.value) {
+    'Popular' => 'popular',
+    'New Arrivals' => 'new_arrivals',
+    'Price: Low to High' => 'price_asc',
+    'Price: High to Low' => 'price_desc',
+    'Biggest Discount' => 'highest_discount',
+    'A–Z' => 'name',
+    _ => 'default',
+  };
 
   ({List<CatalogProduct> products, int page, bool hasNext}) _catalogResult(
     List<HomeProduct> products,

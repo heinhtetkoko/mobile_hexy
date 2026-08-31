@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:mobile_hexy/core/theme/app_colors.dart';
 import 'package:mobile_hexy/presentation/viewmodel/personal_information_view_model.dart';
+import 'package:mobile_hexy/presentation/widgets/clean_app_bar.dart';
 
 class PersonalInformationPage extends GetView<PersonalInformationViewModel> {
   const PersonalInformationPage({super.key});
@@ -11,7 +12,7 @@ class PersonalInformationPage extends GetView<PersonalInformationViewModel> {
   @override
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-    appBar: const _ChildBar(title: 'Personal Information'),
+    appBar: const CleanAppBar(title: 'Personal Information'),
     body: Obx(() {
       if (controller.isLoading.value) {
         return const Center(child: CircularProgressIndicator());
@@ -234,34 +235,6 @@ class _Field extends StatelessWidget {
             ),
           ),
       ],
-    ),
-  );
-}
-
-class _ChildBar extends StatelessWidget implements PreferredSizeWidget {
-  const _ChildBar({required this.title});
-  final String title;
-  @override
-  Size get preferredSize => const Size.fromHeight(56);
-  @override
-  Widget build(BuildContext context) => AppBar(
-    backgroundColor: Colors.white,
-    surfaceTintColor: Colors.white,
-    centerTitle: true,
-    leading: Padding(
-      padding: const EdgeInsets.all(10),
-      child: Material(
-        color: AppColors.surface,
-        shape: const CircleBorder(),
-        child: IconButton(
-          onPressed: Get.back,
-          icon: const Icon(Icons.chevron_left),
-        ),
-      ),
-    ),
-    title: Text(
-      title.tr,
-      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
     ),
   );
 }

@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:mobile_hexy/core/networks/api_endpoints.dart';
 import 'package:mobile_hexy/core/networks/api_service.dart';
 import 'package:mobile_hexy/data/models/catalog_category.dart';
@@ -10,6 +11,7 @@ class CategoriesRemoteDataSource {
   Future<List<CatalogCategory>> fetchCategories({String? path}) async {
     final response = await _apiService.get<dynamic>(
       path ?? ApiEndpoints.categories,
+      options: Options(extra: const {ApiEndpoints.requiresAuthKey: false}),
     );
     final body = response.data;
     if (body is! Map || body['success'] != true) {

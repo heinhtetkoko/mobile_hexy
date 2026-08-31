@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:mobile_hexy/core/networks/api_endpoints.dart';
 import 'package:mobile_hexy/core/networks/api_service.dart';
 import 'package:mobile_hexy/data/models/catalog_brand.dart';
@@ -8,7 +9,10 @@ class BrandsRemoteDataSource {
   final ApiService _apiService;
 
   Future<List<CatalogBrand>> fetchBrands() async {
-    final response = await _apiService.get<dynamic>(ApiEndpoints.brands);
+    final response = await _apiService.get<dynamic>(
+      ApiEndpoints.brands,
+      options: Options(extra: const {ApiEndpoints.requiresAuthKey: false}),
+    );
     final body = response.data;
     if (body is! Map || body['success'] != true) {
       throw const FormatException('Could not load brands.');

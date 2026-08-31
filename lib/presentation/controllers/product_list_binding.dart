@@ -5,8 +5,14 @@ class ProductListBinding extends Bindings {
   @override
   void dependencies() {
     Get.lazyPut(
-      () =>
-          ProductListViewModel(Get.find(), Get.find(), Get.find(), Get.find()),
+      () => ProductListViewModel(
+        Get.find(),
+        Get.find(),
+        Get.find(),
+        Get.find(),
+        Get.find(),
+        Get.find(),
+      ),
     );
   }
 }

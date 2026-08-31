@@ -75,10 +75,28 @@ class AuthViewModel extends BaseViewModel {
         await _secureStorage.remove(AppConstants.rememberedPasswordKey);
       }
       final loginArguments = Get.arguments;
+      final returnProductId = loginArguments is Map
+          ? int.tryParse(loginArguments['returnProductId']?.toString() ?? '')
+          : null;
+      if (returnProductId != null && returnProductId > 0) {
+        final productArguments = <String, Object?>{
+          'productId': returnProductId,
+          'pendingAction': loginArguments['pendingAction'],
+          'quantity': loginArguments['quantity'],
+        };
+        Get.offAllNamed<dynamic>(AppRoutes.home);
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          Get.toNamed<dynamic>(
+            AppRoutes.productDetail,
+            arguments: productArguments,
+          );
+        });
+        return;
+      }
       final tabIndex = loginArguments is Map
           ? loginArguments['tabIndex']
           : null;
-      Get.offAllNamed<void>(
+      await Get.offAllNamed<dynamic>(
         AppRoutes.home,
         arguments: tabIndex is int ? {'tabIndex': tabIndex} : null,
       );
@@ -111,7 +129,7 @@ class AuthViewModel extends BaseViewModel {
         email: email.text.trim(),
         password: password.text,
       );
-      Get.offAllNamed<void>(AppRoutes.home);
+      await Get.offAllNamed<dynamic>(AppRoutes.home);
     } on ServerException catch (error) {
       _message(error.message);
     } catch (_) {

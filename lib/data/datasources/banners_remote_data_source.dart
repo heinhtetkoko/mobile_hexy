@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:mobile_hexy/core/networks/api_endpoints.dart';
 import 'package:mobile_hexy/core/networks/api_service.dart';
 import 'package:mobile_hexy/data/models/home_catalog.dart';
@@ -8,7 +9,10 @@ class BannersRemoteDataSource {
   final ApiService _apiService;
 
   Future<List<HomeBanner>> fetchBanners() async {
-    final response = await _apiService.get<dynamic>(ApiEndpoints.banners);
+    final response = await _apiService.get<dynamic>(
+      ApiEndpoints.banners,
+      options: Options(extra: const {ApiEndpoints.requiresAuthKey: false}),
+    );
     final body = response.data;
     if (body is! Map || body['success'] == false || body['data'] is! List) {
       throw const FormatException('Could not load banners.');

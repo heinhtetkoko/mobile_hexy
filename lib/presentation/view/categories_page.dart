@@ -85,17 +85,11 @@ class _Header extends StatelessWidget {
     padding: const EdgeInsets.symmetric(horizontal: 16),
     decoration: BoxDecoration(
       color: Theme.of(context).colorScheme.surface,
-      boxShadow: [
-        BoxShadow(
-          color: Color(0x0D000000),
-          blurRadius: 5,
-          offset: Offset(0, 2),
-        ),
-      ],
+      border: Border(bottom: BorderSide(color: Theme.of(context).dividerColor)),
     ),
     child: Row(
       children: [
-        const SizedBox(width: 32),
+        const SizedBox(width: 70),
         Expanded(
           child: Center(
             child: Text(
@@ -108,45 +102,9 @@ class _Header extends StatelessWidget {
             ),
           ),
         ),
-        const _CartIcon(),
+        const SizedBox(width: 70),
       ],
     ),
-  );
-}
-
-class _CartIcon extends StatelessWidget {
-  const _CartIcon();
-  @override
-  Widget build(BuildContext context) => Stack(
-    clipBehavior: Clip.none,
-    children: [
-      Icon(
-        Icons.shopping_cart_outlined,
-        size: 25,
-        color: Theme.of(context).colorScheme.onSurface,
-      ),
-      Positioned(
-        right: -7,
-        top: -7,
-        child: Container(
-          width: 16,
-          height: 16,
-          alignment: Alignment.center,
-          decoration: const BoxDecoration(
-            color: Color(0xFFDB2777),
-            shape: BoxShape.circle,
-          ),
-          child: Text(
-            '2'.tr,
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 10,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ),
-      ),
-    ],
   );
 }
 

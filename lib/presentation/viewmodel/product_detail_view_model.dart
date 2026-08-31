@@ -1,12 +1,24 @@
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:mobile_hexy/core/base/base_view_model.dart';
+import 'package:mobile_hexy/app.dart';
+import 'package:mobile_hexy/core/services/app_constants.dart';
+import 'package:mobile_hexy/core/services/secure_storage.dart';
 import 'package:mobile_hexy/data/datasources/product_detail_remote_data_source.dart';
+import 'package:mobile_hexy/data/datasources/cart_remote_data_source.dart';
+import 'package:mobile_hexy/data/datasources/wishlist_remote_data_source.dart';
 import 'package:mobile_hexy/data/models/product_detail.dart';
 
 class ProductDetailViewModel extends BaseViewModel {
-  ProductDetailViewModel(this._remoteDataSource);
+  ProductDetailViewModel(
+    this._remoteDataSource,
+    this._cartRemoteDataSource,
+    this._wishlistRemoteDataSource,
+  );
 
   final ProductDetailRemoteDataSource _remoteDataSource;
+  final CartRemoteDataSource _cartRemoteDataSource;
+  final WishlistRemoteDataSource _wishlistRemoteDataSource;
   final selectedImage = 0.obs;
   final selectedVariantId = RxnInt();
   final selectedVariantValues = <String, int>{}.obs;
@@ -14,15 +26,23 @@ class ProductDetailViewModel extends BaseViewModel {
   final isFavorite = false.obs;
   final product = Rxn<ProductDetail>();
   final isLoading = false.obs;
+  final isAddingToCart = false.obs;
+  final isUpdatingWishlist = false.obs;
+  final scrollController = ScrollController();
+  bool _resumedPendingAction = false;
 
   @override
   void onInit() {
     super.onInit();
-    loadProduct();
+    loadProduct().then((_) => _resumePendingAction());
   }
 
-  Future<void> loadProduct() async {
-    final id = int.tryParse(Get.arguments?.toString() ?? '');
+  Future<void> loadProduct({int? productId}) async {
+    final arguments = Get.arguments;
+    final argumentProductId = arguments is Map
+        ? int.tryParse(arguments['productId']?.toString() ?? '')
+        : int.tryParse(arguments?.toString() ?? '');
+    final id = productId ?? argumentProductId;
     if (id == null || id <= 0) {
       errorMessage.value = 'No product selected.';
       return;
@@ -54,12 +74,36 @@ class ProductDetailViewModel extends BaseViewModel {
                 section.values.firstWhere((value) => value.available).id,
       });
       quantity.value = result.defaultQuantity;
+      if (arguments is Map && arguments['quantity'] is int) {
+        quantity.value = (arguments['quantity'] as int).clamp(
+          result.quantityMin,
+          result.quantityMax,
+        );
+      }
       isFavorite.value = result.wishlist;
     } catch (_) {
       errorMessage.value = 'Could not load product details. Please try again.';
     } finally {
       isLoading.value = false;
     }
+  }
+
+  Future<void> openProduct(int id) async {
+    if (id <= 0 || product.value?.id == id) return;
+    await loadProduct(productId: id);
+    if (scrollController.hasClients) {
+      await scrollController.animateTo(
+        0,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    }
+  }
+
+  @override
+  void onClose() {
+    scrollController.dispose();
+    super.onClose();
   }
 
   void increment() {
@@ -80,5 +124,87 @@ class ProductDetailViewModel extends BaseViewModel {
     if (!value.available) return;
     selectedVariantValues[sectionKey] = value.id;
     if (value.variantId != null) selectedVariantId.value = value.variantId;
+  }
+
+  Future<void> addToCart() async {
+    final detail = product.value;
+    if (detail == null || isAddingToCart.value) return;
+    if (!await _ensureAuthenticated('add_to_cart')) return;
+    isAddingToCart.value = true;
+    try {
+      await _cartRemoteDataSource.addProduct(
+        productId: detail.id,
+        quantity: quantity.value,
+      );
+      Get.snackbar(
+        'Added to cart',
+        '${detail.name} × ${quantity.value}',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    } catch (error) {
+      if (Get.currentRoute != '/login') {
+        Get.snackbar(
+          'Could not add to cart',
+          error.toString().replaceFirst('Exception: ', ''),
+          snackPosition: SnackPosition.BOTTOM,
+        );
+      }
+    } finally {
+      isAddingToCart.value = false;
+    }
+  }
+
+  Future<void> toggleWishlist() async {
+    final detail = product.value;
+    if (detail == null || isUpdatingWishlist.value) return;
+    if (!await _ensureAuthenticated('wishlist')) return;
+    isUpdatingWishlist.value = true;
+    try {
+      final result = await _wishlistRemoteDataSource.toggle(detail.id);
+      isFavorite.value = result.items.any(
+        (item) => item.productId == detail.id,
+      );
+    } catch (error) {
+      if (Get.currentRoute != '/login') {
+        Get.snackbar(
+          'Could not update wishlist',
+          error.toString().replaceFirst('Exception: ', ''),
+          snackPosition: SnackPosition.BOTTOM,
+        );
+      }
+    } finally {
+      isUpdatingWishlist.value = false;
+    }
+  }
+
+  Future<bool> _ensureAuthenticated(String pendingAction) async {
+    final token = await Get.find<SecureStorage>().read(
+      AppConstants.accessTokenKey,
+    );
+    if (token != null && token.trim().isNotEmpty) return true;
+    final detail = product.value;
+    if (detail == null) return false;
+    await Get.toNamed<dynamic>(
+      AppRoutes.login,
+      arguments: {
+        'returnProductId': detail.id,
+        'pendingAction': pendingAction,
+        'quantity': quantity.value,
+      },
+    );
+    return false;
+  }
+
+  Future<void> _resumePendingAction() async {
+    if (_resumedPendingAction || product.value == null) return;
+    _resumedPendingAction = true;
+    final arguments = Get.arguments;
+    if (arguments is! Map) return;
+    switch (arguments['pendingAction']) {
+      case 'add_to_cart':
+        await addToCart();
+      case 'wishlist':
+        await toggleWishlist();
+    }
   }
 }

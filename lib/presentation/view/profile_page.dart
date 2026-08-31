@@ -176,7 +176,7 @@ class _ProfileAppBar extends StatelessWidget {
     ),
     child: Row(
       children: [
-        const SizedBox(width: 80),
+        const SizedBox(width: 40),
         Expanded(
           child: Text(
             'My Profile'.tr,
@@ -188,20 +188,10 @@ class _ProfileAppBar extends StatelessWidget {
             ),
           ),
         ),
-        Row(
-          children: [
-            _RoundAction(
-              key: const Key('profile-notifications'),
-              icon: Icons.notifications_none_rounded,
-              onTap: () => onTap('Notifications'),
-            ),
-            const SizedBox(width: 8),
-            _RoundAction(
-              key: const Key('profile-settings'),
-              icon: Icons.settings_outlined,
-              onTap: () => onTap('Settings'),
-            ),
-          ],
+        _RoundAction(
+          key: const Key('profile-notifications'),
+          icon: Icons.notifications_none_rounded,
+          onTap: () => onTap('Notifications'),
         ),
       ],
     ),
