@@ -5,6 +5,7 @@ import 'package:mobile_hexy/core/services/app_constants.dart';
 import 'package:mobile_hexy/core/services/secure_storage.dart';
 import 'package:mobile_hexy/presentation/viewmodel/categories_view_model.dart';
 import 'package:mobile_hexy/presentation/viewmodel/cart_view_model.dart';
+import 'package:mobile_hexy/presentation/viewmodel/profile_view_model.dart';
 import 'package:mobile_hexy/presentation/viewmodel/wishlist_view_model.dart';
 
 class MainViewModel extends BaseViewModel {
@@ -22,6 +23,8 @@ class MainViewModel extends BaseViewModel {
       Future<void>.microtask(Get.find<CartViewModel>().loadCart);
     } else if (selectedIndex.value == 2) {
       Future<void>.microtask(Get.find<WishlistViewModel>().loadWishlist);
+    } else if (selectedIndex.value == 4) {
+      Future<void>.microtask(Get.find<ProfileViewModel>().loadProfile);
     }
   }
 
@@ -43,6 +46,7 @@ class MainViewModel extends BaseViewModel {
     if (selectedIndex.value != index) selectedIndex.value = index;
     if (index == 2) await Get.find<WishlistViewModel>().loadWishlist();
     if (index == 3) await Get.find<CartViewModel>().loadCart();
+    if (index == 4) await Get.find<ProfileViewModel>().loadProfile();
   }
 
   Future<void> openCategories({String? categoryName}) async {

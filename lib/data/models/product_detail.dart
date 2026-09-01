@@ -43,6 +43,7 @@ class ProductDetailCard {
     required this.rating,
     required this.compareAtPrice,
     required this.discountPercent,
+    required this.wishlist,
   });
 
   final int id;
@@ -53,6 +54,7 @@ class ProductDetailCard {
   final double rating;
   final double? compareAtPrice;
   final int discountPercent;
+  final bool wishlist;
 
   String get formattedPrice =>
       '${ProductDetail._formatAmount(price)} $currencySymbol'.trim();
@@ -87,6 +89,7 @@ class ProductDetail {
     required this.defaultQuantity,
     required this.wishlist,
     required this.cartQuantity,
+    required this.shareUrl,
     required this.relatedProducts,
     required this.youMightAlsoLike,
   });
@@ -114,6 +117,7 @@ class ProductDetail {
   final int defaultQuantity;
   final bool wishlist;
   final int cartQuantity;
+  final String shareUrl;
   final List<ProductDetailCard> relatedProducts;
   final List<ProductDetailCard> youMightAlsoLike;
 

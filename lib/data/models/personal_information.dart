@@ -1,3 +1,5 @@
+import 'package:mobile_hexy/core/networks/api_endpoints.dart';
+
 class PersonalInformation {
   const PersonalInformation({
     required this.firstName,
@@ -33,10 +35,32 @@ class PersonalInformation {
           '',
       phone: source['phone']?.toString() ?? '',
       email: source['email']?.toString() ?? '',
-      avatarUrl:
-          source['avatar_url']?.toString() ??
-          source['image_url']?.toString() ??
-          '',
+      avatarUrl: _imageUrl(source),
     );
+  }
+
+  static String _imageUrl(Map<String, dynamic> source) {
+    for (final key in const [
+      'avatar_url',
+      'image_url',
+      'profile_image_url',
+      'image_1920_url',
+      'image_512_url',
+      'avatar',
+      'image',
+      'photo',
+    ]) {
+      final raw = source[key];
+      final value = raw is Map
+          ? (raw['url'] ?? raw['src'] ?? raw['image_url'])?.toString()
+          : raw?.toString();
+      final url = value?.trim() ?? '';
+      if (url.isEmpty || url == 'false' || url == 'null') continue;
+      final uri = Uri.tryParse(url);
+      return uri?.hasScheme == true
+          ? url
+          : Uri.parse(ApiEndpoints.baseUrl).resolve(url).toString();
+    }
+    return '';
   }
 }

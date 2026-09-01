@@ -27,6 +27,7 @@ class HomeProduct {
     required this.imageAsset,
     this.imageUrl,
     this.hot = false,
+    this.wishlist = false,
   });
 
   final String id;
@@ -35,6 +36,7 @@ class HomeProduct {
   final String imageAsset;
   final String? imageUrl;
   final bool hot;
+  final bool wishlist;
 }
 
 class HomeCatalog {

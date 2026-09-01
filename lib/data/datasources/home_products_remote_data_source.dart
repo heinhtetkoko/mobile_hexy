@@ -64,6 +64,7 @@ class HomeProductsRemoteDataSource {
       imageAsset: '',
       imageUrl: json['image_url']?.toString(),
       hot: json['in_stock'] == true,
+      wishlist: json['wishlist'] == true,
     );
   }
 }

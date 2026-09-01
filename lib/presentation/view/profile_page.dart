@@ -317,6 +317,16 @@ class _ProfileAvatar extends StatelessWidget {
       : Image.network(
           url,
           fit: BoxFit.cover,
+          width: double.infinity,
+          height: double.infinity,
+          loadingBuilder: (context, child, progress) => progress == null
+              ? child
+              : const Center(
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                ),
           errorBuilder: (_, _, _) => Image.asset(
             'assets/images/profile/avatar.png',
             fit: BoxFit.cover,

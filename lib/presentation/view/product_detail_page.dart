@@ -57,6 +57,7 @@ class ProductDetailPage extends GetView<ProductDetailViewModel> {
                           child: _ProductRecommendations(
                             title: 'Related Products',
                             products: product.relatedProducts,
+                            bottomSpacing: 8,
                           ),
                         ),
                         SliverToBoxAdapter(
@@ -80,100 +81,97 @@ class _Header extends StatelessWidget {
   const _Header({required this.controller});
   final ProductDetailViewModel controller;
   @override
-  Widget build(BuildContext context) => SizedBox(
+  Widget build(BuildContext context) => Container(
     height: 56,
+    padding: const EdgeInsets.symmetric(horizontal: 16),
+    decoration: BoxDecoration(
+      color: Theme.of(context).colorScheme.surface,
+      border: Border(bottom: BorderSide(color: Theme.of(context).dividerColor)),
+    ),
     child: Row(
       children: [
-        const SizedBox(width: 12),
-        IconButton(
-          onPressed: Get.back,
-          style: IconButton.styleFrom(
-            backgroundColor: Theme.of(context).colorScheme.surface,
+        SizedBox(
+          width: 80,
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: _HeaderAction(
+              onPressed: Get.back,
+              icon: Icons.arrow_back_rounded,
+            ),
           ),
-          icon: const Icon(Icons.chevron_left),
         ),
         Expanded(
-          child: Center(
-            child: Text(
-              'Product Detail'.tr,
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurface,
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
+          child: Text(
+            'Product Detail'.tr,
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface,
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ),
+        SizedBox(
+          width: 80,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              _HeaderAction(
+                onPressed: () => controller.shareProduct(context),
+                icon: Icons.share_outlined,
               ),
-            ),
+              Obx(
+                () => _HeaderAction(
+                  onPressed: controller.isUpdatingWishlist.value
+                      ? null
+                      : controller.toggleWishlist,
+                  icon: controller.isFavorite.value
+                      ? Icons.favorite
+                      : Icons.favorite_border,
+                  color: controller.isFavorite.value
+                      ? ProductDetailPage._pink
+                      : Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
+            ],
           ),
         ),
-        IconButton(
-          onPressed: () {},
-          style: IconButton.styleFrom(
-            backgroundColor: Theme.of(context).colorScheme.surface,
-          ),
-          icon: const Icon(Icons.share_outlined, size: 19),
-        ),
-        Obx(
-          () => IconButton(
-            onPressed: controller.isUpdatingWishlist.value
-                ? null
-                : controller.toggleWishlist,
-            style: IconButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.surface,
-            ),
-            icon: Icon(
-              controller.isFavorite.value
-                  ? Icons.favorite
-                  : Icons.favorite_border,
-              color: controller.isFavorite.value
-                  ? ProductDetailPage._pink
-                  : Theme.of(context).colorScheme.onSurface,
-              size: 19,
-            ),
-          ),
-        ),
-        _CartBadge(quantity: controller.product.value?.cartQuantity ?? 0),
-        const SizedBox(width: 8),
       ],
     ),
   );
 }
 
-class _CartBadge extends StatelessWidget {
-  const _CartBadge({required this.quantity});
-  final int quantity;
+class _HeaderAction extends StatelessWidget {
+  const _HeaderAction({
+    required this.icon,
+    required this.onPressed,
+    this.color,
+  });
+
+  final IconData icon;
+  final VoidCallback? onPressed;
+  final Color? color;
+
   @override
-  Widget build(BuildContext context) => Stack(
-    clipBehavior: Clip.none,
-    children: [
-      IconButton(
-        onPressed: () {},
-        style: IconButton.styleFrom(
-          backgroundColor: Theme.of(context).colorScheme.surface,
+  Widget build(BuildContext context) => SizedBox.square(
+    dimension: 40,
+    child: Material(
+      color: Colors.transparent,
+      shape: const CircleBorder(),
+      child: InkWell(
+        onTap: onPressed,
+        customBorder: const CircleBorder(),
+        child: Icon(
+          icon,
+          size: 20,
+          color: onPressed == null
+              ? Theme.of(context).disabledColor
+              : color ?? Theme.of(context).colorScheme.onSurface,
         ),
-        icon: const Icon(Icons.shopping_cart_outlined, size: 19),
       ),
-      if (quantity > 0)
-        Positioned(
-          right: 2,
-          top: 0,
-          child: Container(
-            width: 16,
-            height: 16,
-            alignment: Alignment.center,
-            decoration: const BoxDecoration(
-              color: ProductDetailPage._pink,
-              shape: BoxShape.circle,
-            ),
-            child: Text(
-              '$quantity',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ),
-    ],
+    ),
   );
 }
 
@@ -743,16 +741,21 @@ class _Description extends StatelessWidget {
 }
 
 class _ProductRecommendations extends StatelessWidget {
-  const _ProductRecommendations({required this.title, required this.products});
+  const _ProductRecommendations({
+    required this.title,
+    required this.products,
+    this.bottomSpacing = 24,
+  });
 
   final String title;
   final List<ProductDetailCard> products;
+  final double bottomSpacing;
 
   @override
   Widget build(BuildContext context) {
     if (products.isEmpty) return const SizedBox.shrink();
     return Padding(
-      padding: const EdgeInsets.only(bottom: 24),
+      padding: EdgeInsets.only(bottom: bottomSpacing),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -786,11 +789,10 @@ class _ProductRecommendations extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 12),
           SizedBox(
-            height: 234,
+            height: 200,
             child: ListView.separated(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
               scrollDirection: Axis.horizontal,
               itemCount: products.length,
               separatorBuilder: (_, _) => const SizedBox(width: 12),
@@ -814,14 +816,15 @@ class _RecommendationCard extends StatelessWidget {
     onTap: () => Get.find<ProductDetailViewModel>().openProduct(product.id),
     borderRadius: BorderRadius.circular(18),
     child: Container(
-      width: 132,
-      padding: const EdgeInsets.all(8),
+      width: 142,
+      margin: const EdgeInsets.symmetric(vertical: 12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFF0F0F0)),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x14000000),
+            color: Color(0x0D000000),
             blurRadius: 12,
             offset: Offset(0, 4),
           ),
@@ -830,64 +833,110 @@ class _RecommendationCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Stack(
-            children: [
-              Container(
-                height: 112,
-                width: double.infinity,
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF5F6F8),
-                  borderRadius: BorderRadius.circular(14),
+          Expanded(
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: ClipRRect(
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(17),
+                    ),
+                    child: product.imageUrl.isEmpty
+                        ? const Center(
+                            child: Icon(Icons.image_not_supported_outlined),
+                          )
+                        : Image.network(
+                            product.imageUrl,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, _, _) => const Center(
+                              child: Icon(Icons.image_not_supported_outlined),
+                            ),
+                          ),
+                  ),
                 ),
-                child: product.imageUrl.isEmpty
-                    ? const Icon(Icons.image_not_supported_outlined)
-                    : Image.network(product.imageUrl, fit: BoxFit.contain),
-              ),
-              if (product.discountPercent > 0)
+                if (product.discountPercent > 0)
+                  Positioned(
+                    left: 0,
+                    top: 8,
+                    child: _DiscountBadge(percent: product.discountPercent),
+                  ),
                 Positioned(
-                  left: 0,
-                  top: 8,
-                  child: _DiscountBadge(percent: product.discountPercent),
+                  right: 7,
+                  top: 7,
+                  child: Obx(() {
+                    final controller = Get.find<ProductDetailViewModel>();
+                    final isUpdating = controller.updatingRecommendationIds
+                        .contains(product.id);
+                    final isFavorite = controller.recommendationFavoriteIds
+                        .contains(product.id);
+                    return GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: isUpdating
+                          ? null
+                          : () => controller.toggleRecommendationWishlist(
+                              product,
+                            ),
+                      child: SizedBox.square(
+                        dimension: 32,
+                        child: Center(
+                          child: isUpdating
+                              ? const SizedBox.square(
+                                  dimension: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : Icon(
+                                  isFavorite
+                                      ? Icons.favorite_rounded
+                                      : Icons.favorite_border_rounded,
+                                  color: ProductDetailPage._pink,
+                                  size: 20,
+                                ),
+                        ),
+                      ),
+                    );
+                  }),
                 ),
-              const Positioned(
-                right: 7,
-                top: 7,
-                child: Icon(
-                  Icons.favorite_border_rounded,
-                  color: ProductDetailPage._pink,
-                  size: 20,
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
-          const SizedBox(height: 8),
-          Text(
-            product.name,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+          const SizedBox(height: 5),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Text(
+              product.name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800),
+            ),
           ),
           const SizedBox(height: 4),
-          Row(
-            children: List.generate(
-              5,
-              (index) => Icon(
-                index < product.rating.round()
-                    ? Icons.star_rounded
-                    : Icons.star_border_rounded,
-                color: const Color(0xFFFBBF24),
-                size: 12,
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: List.generate(
+                5,
+                (index) => Icon(
+                  index < product.rating.round()
+                      ? Icons.star_rounded
+                      : Icons.star_border_rounded,
+                  color: const Color(0xFFFBBF24),
+                  size: 12,
+                ),
               ),
             ),
           ),
           const SizedBox(height: 3),
-          Text(
-            product.formattedPrice,
-            style: const TextStyle(
-              color: ProductDetailPage._pink,
-              fontSize: 13,
-              fontWeight: FontWeight.w800,
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            child: Text(
+              product.formattedPrice,
+              style: const TextStyle(
+                color: ProductDetailPage._pink,
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+              ),
             ),
           ),
         ],
@@ -995,6 +1044,12 @@ class _BottomActions extends StatelessWidget {
           Obx(
             () => _QuantitySelector(
               quantity: controller.quantity.value,
+              canDecrease:
+                  controller.quantity.value >
+                  controller.product.value!.quantityMin,
+              canIncrease:
+                  controller.quantity.value <
+                  controller.effectiveQuantityMaximum,
               onMinus: controller.decrement,
               onPlus: controller.increment,
             ),
@@ -1002,7 +1057,7 @@ class _BottomActions extends StatelessWidget {
           const SizedBox(width: 10),
           Expanded(
             child: Obx(
-              () => FilledButton.icon(
+              () => FilledButton(
                 onPressed: controller.isAddingToCart.value
                     ? null
                     : controller.addToCart,
@@ -1013,7 +1068,7 @@ class _BottomActions extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                icon: controller.isAddingToCart.value
+                child: controller.isAddingToCart.value
                     ? const SizedBox(
                         width: 16,
                         height: 16,
@@ -1022,18 +1077,17 @@ class _BottomActions extends StatelessWidget {
                           color: Colors.white,
                         ),
                       )
-                    : const Icon(Icons.shopping_cart_outlined, size: 18),
-                label: Text(
-                  'Add to Cart'.tr,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
+                    : Text(
+                        'Add to Cart'.tr,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
               ),
             ),
           ),
           const SizedBox(width: 8),
           Expanded(
-            child: FilledButton.icon(
+            child: FilledButton(
               onPressed: () {},
               style: FilledButton.styleFrom(
                 backgroundColor: ProductDetailPage._pink,
@@ -1042,8 +1096,7 @@ class _BottomActions extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              icon: const Icon(Icons.bolt_rounded, size: 18),
-              label: Text(
+              child: Text(
                 'Buy Now'.tr,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -1059,10 +1112,14 @@ class _BottomActions extends StatelessWidget {
 class _QuantitySelector extends StatelessWidget {
   const _QuantitySelector({
     required this.quantity,
+    required this.canDecrease,
+    required this.canIncrease,
     required this.onMinus,
     required this.onPlus,
   });
   final int quantity;
+  final bool canDecrease;
+  final bool canIncrease;
   final VoidCallback onMinus;
   final VoidCallback onPlus;
   @override
@@ -1070,7 +1127,7 @@ class _QuantitySelector extends StatelessWidget {
     mainAxisSize: MainAxisSize.min,
     children: [
       IconButton(
-        onPressed: onMinus,
+        onPressed: canDecrease ? onMinus : null,
         style: IconButton.styleFrom(
           backgroundColor: Theme.of(
             context,
@@ -1079,10 +1136,13 @@ class _QuantitySelector extends StatelessWidget {
         icon: const Icon(Icons.remove, size: 16),
       ),
       SizedBox(
-        width: 20,
+        width: 36,
         child: Text(
           '$quantity'.tr,
           textAlign: TextAlign.center,
+          maxLines: 1,
+          softWrap: false,
+          overflow: TextOverflow.visible,
           style: TextStyle(
             color: Theme.of(context).colorScheme.onSurface,
             fontSize: 18,
@@ -1091,7 +1151,7 @@ class _QuantitySelector extends StatelessWidget {
         ),
       ),
       IconButton(
-        onPressed: onPlus,
+        onPressed: canIncrease ? onPlus : null,
         style: IconButton.styleFrom(backgroundColor: ProductDetailPage._ink),
         color: Colors.white,
         icon: const Icon(Icons.add, size: 16),

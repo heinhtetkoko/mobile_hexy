@@ -87,14 +87,12 @@ class CartRemoteDataSource {
         ? rawItems.fold<int>(0, (total, item) {
             if (item is! Map) return total;
             return total +
-                (int.tryParse(
-                      (item['quantity'] ??
-                                  item['qty'] ??
-                                  item['cart_qty'] ??
-                                  item['product_uom_qty'] ??
-                                  item['ordered_qty'])
-                              ?.toString() ??
-                          '',
+                (_asInt(
+                      item['quantity'] ??
+                          item['qty'] ??
+                          item['cart_qty'] ??
+                          item['product_uom_qty'] ??
+                          item['ordered_qty'],
                     ) ??
                     1);
           })
@@ -127,9 +125,15 @@ class CartRemoteDataSource {
 
   int? _firstInt(List<Object?> values) {
     for (final value in values) {
-      final parsed = int.tryParse(value?.toString() ?? '');
+      final parsed = _asInt(value);
       if (parsed != null) return parsed;
     }
     return null;
+  }
+
+  int? _asInt(Object? value) {
+    if (value is num) return value.toInt();
+    final text = value?.toString().trim() ?? '';
+    return int.tryParse(text) ?? double.tryParse(text)?.toInt();
   }
 }

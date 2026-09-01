@@ -12,7 +12,7 @@ class LoginPage extends GetView<AuthViewModel> {
   @override
   Widget build(BuildContext context) => _AuthScaffold(
     child: _AuthCard(
-      height: 680,
+      height: 590,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -87,7 +87,7 @@ class RegisterPage extends GetView<AuthViewModel> {
   @override
   Widget build(BuildContext context) => _AuthScaffold(
     child: _AuthCard(
-      height: 740,
+      height: 590,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

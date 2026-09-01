@@ -1468,19 +1468,40 @@ class _RecommendedCard extends StatelessWidget {
               Positioned(
                 right: 8,
                 top: 8,
-                child: Container(
-                  width: 30,
-                  height: 30,
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surface,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.favorite_border_rounded,
-                    color: StationeryHomePage._pink,
-                    size: 18,
-                  ),
-                ),
+                child: Obx(() {
+                  final controller = Get.find<StationeryHomeViewModel>();
+                  final isUpdating = controller.updatingRecommendedWishlistIds
+                      .contains(product.id);
+                  final isFavorite = controller.recommendedFavoriteIds.contains(
+                    product.id,
+                  );
+                  return GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: isUpdating
+                        ? null
+                        : () => controller.toggleRecommendedWishlist(product),
+                    child: Container(
+                      width: 30,
+                      height: 30,
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.surface,
+                        shape: BoxShape.circle,
+                      ),
+                      child: isUpdating
+                          ? const Padding(
+                              padding: EdgeInsets.all(7),
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : Icon(
+                              isFavorite
+                                  ? Icons.favorite_rounded
+                                  : Icons.favorite_border_rounded,
+                              color: StationeryHomePage._pink,
+                              size: 18,
+                            ),
+                    ),
+                  );
+                }),
               ),
             ],
           ),

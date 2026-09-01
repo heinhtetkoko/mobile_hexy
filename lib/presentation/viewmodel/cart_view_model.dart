@@ -362,7 +362,9 @@ class CartViewModel extends BaseViewModel {
         value['value'] ?? value['current'] ?? value['quantity'] ?? value['id'],
       );
     }
-    return int.tryParse(value?.toString() ?? '');
+    if (value is num) return value.toInt();
+    final text = value?.toString().trim() ?? '';
+    return int.tryParse(text) ?? double.tryParse(text)?.toInt();
   }
 
   int? _findIntByKeys(Object? value, List<String> keys, [int depth = 0]) {

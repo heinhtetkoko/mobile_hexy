@@ -1,4 +1,8 @@
+import 'dart:async';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:mobile_hexy/core/base/base_view_model.dart';
 import 'package:mobile_hexy/app.dart';
@@ -6,6 +10,7 @@ import 'package:mobile_hexy/domain/usecases/logout_user.dart';
 import 'package:mobile_hexy/domain/usecases/get_profile.dart';
 import 'package:mobile_hexy/extensions/show_logout_sheet.dart';
 import 'package:mobile_hexy/data/models/profile_summary.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ProfileViewModel extends BaseViewModel {
   ProfileViewModel(this._logoutUser, this._getProfile);
@@ -18,6 +23,7 @@ class ProfileViewModel extends BaseViewModel {
   final profile = Rxn<ProfileSummary>();
   final isProfileLoading = false.obs;
   final profileError = RxnString();
+  static const _phoneChannel = MethodChannel('mobile_hexy/phone');
 
   @override
   void onInit() {
@@ -43,6 +49,10 @@ class ProfileViewModel extends BaseViewModel {
   }
 
   void openItem(String label) {
+    if (label == 'Hot Line') {
+      unawaited(_openHotline());
+      return;
+    }
     if (label == 'Language') {
       _showLanguagePicker();
       return;
@@ -82,6 +92,35 @@ class ProfileViewModel extends BaseViewModel {
       snackPosition: SnackPosition.BOTTOM,
       duration: const Duration(seconds: 2),
     );
+  }
+
+  Future<void> _openHotline() async {
+    const hotline = '09-123-456-789';
+    final phoneNumber = hotline.replaceAll(RegExp(r'[^0-9+]'), '');
+    var opened = false;
+    try {
+      if (Platform.isAndroid) {
+        opened =
+            await _phoneChannel.invokeMethod<bool>('openDialer', {
+              'number': phoneNumber,
+            }) ??
+            false;
+      } else {
+        opened = await launchUrl(
+          Uri(scheme: 'tel', path: phoneNumber),
+          mode: LaunchMode.externalApplication,
+        );
+      }
+    } catch (_) {
+      opened = false;
+    }
+    if (!opened) {
+      Get.snackbar(
+        'Unable to open phone app',
+        'Please call $hotline.',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    }
   }
 
   void _showLanguagePicker() {

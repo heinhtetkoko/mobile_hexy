@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:mobile_hexy/core/base/base_view_model.dart';
 import 'package:mobile_hexy/app.dart';
@@ -8,6 +9,7 @@ import 'package:mobile_hexy/data/datasources/product_detail_remote_data_source.d
 import 'package:mobile_hexy/data/datasources/cart_remote_data_source.dart';
 import 'package:mobile_hexy/data/datasources/wishlist_remote_data_source.dart';
 import 'package:mobile_hexy/data/models/product_detail.dart';
+import 'package:share_plus/share_plus.dart';
 
 class ProductDetailViewModel extends BaseViewModel {
   ProductDetailViewModel(
@@ -28,8 +30,19 @@ class ProductDetailViewModel extends BaseViewModel {
   final isLoading = false.obs;
   final isAddingToCart = false.obs;
   final isUpdatingWishlist = false.obs;
+  final recommendationFavoriteIds = <int>{}.obs;
+  final updatingRecommendationIds = <int>{}.obs;
   final scrollController = ScrollController();
   bool _resumedPendingAction = false;
+
+  int get effectiveQuantityMaximum {
+    final detail = product.value;
+    if (detail == null) return 1;
+    final stockMaximum = detail.availableQuantity.floor();
+    if (detail.quantityMax > detail.quantityMin) return detail.quantityMax;
+    if (stockMaximum > detail.quantityMin) return stockMaximum;
+    return detail.quantityMin;
+  }
 
   @override
   void onInit() {
@@ -81,6 +94,14 @@ class ProductDetailViewModel extends BaseViewModel {
         );
       }
       isFavorite.value = result.wishlist;
+      recommendationFavoriteIds
+        ..clear()
+        ..addAll(
+          [
+            ...result.relatedProducts,
+            ...result.youMightAlsoLike,
+          ].where((item) => item.wishlist).map((item) => item.id),
+        );
     } catch (_) {
       errorMessage.value = 'Could not load product details. Please try again.';
     } finally {
@@ -109,15 +130,48 @@ class ProductDetailViewModel extends BaseViewModel {
   void increment() {
     final detail = product.value;
     if (detail == null) return;
-    final next = quantity.value + detail.quantityStep;
-    if (next <= detail.quantityMax) quantity.value = next;
+    final step = detail.quantityStep > 0 ? detail.quantityStep : 1;
+    final next = quantity.value + step;
+    if (next <= effectiveQuantityMaximum) quantity.value = next;
   }
 
   void decrement() {
     final detail = product.value;
     if (detail == null) return;
-    final next = quantity.value - detail.quantityStep;
+    final step = detail.quantityStep > 0 ? detail.quantityStep : 1;
+    final next = quantity.value - step;
     if (next >= detail.quantityMin) quantity.value = next;
+  }
+
+  Future<void> shareProduct(BuildContext context) async {
+    final detail = product.value;
+    if (detail == null) return;
+    final box = context.findRenderObject() as RenderBox?;
+    final shareText = '${detail.name}\n${detail.shareUrl}';
+    try {
+      await SharePlus.instance.share(
+        ShareParams(
+          subject: detail.name,
+          text: shareText,
+          sharePositionOrigin: box == null
+              ? null
+              : box.localToGlobal(Offset.zero) & box.size,
+        ),
+      );
+    } on MissingPluginException {
+      await Clipboard.setData(ClipboardData(text: shareText));
+      Get.snackbar(
+        'Link copied',
+        'Restart the app completely to enable the share menu.',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    } on PlatformException catch (error) {
+      Get.snackbar(
+        'Could not share product',
+        error.message ?? 'Please try again.',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    }
   }
 
   void selectVariantValue(String sectionKey, ProductVariantValue value) {
@@ -174,6 +228,41 @@ class ProductDetailViewModel extends BaseViewModel {
       }
     } finally {
       isUpdatingWishlist.value = false;
+    }
+  }
+
+  Future<void> toggleRecommendationWishlist(ProductDetailCard item) async {
+    if (item.id <= 0 || updatingRecommendationIds.contains(item.id)) return;
+    final token = await Get.find<SecureStorage>().read(
+      AppConstants.accessTokenKey,
+    );
+    if (token == null || token.trim().isEmpty) {
+      await Get.toNamed<dynamic>(
+        AppRoutes.login,
+        arguments: {'returnProductId': product.value?.id},
+      );
+      return;
+    }
+
+    updatingRecommendationIds.add(item.id);
+    try {
+      final result = await _wishlistRemoteDataSource.toggle(item.id);
+      final isFavorite = result.items.any(
+        (wishlistItem) => wishlistItem.productId == item.id,
+      );
+      if (isFavorite) {
+        recommendationFavoriteIds.add(item.id);
+      } else {
+        recommendationFavoriteIds.remove(item.id);
+      }
+    } catch (error) {
+      Get.snackbar(
+        'Could not update wishlist',
+        error.toString().replaceFirst('Exception: ', ''),
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    } finally {
+      updatingRecommendationIds.remove(item.id);
     }
   }
 

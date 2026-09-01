@@ -103,22 +103,38 @@ class ProductDetailRemoteDataSource {
                 .toList(growable: false)
           : const [],
       quantityMin: quantitySelector is Map
-          ? int.tryParse(quantitySelector['min']?.toString() ?? '') ?? 1
+          ? _intValue(quantitySelector['min']) ?? 1
           : 1,
       quantityMax: quantitySelector is Map
-          ? int.tryParse(quantitySelector['max']?.toString() ?? '') ?? 1
-          : 1,
+          ? _intValue(quantitySelector['max']) ??
+                _intValue(data['available_qty']) ??
+                1
+          : _intValue(data['available_qty']) ?? 1,
       quantityStep: quantitySelector is Map
-          ? int.tryParse(quantitySelector['step']?.toString() ?? '') ?? 1
+          ? _intValue(quantitySelector['step']) ?? 1
           : 1,
       defaultQuantity: quantitySelector is Map
-          ? int.tryParse(quantitySelector['default']?.toString() ?? '') ?? 1
+          ? _intValue(quantitySelector['default']) ?? 1
           : 1,
       wishlist: data['wishlist'] == true,
-      cartQuantity: int.tryParse(data['cart_qty']?.toString() ?? '') ?? 0,
+      cartQuantity: _intValue(data['cart_qty']) ?? 0,
+      shareUrl: _shareUrl(data['share_url'], id),
       relatedProducts: _parseProductCards(relatedProducts, currency),
       youMightAlsoLike: _parseProductCards(youMightAlsoLike, currency),
     );
+  }
+
+  String _shareUrl(Object? value, int productId) {
+    final raw = value?.toString().trim() ?? '';
+    return Uri.parse(
+      ApiEndpoints.baseUrl,
+    ).resolve(raw.isEmpty ? 'shop/product/$productId' : raw).toString();
+  }
+
+  int? _intValue(Object? value) {
+    if (value is num) return value.toInt();
+    final text = value?.toString().trim() ?? '';
+    return int.tryParse(text) ?? double.tryParse(text)?.toInt();
   }
 
   List<ProductVariantSection> _parseVariantSections(
@@ -246,6 +262,7 @@ class ProductDetailRemoteDataSource {
                       '',
                 ) ??
                 0,
+            wishlist: value['wishlist'] == true,
           );
         })
         .where((value) => value.id > 0)

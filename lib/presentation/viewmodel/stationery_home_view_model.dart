@@ -10,7 +10,11 @@ import 'package:mobile_hexy/data/datasources/categories_remote_data_source.dart'
 import 'package:mobile_hexy/data/datasources/home_products_remote_data_source.dart';
 import 'package:mobile_hexy/data/datasources/new_arrivals_remote_data_source.dart';
 import 'package:mobile_hexy/data/datasources/cart_remote_data_source.dart';
+import 'package:mobile_hexy/data/datasources/wishlist_remote_data_source.dart';
+import 'package:mobile_hexy/app.dart';
 import 'package:mobile_hexy/core/networks/api_endpoints.dart';
+import 'package:mobile_hexy/core/services/app_constants.dart';
+import 'package:mobile_hexy/core/services/secure_storage.dart';
 import 'package:mobile_hexy/data/models/home_catalog.dart';
 import 'package:mobile_hexy/data/models/catalog_brand.dart';
 import 'package:mobile_hexy/data/models/catalog_category.dart';
@@ -26,6 +30,7 @@ class StationeryHomeViewModel extends BaseViewModel {
     this._brandsDataSource,
     this._bannersDataSource,
     this._cartRemoteDataSource,
+    this._wishlistRemoteDataSource,
   );
 
   final GetHomeCatalog _getHomeCatalog;
@@ -36,7 +41,10 @@ class StationeryHomeViewModel extends BaseViewModel {
   final BrandsRemoteDataSource _brandsDataSource;
   final BannersRemoteDataSource _bannersDataSource;
   final CartRemoteDataSource _cartRemoteDataSource;
+  final WishlistRemoteDataSource _wishlistRemoteDataSource;
   final addingToCartIds = <String>{}.obs;
+  final recommendedFavoriteIds = <String>{}.obs;
+  final updatingRecommendedWishlistIds = <String>{}.obs;
   final activeBanner = 0.obs;
   final searchQuery = ''.obs;
   final bannerController = PageController();
@@ -103,6 +111,43 @@ class StationeryHomeViewModel extends BaseViewModel {
       }
     } finally {
       addingToCartIds.remove(product.id);
+    }
+  }
+
+  Future<void> toggleRecommendedWishlist(HomeProduct product) async {
+    final productId = int.tryParse(product.id);
+    if (productId == null ||
+        productId <= 0 ||
+        updatingRecommendedWishlistIds.contains(product.id)) {
+      return;
+    }
+    final token = await Get.find<SecureStorage>().read(
+      AppConstants.accessTokenKey,
+    );
+    if (token == null || token.trim().isEmpty) {
+      await Get.toNamed<dynamic>(AppRoutes.login);
+      return;
+    }
+
+    updatingRecommendedWishlistIds.add(product.id);
+    try {
+      final result = await _wishlistRemoteDataSource.toggle(productId);
+      final isFavorite = result.items.any(
+        (item) => item.productId == productId,
+      );
+      if (isFavorite) {
+        recommendedFavoriteIds.add(product.id);
+      } else {
+        recommendedFavoriteIds.remove(product.id);
+      }
+    } catch (error) {
+      Get.snackbar(
+        'Could not update wishlist',
+        error.toString().replaceFirst('Exception: ', ''),
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    } finally {
+      updatingRecommendedWishlistIds.remove(product.id);
     }
   }
 
@@ -236,6 +281,10 @@ class StationeryHomeViewModel extends BaseViewModel {
         limit: remoteProductPageLimit,
       );
       recommendedProducts.assignAll(result.products);
+      recommendedFavoriteIds.addAll(
+        result.products.where((item) => item.wishlist).map((item) => item.id),
+      );
+      await _syncRecommendedWishlist();
       _recommendedPage = result.page;
       hasMoreRecommended.value = result.hasNext;
     } catch (_) {
@@ -255,12 +304,30 @@ class StationeryHomeViewModel extends BaseViewModel {
         limit: remoteProductPageLimit,
       );
       recommendedProducts.addAll(result.products);
+      recommendedFavoriteIds.addAll(
+        result.products.where((item) => item.wishlist).map((item) => item.id),
+      );
       _recommendedPage = result.page;
       hasMoreRecommended.value = result.hasNext;
     } catch (_) {
       Get.snackbar('Could not load recommended products', 'Please try again.');
     } finally {
       isRecommendedLoadingMore.value = false;
+    }
+  }
+
+  Future<void> _syncRecommendedWishlist() async {
+    final token = await Get.find<SecureStorage>().read(
+      AppConstants.accessTokenKey,
+    );
+    if (token == null || token.trim().isEmpty) return;
+    try {
+      final result = await _wishlistRemoteDataSource.fetchWishlist();
+      recommendedFavoriteIds
+        ..clear()
+        ..addAll(result.items.map((item) => item.productId.toString()));
+    } catch (_) {
+      // Keep the wishlist values returned with recommended products.
     }
   }
 

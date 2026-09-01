@@ -21,6 +21,7 @@ class MainBinding extends Bindings {
         Get.find(),
         Get.find(),
         Get.find(),
+        Get.find(),
       ),
     );
     Get.lazyPut(() => CategoriesViewModel(Get.find()));
