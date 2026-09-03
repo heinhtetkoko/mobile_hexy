@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:mobile_hexy/app.dart';
 import 'package:mobile_hexy/core/base/base_view_model.dart';
 import 'package:mobile_hexy/data/datasources/category_products_remote_data_source.dart';
 import 'package:mobile_hexy/data/datasources/best_sellers_remote_data_source.dart';
@@ -10,6 +11,8 @@ import 'package:mobile_hexy/data/datasources/categories_remote_data_source.dart'
 import 'package:mobile_hexy/data/datasources/cart_remote_data_source.dart';
 import 'package:mobile_hexy/data/datasources/wishlist_remote_data_source.dart';
 import 'package:mobile_hexy/core/networks/api_endpoints.dart';
+import 'package:mobile_hexy/core/services/app_constants.dart';
+import 'package:mobile_hexy/core/services/secure_storage.dart';
 import 'package:mobile_hexy/data/models/catalog_category.dart';
 import 'package:mobile_hexy/data/models/catalog_product.dart';
 import 'package:mobile_hexy/data/models/product_list_request.dart';
@@ -50,6 +53,7 @@ class ProductListViewModel extends BaseViewModel {
   final filterCategories = <CatalogCategory>[].obs;
   final filterBrands = <CatalogBrand>[].obs;
   final favorites = <String>{}.obs;
+  final updatingFavoriteIds = <String>{}.obs;
   final addingToCartIds = <String>{}.obs;
   final products = <CatalogProduct>[].obs;
   final isLoading = false.obs;
@@ -65,6 +69,7 @@ class ProductListViewModel extends BaseViewModel {
   void onInit() {
     super.onInit();
     _loadFilterOptions();
+    _loadWishlistState();
     final category = Get.arguments;
     if (category is CatalogCategory) {
       _categoryId = category.id;
@@ -79,6 +84,7 @@ class ProductListViewModel extends BaseViewModel {
         ProductListMode.newArrivals => 'New Arrivals',
         ProductListMode.flashSale => 'Flash Sale',
         ProductListMode.recommended => 'Recommended For You',
+        ProductListMode.discountProducts => 'Promo Products',
         ProductListMode.search => 'All Products',
       };
       activeFilters.value = 0;
@@ -94,6 +100,23 @@ class ProductListViewModel extends BaseViewModel {
       loadProducts();
     } else {
       errorMessage.value = 'No category selected.';
+    }
+  }
+
+  Future<void> _loadWishlistState() async {
+    final token = await Get.find<SecureStorage>().read(
+      AppConstants.accessTokenKey,
+    );
+    if (token == null || token.trim().isEmpty) return;
+    try {
+      final result = await _wishlistRemoteDataSource.fetchWishlist();
+      favorites.assignAll(
+        result.items
+            .where((item) => item.productId > 0)
+            .map((item) => item.productId.toString()),
+      );
+    } catch (_) {
+      // Product browsing remains available if wishlist loading fails.
     }
   }
 
@@ -235,12 +258,29 @@ class ProductListViewModel extends BaseViewModel {
 
   Future<void> toggleFavorite(String id) async {
     final productId = int.tryParse(id);
-    if (productId == null || productId <= 0) return;
+    if (productId == null ||
+        productId <= 0 ||
+        updatingFavoriteIds.contains(id)) {
+      return;
+    }
+    final token = await Get.find<SecureStorage>().read(
+      AppConstants.accessTokenKey,
+    );
+    if (token == null || token.trim().isEmpty) {
+      await Get.toNamed<dynamic>(
+        AppRoutes.login,
+        arguments: {'returnProductId': productId, 'pendingAction': 'wishlist'},
+      );
+      return;
+    }
+
+    final wasFavorite = favorites.contains(id);
+    updatingFavoriteIds.add(id);
+    _setFavorite(id, !wasFavorite);
     try {
-      final result = await _wishlistRemoteDataSource.toggle(productId);
-      final active = result.items.any((item) => item.productId == productId);
-      active ? favorites.add(id) : favorites.remove(id);
+      await _wishlistRemoteDataSource.toggle(productId);
     } catch (error) {
+      _setFavorite(id, wasFavorite);
       if (Get.currentRoute != '/login') {
         Get.snackbar(
           'Could not update wishlist',
@@ -248,7 +288,16 @@ class ProductListViewModel extends BaseViewModel {
           snackPosition: SnackPosition.BOTTOM,
         );
       }
+    } finally {
+      updatingFavoriteIds.remove(id);
     }
+  }
+
+  void _setFavorite(String id, bool favorite) {
+    final updated = Set<String>.from(favorites);
+    favorite ? updated.add(id) : updated.remove(id);
+    favorites.assignAll(updated);
+    favorites.refresh();
   }
 
   Future<void> addToCart(CatalogProduct product) async {
@@ -394,6 +443,16 @@ class ProductListViewModel extends BaseViewModel {
           limit: pageLimit,
         );
         return _catalogResult(result.products, result.page, result.hasNext);
+      case ProductListMode.discountProducts:
+        final result = await _remoteDataSource.fetchDiscountProducts(
+          page: page,
+          limit: pageLimit,
+        );
+        return (
+          products: result.products,
+          page: result.page,
+          hasNext: result.hasNext,
+        );
       case ProductListMode.search:
         final selectedCategoryId = filterCategories
             .firstWhereOrNull((item) => item.name == selectedCategory.value)

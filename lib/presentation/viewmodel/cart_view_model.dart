@@ -134,7 +134,17 @@ class CartViewModel extends BaseViewModel {
   }
 
   void _apply(Map<String, dynamic> data) {
-    final rawItems = data['items'] ?? data['cart_items'] ?? data['lines'];
+    final itemsSource =
+        data['order_items'] ??
+        data['items'] ??
+        data['cart_items'] ??
+        data['lines'];
+    final rawItems = itemsSource is Map
+        ? itemsSource['data'] ??
+              itemsSource['items'] ??
+              itemsSource['lines'] ??
+              itemsSource['order_items']
+        : itemsSource;
     items.assignAll(
       rawItems is List
           ? rawItems.whereType<Map>().map(_parseItem)
@@ -186,6 +196,9 @@ class CartViewModel extends BaseViewModel {
         .firstWhereOrNull((method) => method.selected)
         ?.id;
   }
+
+  /// Keeps checkout items and totals in sync with the checkout detail API.
+  void applyCheckoutPayload(Map<String, dynamic> data) => _apply(data);
 
   CartItem _parseItem(Map<dynamic, dynamic> json) {
     final product = json['product'];

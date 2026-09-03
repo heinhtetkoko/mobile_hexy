@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:mobile_hexy/app.dart';
 import 'package:mobile_hexy/core/theme/app_colors.dart';
+import 'package:mobile_hexy/data/models/shipping_address.dart';
 import 'package:mobile_hexy/presentation/view/cart_page.dart';
 import 'package:mobile_hexy/presentation/viewmodel/checkout_view_model.dart';
 
@@ -17,30 +17,14 @@ class CheckoutPage extends GetView<CheckoutViewModel> {
         children: [
           const _CheckoutHeader(),
           const _ProgressSteps(),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-              children: [
-                const _DeliveryInformation(),
-                SizedBox(height: 10),
-                const _DeliveryMethod(),
-                SizedBox(height: 10),
-                _PaymentMethod(controller: controller),
-                SizedBox(height: 10),
-                _ItemsSummary(controller: controller),
-                SizedBox(height: 10),
-                _PriceBreakdown(controller: controller),
-                SizedBox(height: 10),
-                _DeliveryNotes(controller: controller),
-                SizedBox(height: 12),
-                _TermsRow(controller: controller),
-              ],
-            ),
-          ),
+          Expanded(child: Obx(() => _content(context))),
           Obx(
             () => _PlaceOrderBar(
               total: controller.cart.grandTotal,
-              enabled: controller.termsAccepted.value,
+              enabled:
+                  controller.termsAccepted.value &&
+                  !controller.isPlacingOrder.value,
+              loading: controller.isPlacingOrder.value,
               onPressed: controller.placeOrder,
             ),
           ),
@@ -48,6 +32,74 @@ class CheckoutPage extends GetView<CheckoutViewModel> {
       ),
     ),
   );
+
+  Widget _content(BuildContext context) {
+    if (controller.isLoading.value && !controller.hasCheckoutData.value) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    final error = controller.errorMessage.value;
+    if (error != null && !controller.hasCheckoutData.value) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(24),
+              child: Text(error, textAlign: TextAlign.center),
+            ),
+            FilledButton(
+              onPressed: controller.loadCheckout,
+              child: Text('Try Again'.tr),
+            ),
+          ],
+        ),
+      );
+    }
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+      children: [
+        _DeliveryInformation(
+          address: controller.selectedAddress.value,
+          updating: controller.isUpdatingAddress.value,
+          onEdit: () => _showAddressDialog(context),
+        ),
+        const SizedBox(height: 10),
+        _DeliveryMethod(
+          method: controller.selectedDeliveryMethod.value,
+          updating: controller.isUpdatingDeliveryMethod.value,
+          onTap: () => _showDeliveryMethodDialog(context),
+        ),
+        const SizedBox(height: 10),
+        _PaymentMethod(controller: controller),
+        const SizedBox(height: 10),
+        _ItemsSummary(controller: controller),
+        const SizedBox(height: 10),
+        _PriceBreakdown(controller: controller),
+        const SizedBox(height: 10),
+        _DeliveryNotes(controller: controller),
+        const SizedBox(height: 12),
+        _TermsRow(controller: controller),
+      ],
+    );
+  }
+
+  Future<void> _showAddressDialog(BuildContext context) async {
+    final address = await showDialog<ShippingAddress>(
+      context: context,
+      builder: (_) => _AddressSelectDialog(controller: controller),
+    );
+    if (address == null) return;
+    final updated = await controller.selectAddress(address);
+    if (updated && context.mounted) await _showDeliveryMethodDialog(context);
+  }
+
+  Future<void> _showDeliveryMethodDialog(BuildContext context) async {
+    final method = await showDialog<CheckoutDeliveryMethod>(
+      context: context,
+      builder: (_) => _DeliveryMethodSelectDialog(controller: controller),
+    );
+    if (method != null) await controller.selectDeliveryMethod(method);
+  }
 }
 
 class _CheckoutHeader extends StatelessWidget {
@@ -201,7 +253,14 @@ class _Step extends StatelessWidget {
 }
 
 class _DeliveryInformation extends StatelessWidget {
-  const _DeliveryInformation();
+  const _DeliveryInformation({
+    required this.address,
+    required this.onEdit,
+    required this.updating,
+  });
+  final ShippingAddress? address;
+  final VoidCallback onEdit;
+  final bool updating;
 
   @override
   Widget build(BuildContext context) => _Panel(
@@ -212,17 +271,19 @@ class _DeliveryInformation extends StatelessWidget {
           emoji: '📍',
           title: 'Delivery Information',
           action: 'Edit',
-          onAction: () =>
-              Get.toNamed<void>('${AppRoutes.addressForm}?mode=edit'),
+          onAction: updating ? null : onEdit,
         ),
         SizedBox(height: 14),
         Text(
-          'John Smith'.tr,
+          (address?.name.isNotEmpty == true
+                  ? address!.name
+                  : 'Select a shipping address')
+              .tr,
           style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
         ),
         SizedBox(height: 4),
         Text(
-          '09-123456789'.tr,
+          address?.phone ?? '',
           style: TextStyle(
             color: Theme.of(context).colorScheme.onSurfaceVariant,
             fontSize: 12,
@@ -230,7 +291,7 @@ class _DeliveryInformation extends StatelessWidget {
         ),
         SizedBox(height: 4),
         Text(
-          'No.25, Main Street, Sanchaung Township, Yangon'.tr,
+          _addressText(address).tr,
           style: TextStyle(
             color: Theme.of(context).colorScheme.onSurfaceVariant,
             fontSize: 12,
@@ -239,53 +300,211 @@ class _DeliveryInformation extends StatelessWidget {
       ],
     ),
   );
+
+  String _addressText(ShippingAddress? value) => value == null
+      ? 'Tap Edit to choose delivery information.'
+      : [
+          value.building,
+          value.streetAddress,
+          value.cityTownship,
+          value.stateRegion,
+        ].where((part) => part.trim().isNotEmpty).join(', ');
 }
 
 class _DeliveryMethod extends StatelessWidget {
-  const _DeliveryMethod();
+  const _DeliveryMethod({
+    required this.method,
+    required this.onTap,
+    required this.updating,
+  });
+  final CheckoutDeliveryMethod? method;
+  final VoidCallback onTap;
+  final bool updating;
 
   @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(16),
-    decoration: BoxDecoration(
-      color: Theme.of(context).colorScheme.primaryContainer,
-      borderRadius: BorderRadius.circular(12),
-    ),
-    child: Row(
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '🚚 Standard Delivery'.tr,
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.onPrimaryContainer,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w800,
+  Widget build(BuildContext context) => InkWell(
+    onTap: updating ? null : onTap,
+    borderRadius: BorderRadius.circular(12),
+    child: Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.primaryContainer,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '🚚 ${method?.name.isNotEmpty == true ? method!.name : 'Select Delivery Method'}'
+                      .tr,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onPrimaryContainer,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
-              ),
-              SizedBox(height: 2),
-              Text(
-                'Estimated: 2–3 business days'.tr,
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.onPrimaryContainer,
-                  fontSize: 12,
+                const SizedBox(height: 2),
+                Text(
+                  (method?.description?.isNotEmpty == true
+                          ? method!.description!
+                          : 'Tap to choose a delivery method')
+                      .tr,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onPrimaryContainer,
+                    fontSize: 12,
+                  ),
                 ),
+              ],
+            ),
+          ),
+          if (updating)
+            const SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          else
+            Text(
+              method == null
+                  ? 'Change'.tr
+                  : method!.formattedPrice?.isNotEmpty == true
+                  ? method!.formattedPrice!
+                  : CartPage.money(method!.price),
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onPrimaryContainer,
+                fontSize: 14,
+                fontWeight: FontWeight.w800,
               ),
-            ],
-          ),
-        ),
-        Text(
-          '3,000 Ks'.tr,
-          style: TextStyle(
-            color: Theme.of(context).colorScheme.onPrimaryContainer,
-            fontSize: 14,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-      ],
+            ),
+        ],
+      ),
     ),
+  );
+}
+
+class _AddressSelectDialog extends StatelessWidget {
+  const _AddressSelectDialog({required this.controller});
+  final CheckoutViewModel controller;
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: Text('Select Shipping Address'.tr),
+    contentPadding: const EdgeInsets.fromLTRB(8, 12, 8, 8),
+    content: SizedBox(
+      width: double.maxFinite,
+      child: controller.addresses.isEmpty
+          ? Padding(
+              padding: const EdgeInsets.all(20),
+              child: Text(
+                'No shipping addresses found.'.tr,
+                textAlign: TextAlign.center,
+              ),
+            )
+          : ListView.separated(
+              shrinkWrap: true,
+              itemCount: controller.addresses.length,
+              separatorBuilder: (_, _) => const Divider(height: 1),
+              itemBuilder: (_, index) {
+                final address = controller.addresses[index];
+                final selected =
+                    address.id == controller.selectedAddress.value?.id;
+                final detail = [
+                  address.building,
+                  address.streetAddress,
+                  address.cityTownship,
+                  address.stateRegion,
+                ].where((value) => value.trim().isNotEmpty).join(', ');
+                return ListTile(
+                  key: Key('checkout-address-${address.id}'),
+                  onTap: () => Navigator.of(context).pop(address),
+                  leading: Icon(
+                    selected
+                        ? Icons.radio_button_checked
+                        : Icons.radio_button_off,
+                    color: selected
+                        ? Theme.of(context).colorScheme.primary
+                        : Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                  title: Text(
+                    address.name,
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  subtitle: Text(
+                    [
+                      address.phone,
+                      detail,
+                    ].where((value) => value.trim().isNotEmpty).join('\n'),
+                  ),
+                  isThreeLine: address.phone.isNotEmpty && detail.isNotEmpty,
+                );
+              },
+            ),
+    ),
+    actions: [TextButton(onPressed: Get.back, child: Text('Cancel'.tr))],
+  );
+}
+
+class _DeliveryMethodSelectDialog extends StatelessWidget {
+  const _DeliveryMethodSelectDialog({required this.controller});
+  final CheckoutViewModel controller;
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: Text('Select Delivery Method'.tr),
+    contentPadding: const EdgeInsets.fromLTRB(8, 12, 8, 8),
+    content: SizedBox(
+      width: double.maxFinite,
+      child: controller.deliveryMethods.isEmpty
+          ? Padding(
+              padding: const EdgeInsets.all(20),
+              child: Text(
+                'No delivery methods are available for this address.'.tr,
+                textAlign: TextAlign.center,
+              ),
+            )
+          : ListView.separated(
+              shrinkWrap: true,
+              itemCount: controller.deliveryMethods.length,
+              separatorBuilder: (_, _) => const Divider(height: 1),
+              itemBuilder: (_, index) {
+                final method = controller.deliveryMethods[index];
+                final selected =
+                    method.id == controller.selectedDeliveryMethod.value?.id;
+                return ListTile(
+                  key: Key('checkout-delivery-method-${method.id}'),
+                  onTap: () => Navigator.of(context).pop(method),
+                  leading: Icon(
+                    selected
+                        ? Icons.radio_button_checked
+                        : Icons.radio_button_off,
+                    color: selected
+                        ? Theme.of(context).colorScheme.primary
+                        : Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                  title: Text(
+                    method.name,
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  subtitle: method.description?.isNotEmpty == true
+                      ? Text(method.description!)
+                      : null,
+                  trailing: Text(
+                    method.formattedPrice?.isNotEmpty == true
+                        ? method.formattedPrice!
+                        : CartPage.money(method.price),
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.primary,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                );
+              },
+            ),
+    ),
+    actions: [TextButton(onPressed: Get.back, child: Text('Cancel'.tr))],
   );
 }
 
@@ -570,8 +789,13 @@ class _DeliveryNotes extends StatelessWidget {
           controller: controller.notesController,
           minLines: 3,
           maxLines: 3,
+          onEditingComplete: controller.updateDeliveryNotes,
+          onTapOutside: (_) {
+            FocusManager.instance.primaryFocus?.unfocus();
+            controller.updateDeliveryNotes();
+          },
           decoration: InputDecoration(
-            hintText: 'Add delivery instructions...'.tr,
+            hintText: controller.notesHint.value.tr,
             hintStyle: TextStyle(
               color: Theme.of(context).colorScheme.onSurfaceVariant,
               fontSize: 14,
@@ -648,10 +872,12 @@ class _PlaceOrderBar extends StatelessWidget {
   const _PlaceOrderBar({
     required this.total,
     required this.enabled,
+    required this.loading,
     required this.onPressed,
   });
   final int total;
   final bool enabled;
+  final bool loading;
   final VoidCallback onPressed;
 
   @override
@@ -694,7 +920,7 @@ class _PlaceOrderBar extends StatelessWidget {
         const Spacer(),
         FilledButton.icon(
           key: const Key('place-order'),
-          onPressed: onPressed,
+          onPressed: enabled ? onPressed : null,
           style: FilledButton.styleFrom(
             backgroundColor: enabled
                 ? AppColors.accent
@@ -702,9 +928,18 @@ class _PlaceOrderBar extends StatelessWidget {
             foregroundColor: Colors.white,
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
           ),
-          label: Text('Place Order'.tr),
+          label: Text((loading ? 'Placing Order...' : 'Place Order').tr),
           iconAlignment: IconAlignment.end,
-          icon: Icon(Icons.bolt_rounded, size: 18),
+          icon: loading
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : const Icon(Icons.bolt_rounded, size: 18),
         ),
       ],
     ),

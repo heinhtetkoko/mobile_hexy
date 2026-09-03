@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:mobile_hexy/core/theme/app_colors.dart';
+import 'package:mobile_hexy/data/models/order.dart';
 import 'package:mobile_hexy/presentation/viewmodel/my_orders_view_model.dart';
 
 class MyOrdersPage extends GetView<MyOrdersViewModel> {
@@ -95,7 +96,7 @@ class MyOrdersPage extends GetView<MyOrdersViewModel> {
                 children: [
                   Text(
                     'Showing @count orders'.trParams({
-                      'count': '${orders.length}',
+                      'count': '${controller.totalCount.value}',
                     }),
                     style: TextStyle(
                       color: colors.onSurfaceVariant,
@@ -135,7 +136,14 @@ class MyOrdersPage extends GetView<MyOrdersViewModel> {
               ),
             ),
             Expanded(
-              child: orders.isEmpty
+              child: controller.isLoading.value
+                  ? const Center(child: CircularProgressIndicator())
+                  : controller.errorMessage.value != null
+                  ? _OrdersError(
+                      message: controller.errorMessage.value!,
+                      onRetry: controller.loadOrders,
+                    )
+                  : orders.isEmpty
                   ? _EmptyOrders(query: controller.searchQuery.value)
                   : NotificationListener<ScrollNotification>(
                       onNotification: (notification) {
@@ -147,10 +155,18 @@ class MyOrdersPage extends GetView<MyOrdersViewModel> {
                       },
                       child: ListView.separated(
                         padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
-                        itemCount: orders.length,
+                        itemCount:
+                            orders.length +
+                            (controller.isLoadingMore.value ? 1 : 0),
                         separatorBuilder: (_, _) => const SizedBox(height: 12),
-                        itemBuilder: (_, index) =>
-                            _OrderCard(order: orders[index]),
+                        itemBuilder: (_, index) => index == orders.length
+                            ? const Center(
+                                child: Padding(
+                                  padding: EdgeInsets.all(12),
+                                  child: CircularProgressIndicator(),
+                                ),
+                              )
+                            : _OrderCard(order: orders[index]),
                       ),
                     ),
             ),
@@ -185,118 +201,128 @@ class _OrderCard extends GetView<MyOrdersViewModel> {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final status = _statusStyle(order.status);
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x0A000000),
-            blurRadius: 8,
-            offset: Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  'Order #${order.number}'.tr,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: status.background,
-                  borderRadius: BorderRadius.circular(100),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 6,
-                      height: 6,
-                      decoration: BoxDecoration(
-                        color: status.foreground,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      controller.statusLabel(order.status).tr,
-                      style: TextStyle(
-                        color: status.foreground,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Divider(height: 1, color: Theme.of(context).dividerColor),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              _Info(
-                label: 'ITEMS',
-                value:
-                    '${order.itemCount} ${order.itemCount == 1 ? 'Item' : 'Items'}',
-                bold: true,
-              ),
-              _Info(label: 'DATE', value: _date(order.date)),
-              _Info(
-                label: 'TOTAL',
-                value: order.total,
-                bold: true,
-                alignEnd: true,
-                valueColor: colors.primary,
-              ),
-            ],
-          ),
-          if (order.reason != null) ...[
-            const SizedBox(height: 10),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFEF2F2),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                'Reason: ${order.reason}'.tr,
-                style: const TextStyle(color: Color(0xFF991B1B), fontSize: 11),
-              ),
+    return InkWell(
+      onTap: () => controller.openDetail(order),
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: colors.surface,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x0A000000),
+              blurRadius: 8,
+              offset: Offset(0, 4),
             ),
           ],
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              for (var i = 0; i < order.actions.length; i++) ...[
-                if (i > 0) const SizedBox(width: 8),
+        ),
+        child: Column(
+          children: [
+            Row(
+              children: [
                 Expanded(
-                  child: _ActionButton(
-                    label: order.actions[i],
-                    primary: _isPrimary(order.actions[i]),
-                    onTap: () =>
-                        controller.performAction(order.actions[i], order),
+                  child: Text(
+                    'Order #${order.number}'.tr,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: status.background,
+                    borderRadius: BorderRadius.circular(100),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 6,
+                        height: 6,
+                        decoration: BoxDecoration(
+                          color: status.foreground,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        controller.statusLabel(order.status).tr,
+                        style: TextStyle(
+                          color: status.foreground,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
+            ),
+            const SizedBox(height: 10),
+            Divider(height: 1, color: Theme.of(context).dividerColor),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                _Info(
+                  label: 'ITEMS',
+                  value:
+                      '${order.itemCount} ${order.itemCount == 1 ? 'Item' : 'Items'}',
+                  bold: true,
+                ),
+                _Info(label: 'DATE', value: _date(order.date)),
+                _Info(
+                  label: 'TOTAL',
+                  value: order.total,
+                  bold: true,
+                  alignEnd: true,
+                  valueColor: colors.primary,
+                ),
+              ],
+            ),
+            if (order.reason != null) ...[
+              const SizedBox(height: 10),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEF2F2),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  'Reason: ${order.reason}'.tr,
+                  style: const TextStyle(
+                    color: Color(0xFF991B1B),
+                    fontSize: 11,
+                  ),
+                ),
+              ),
             ],
-          ),
-        ],
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                for (var i = 0; i < order.actions.length; i++) ...[
+                  if (i > 0) const SizedBox(width: 8),
+                  Expanded(
+                    child: _ActionButton(
+                      label: order.actions[i],
+                      primary: _isPrimary(order.actions[i]),
+                      onTap: () =>
+                          controller.performAction(order.actions[i], order),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -443,6 +469,27 @@ class _EmptyOrders extends StatelessWidget {
           style: const TextStyle(fontWeight: FontWeight.w600),
         ),
       ],
+    ),
+  );
+}
+
+class _OrdersError extends StatelessWidget {
+  const _OrdersError({required this.message, required this.onRetry});
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) => Center(
+    child: Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(message, textAlign: TextAlign.center),
+          const SizedBox(height: 12),
+          FilledButton(onPressed: onRetry, child: Text('Try Again'.tr)),
+        ],
+      ),
     ),
   );
 }

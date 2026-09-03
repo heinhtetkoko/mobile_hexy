@@ -49,6 +49,7 @@ class StationeryHomeViewModel extends BaseViewModel {
   final searchQuery = ''.obs;
   final bannerController = PageController();
   Timer? _bannerTimer;
+  bool _isDisposed = false;
   late final HomeCatalog catalog;
   final banners = <HomeBanner>[].obs;
   final isBannersLoading = false.obs;
@@ -171,6 +172,7 @@ class StationeryHomeViewModel extends BaseViewModel {
     isBannersLoading.value = true;
     try {
       final result = await _bannersDataSource.fetchBanners();
+      if (_isDisposed) return;
       if (result.isNotEmpty) {
         activeBanner.value = 0;
         banners.assignAll(result);
@@ -178,9 +180,9 @@ class StationeryHomeViewModel extends BaseViewModel {
         _startBannerAutoplay();
       }
     } catch (_) {
-      banners.clear();
+      if (!_isDisposed) banners.clear();
     } finally {
-      isBannersLoading.value = false;
+      if (!_isDisposed) isBannersLoading.value = false;
     }
   }
 
@@ -210,9 +212,11 @@ class StationeryHomeViewModel extends BaseViewModel {
 
   void _startBannerAutoplay() {
     _bannerTimer?.cancel();
-    if (banners.length < 2) return;
+    if (_isDisposed || banners.length < 2) return;
     _bannerTimer = Timer.periodic(const Duration(seconds: 5), (_) {
-      if (!bannerController.hasClients || banners.length < 2) return;
+      if (_isDisposed || !bannerController.hasClients || banners.length < 2) {
+        return;
+      }
       final nextPage = (activeBanner.value + 1) % banners.length;
       bannerController.animateToPage(
         nextPage,
@@ -431,6 +435,7 @@ class StationeryHomeViewModel extends BaseViewModel {
 
   @override
   void onClose() {
+    _isDisposed = true;
     _bannerTimer?.cancel();
     bannerController.dispose();
     super.onClose();

@@ -1,29 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:mobile_hexy/app.dart';
 import 'package:mobile_hexy/core/base/base_view_model.dart';
-
-enum OrderStatus { pending, processing, delivered, refunded, cancelled }
-
-class OrderSummary {
-  const OrderSummary({
-    required this.number,
-    required this.status,
-    required this.itemCount,
-    required this.date,
-    required this.total,
-    required this.actions,
-    this.reason,
-  });
-  final String number;
-  final OrderStatus status;
-  final int itemCount;
-  final DateTime date;
-  final String total;
-  final List<String> actions;
-  final String? reason;
-}
+import 'package:mobile_hexy/data/datasources/orders_remote_data_source.dart';
+import 'package:mobile_hexy/data/models/order.dart';
 
 class MyOrdersViewModel extends BaseViewModel {
+  MyOrdersViewModel(this._remoteDataSource);
+  final OrdersRemoteDataSource _remoteDataSource;
+
   static const tabs = [
     'All',
     'Pending',
@@ -36,67 +21,13 @@ class MyOrdersViewModel extends BaseViewModel {
   final searchQuery = ''.obs;
   final latestFirst = true.obs;
   final searchVisible = false.obs;
-  final visibleCount = 7.obs;
   final searchController = TextEditingController();
-  final orders = <OrderSummary>[
-    OrderSummary(
-      number: 'STA-2025-0874',
-      status: OrderStatus.pending,
-      itemCount: 4,
-      date: DateTime(2025, 7, 2),
-      total: '48,540 Ks',
-      actions: ['Track Order'],
-    ),
-    OrderSummary(
-      number: 'STA-2025-0821',
-      status: OrderStatus.processing,
-      itemCount: 2,
-      date: DateTime(2025, 6, 28),
-      total: '15,200 Ks',
-      actions: ['View Details'],
-    ),
-    OrderSummary(
-      number: 'STA-2025-0701',
-      status: OrderStatus.delivered,
-      itemCount: 5,
-      date: DateTime(2025, 6, 15),
-      total: '28,750 Ks',
-      actions: ['Buy Again'],
-    ),
-    OrderSummary(
-      number: 'STA-2025-0688',
-      status: OrderStatus.pending,
-      itemCount: 1,
-      date: DateTime(2025, 6, 12),
-      total: '8,500 Ks',
-      actions: ['Track Order'],
-    ),
-    OrderSummary(
-      number: 'STA-2025-0632',
-      status: OrderStatus.refunded,
-      itemCount: 2,
-      date: DateTime(2025, 6, 5),
-      total: '12,000 Ks',
-      actions: ['View Details', 'Contact Support'],
-    ),
-    OrderSummary(
-      number: 'STA-2025-0598',
-      status: OrderStatus.delivered,
-      itemCount: 6,
-      date: DateTime(2025, 5, 28),
-      total: '35,400 Ks',
-      actions: ['Buy Again'],
-    ),
-    OrderSummary(
-      number: 'STA-2025-0543',
-      status: OrderStatus.cancelled,
-      itemCount: 2,
-      date: DateTime(2025, 5, 20),
-      total: '95,000 Ks',
-      actions: ['View Details', 'Reorder'],
-      reason: 'Customer request',
-    ),
-  ];
+  final orders = <OrderSummary>[].obs;
+  final isLoading = false.obs;
+  final isLoadingMore = false.obs;
+  final totalCount = 0.obs;
+  int _page = 1;
+  bool _hasNextPage = false;
 
   @override
   void onInit() {
@@ -105,36 +36,97 @@ class MyOrdersViewModel extends BaseViewModel {
     if (initial is String && tabs.contains(initial)) {
       selectedStatus.value = initial;
     }
+    loadOrders();
   }
 
   List<OrderSummary> get filteredOrders {
-    return _matchingOrders().take(visibleCount.value).toList();
+    final query = searchQuery.value.trim().toLowerCase();
+    if (query.isEmpty) return orders;
+    return orders
+        .where((order) => order.number.toLowerCase().contains(query))
+        .toList();
   }
 
-  bool get hasMoreOrders => visibleCount.value < _matchingOrders().length;
+  bool get hasMoreOrders => _hasNextPage && !isLoadingMore.value;
 
-  List<OrderSummary> _matchingOrders() {
-    final query = searchQuery.value.trim().toLowerCase();
-    final result =
-        orders
-            .where(
-              (order) =>
-                  (selectedStatus.value == 'All' ||
-                      statusLabel(order.status) == selectedStatus.value) &&
-                  (query.isEmpty || order.number.toLowerCase().contains(query)),
-            )
-            .toList()
-          ..sort(
-            (a, b) => latestFirst.value
-                ? b.date.compareTo(a.date)
-                : a.date.compareTo(b.date),
-          );
-    return result;
+  Future<void> loadOrders() async {
+    isLoading.value = true;
+    errorMessage.value = null;
+    _page = 1;
+    try {
+      final data = await _remoteDataSource.fetchOrders(
+        status: selectedStatus.value.toLowerCase(),
+        sort: latestFirst.value ? 'latest' : 'oldest',
+        page: _page,
+      );
+      _apply(data, replace: true);
+    } catch (error) {
+      errorMessage.value = _message(error);
+      orders.clear();
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  Future<void> loadMore() async {
+    if (!hasMoreOrders) return;
+    isLoadingMore.value = true;
+    try {
+      final data = await _remoteDataSource.fetchOrders(
+        status: selectedStatus.value.toLowerCase(),
+        sort: latestFirst.value ? 'latest' : 'oldest',
+        page: _page + 1,
+      );
+      _page++;
+      _apply(data, replace: false);
+    } catch (error) {
+      Get.snackbar(
+        'Could not load more orders',
+        _message(error),
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    } finally {
+      isLoadingMore.value = false;
+    }
+  }
+
+  void _apply(Map<String, dynamic> data, {required bool replace}) {
+    final source = data['orders'] ?? data['items'] ?? data['data'];
+    final raw = source is Map
+        ? source['data'] ?? source['items'] ?? source['orders']
+        : source;
+    final parsed = raw is List
+        ? raw.whereType<Map>().map(OrderSummary.fromJson).toList()
+        : <OrderSummary>[];
+    if (replace) {
+      orders.assignAll(parsed);
+    } else {
+      final known = orders.map((order) => order.id).toSet();
+      orders.addAll(parsed.where((order) => !known.contains(order.id)));
+    }
+    final paginationSource =
+        data['pagination'] ?? data['meta'] ?? (source is Map ? source : null);
+    final pagination = paginationSource is Map ? paginationSource : const {};
+    totalCount.value = _int(
+      pagination['total'] ?? pagination['total_count'] ?? data['count'],
+      fallback: orders.length,
+    );
+    final current = _int(
+      pagination['page'] ?? pagination['current_page'],
+      fallback: _page,
+    );
+    final pages = _int(pagination['pages'] ?? pagination['total_pages']);
+    _hasNextPage =
+        pagination['has_next'] == true ||
+        pagination['has_more'] == true ||
+        (pages > 0 && current < pages) ||
+        (parsed.length >= 10 && orders.length < totalCount.value);
   }
 
   void selectStatus(String status) {
+    if (selectedStatus.value == status) return;
     selectedStatus.value = status;
-    visibleCount.value = 7;
+    loadOrders();
   }
 
   void toggleSearch() {
@@ -146,16 +138,30 @@ class MyOrdersViewModel extends BaseViewModel {
   }
 
   void setSearch(String value) => searchQuery.value = value;
-  void setSort(bool latest) => latestFirst.value = latest;
-  void loadMore() {
-    if (hasMoreOrders) visibleCount.value += 5;
+  void setSort(bool latest) {
+    if (latestFirst.value == latest) return;
+    latestFirst.value = latest;
+    loadOrders();
   }
 
-  void performAction(String action, OrderSummary order) => Get.snackbar(
-    action,
-    'Order #${order.number}',
-    snackPosition: SnackPosition.BOTTOM,
+  void performAction(String action, OrderSummary order) {
+    if (action.toLowerCase().contains('detail') ||
+        action.toLowerCase().contains('track')) {
+      openDetail(order);
+      return;
+    }
+    Get.snackbar(
+      action,
+      'Order #${order.number}',
+      snackPosition: SnackPosition.BOTTOM,
+    );
+  }
+
+  void openDetail(OrderSummary order) => Get.toNamed<dynamic>(
+    AppRoutes.orderDetail,
+    arguments: {'id': order.id, 'number': order.number},
   );
+
   String statusLabel(OrderStatus status) => switch (status) {
     OrderStatus.pending => 'Pending',
     OrderStatus.processing => 'Processing',
@@ -163,6 +169,14 @@ class MyOrdersViewModel extends BaseViewModel {
     OrderStatus.refunded => 'Refunded',
     OrderStatus.cancelled => 'Cancelled',
   };
+
+  int _int(Object? value, {int fallback = 0}) => value is num
+      ? value.toInt()
+      : int.tryParse(value?.toString() ?? '') ?? fallback;
+  String _message(Object error) => error
+      .toString()
+      .replaceFirst('Exception: ', '')
+      .replaceFirst('FormatException: ', '');
 
   @override
   void onClose() {

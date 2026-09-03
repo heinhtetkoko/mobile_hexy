@@ -120,6 +120,38 @@ class CategoryProductsRemoteDataSource {
     );
   }
 
+  Future<CategoryProductsResult> fetchDiscountProducts({
+    required int page,
+    required int limit,
+  }) async {
+    final response = await _apiService.get<dynamic>(
+      ApiEndpoints.discountProducts,
+      queryParameters: {
+        'source': 'all',
+        'sort': 'highest_discount',
+        'page': page,
+        'limit': limit,
+      },
+      options: Options(extra: const {ApiEndpoints.requiresAuthKey: false}),
+    );
+    final body = response.data;
+    if (body is! Map || body['success'] != true || body['data'] is! List) {
+      throw const FormatException('Could not load promotional products.');
+    }
+    final products = (body['data'] as List)
+        .whereType<Map>()
+        .map(_parseProduct)
+        .toList(growable: false);
+    final meta = body['meta'];
+    return CategoryProductsResult(
+      products: products,
+      page: meta is Map
+          ? int.tryParse(meta['page']?.toString() ?? '') ?? page
+          : page,
+      hasNext: meta is Map && meta['has_next'] == true,
+    );
+  }
+
   CatalogProduct _parseProduct(Map<dynamic, dynamic> json) {
     final currency = json['currency'];
     final symbol = currency is Map ? currency['symbol']?.toString() ?? '' : '';

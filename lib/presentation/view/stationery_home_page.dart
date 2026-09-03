@@ -25,6 +25,8 @@ class StationeryHomePage extends GetView<StationeryHomeViewModel> {
         child: Column(
           children: [
             _Header(
+              onNotificationTap: () =>
+                  Get.toNamed<void>(AppRoutes.notifications),
               onSearchTap: () => Get.toNamed<void>(
                 AppRoutes.productList,
                 arguments: const ProductListRequest.search(),
@@ -187,8 +189,9 @@ class StationeryHomePage extends GetView<StationeryHomeViewModel> {
 }
 
 class _Header extends StatelessWidget {
-  const _Header({required this.onSearchTap});
+  const _Header({required this.onSearchTap, required this.onNotificationTap});
   final VoidCallback onSearchTap;
+  final VoidCallback onNotificationTap;
 
   @override
   Widget build(BuildContext context) => Column(
@@ -219,7 +222,11 @@ class _Header extends StatelessWidget {
               ),
             ),
             const Spacer(),
-            _BadgeIcon(icon: Icons.notifications_none_rounded, count: '3'),
+            _BadgeIcon(
+              icon: Icons.notifications_none_rounded,
+              count: '3',
+              onTap: onNotificationTap,
+            ),
           ],
         ),
       ),
@@ -253,17 +260,26 @@ class _Header extends StatelessWidget {
 }
 
 class _BadgeIcon extends StatelessWidget {
-  const _BadgeIcon({required this.icon, required this.count});
+  const _BadgeIcon({
+    required this.icon,
+    required this.count,
+    required this.onTap,
+  });
   final IconData icon;
   final String count;
+  final VoidCallback onTap;
   @override
-  Widget build(BuildContext context) => Stack(
-    clipBehavior: Clip.none,
-    children: [
-      const SizedBox(width: 28, height: 28),
-      Positioned.fill(child: Icon(icon, color: Colors.white, size: 25)),
-      Positioned(right: -3, top: -3, child: _CountBadge(value: count)),
-    ],
+  Widget build(BuildContext context) => InkWell(
+    onTap: onTap,
+    borderRadius: BorderRadius.circular(18),
+    child: Stack(
+      clipBehavior: Clip.none,
+      children: [
+        const SizedBox(width: 28, height: 28),
+        Positioned.fill(child: Icon(icon, color: Colors.white, size: 25)),
+        Positioned(right: -3, top: -3, child: _CountBadge(value: count)),
+      ],
+    ),
   );
 }
 
@@ -1018,7 +1034,13 @@ class _OfferCard extends StatelessWidget {
               ),
               SizedBox(height: 14),
               if (banner.buttonText.isNotEmpty)
-                _LabelBadge(value: banner.buttonText),
+                _LabelBadge(
+                  value: banner.buttonText,
+                  onTap: () => Get.toNamed<void>(
+                    AppRoutes.productList,
+                    arguments: const ProductListRequest.discountProducts(),
+                  ),
+                ),
             ],
           ),
         ),
@@ -2059,21 +2081,26 @@ class _CountBadge extends StatelessWidget {
 }
 
 class _LabelBadge extends StatelessWidget {
-  const _LabelBadge({required this.value});
+  const _LabelBadge({required this.value, this.onTap});
   final String value;
+  final VoidCallback? onTap;
   @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-    decoration: BoxDecoration(
-      color: StationeryHomePage._pink,
+  Widget build(BuildContext context) => Material(
+    color: StationeryHomePage._pink,
+    borderRadius: BorderRadius.circular(10),
+    child: InkWell(
+      onTap: onTap,
       borderRadius: BorderRadius.circular(10),
-    ),
-    child: Text(
-      value,
-      style: const TextStyle(
-        color: Colors.white,
-        fontSize: 10,
-        fontWeight: FontWeight.w800,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        child: Text(
+          value,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 10,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
       ),
     ),
   );

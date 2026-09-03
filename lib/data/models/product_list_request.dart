@@ -3,6 +3,7 @@ enum ProductListMode {
   newArrivals,
   flashSale,
   recommended,
+  discountProducts,
   search,
 }
 
@@ -18,6 +19,9 @@ class ProductListRequest {
       query = '';
   const ProductListRequest.recommended()
     : mode = ProductListMode.recommended,
+      query = '';
+  const ProductListRequest.discountProducts()
+    : mode = ProductListMode.discountProducts,
       query = '';
   const ProductListRequest.search({this.query = ''})
     : mode = ProductListMode.search;

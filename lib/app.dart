@@ -10,6 +10,8 @@ import 'package:mobile_hexy/presentation/controllers/categories_binding.dart';
 import 'package:mobile_hexy/presentation/controllers/checkout_binding.dart';
 import 'package:mobile_hexy/presentation/controllers/main_binding.dart';
 import 'package:mobile_hexy/presentation/controllers/my_orders_binding.dart';
+import 'package:mobile_hexy/presentation/controllers/order_detail_binding.dart';
+import 'package:mobile_hexy/presentation/controllers/notifications_binding.dart';
 import 'package:mobile_hexy/presentation/controllers/onboarding_binding.dart';
 import 'package:mobile_hexy/presentation/controllers/product_detail_binding.dart';
 import 'package:mobile_hexy/presentation/controllers/product_list_binding.dart';
@@ -26,6 +28,8 @@ import 'package:mobile_hexy/presentation/view/checkout_page.dart';
 import 'package:mobile_hexy/presentation/view/support_content_page.dart';
 import 'package:mobile_hexy/presentation/view/main_view.dart';
 import 'package:mobile_hexy/presentation/view/my_orders_page.dart';
+import 'package:mobile_hexy/presentation/view/order_detail_page.dart';
+import 'package:mobile_hexy/presentation/view/notifications_page.dart';
 import 'package:mobile_hexy/presentation/view/onboarding_page.dart';
 import 'package:mobile_hexy/presentation/view/payment_success_page.dart';
 import 'package:mobile_hexy/presentation/view/personal_information_page.dart';
@@ -80,6 +84,9 @@ abstract final class AppRoutes {
   static const privacyPolicy = '/privacy-policy';
   static const termsConditions = '/terms-conditions';
   static const myOrders = '/my-orders';
+  static const orderDetail = '/order-detail';
+  static const notifications = '/notifications';
+  static const notificationDetail = '/notification-detail';
   static const login = '/login';
   static const register = '/register';
   static const forgotPassword = '/forgot-password';
@@ -160,6 +167,20 @@ abstract final class AppPages {
       name: AppRoutes.myOrders,
       page: MyOrdersPage.new,
       binding: MyOrdersBinding(),
+    ),
+    GetPage(
+      name: AppRoutes.orderDetail,
+      page: OrderDetailPage.new,
+      binding: OrderDetailBinding(),
+    ),
+    GetPage(
+      name: AppRoutes.notifications,
+      page: NotificationsPage.new,
+      binding: NotificationsBinding(),
+    ),
+    GetPage(
+      name: AppRoutes.notificationDetail,
+      page: NotificationDetailPage.new,
     ),
     GetPage(name: AppRoutes.login, page: LoginPage.new, binding: AuthBinding()),
     GetPage(

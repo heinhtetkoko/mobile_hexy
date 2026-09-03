@@ -78,4 +78,65 @@ class AuthRemoteDataSource {
       throw ServerException(error.toString().replaceFirst('Exception: ', ''));
     }
   }
+
+  Future<void> requestPasswordOtp(String email) async {
+    await _publicPost(ApiEndpoints.forgotPasswordRequest, {'email': email});
+  }
+
+  Future<String> verifyPasswordOtp({
+    required String email,
+    required String otp,
+  }) async {
+    final data = await _publicPost(ApiEndpoints.forgotPasswordVerify, {
+      'email': email,
+      'otp': otp,
+    });
+    final token = data['reset_token']?.toString() ?? '';
+    if (token.isEmpty) {
+      throw const ServerException(
+        'The verification response did not contain a reset token.',
+      );
+    }
+    return token;
+  }
+
+  Future<String?> resetForgottenPassword({
+    required String resetToken,
+    required String newPassword,
+  }) async {
+    final data = await _publicPost(ApiEndpoints.forgotPasswordReset, {
+      'reset_token': resetToken,
+      'new_password': newPassword,
+      'confirm_password': newPassword,
+    });
+    final token = data['access_token']?.toString();
+    return token?.isNotEmpty == true ? token : null;
+  }
+
+  Future<Map<String, dynamic>> _publicPost(
+    String path,
+    Map<String, dynamic> request,
+  ) async {
+    try {
+      final response = await _apiService.post<dynamic>(
+        path,
+        data: request,
+        options: Options(extra: {ApiEndpoints.requiresAuthKey: false}),
+      );
+      final body = response.data;
+      if (body is! Map || body['success'] != true) {
+        throw ServerException(
+          body is Map
+              ? body['message']?.toString() ?? 'Password reset failed.'
+              : 'The server returned an invalid response.',
+        );
+      }
+      final data = body['data'];
+      return data is Map ? Map<String, dynamic>.from(data) : const {};
+    } on ServerException {
+      rethrow;
+    } on Exception catch (error) {
+      throw ServerException(error.toString().replaceFirst('Exception: ', ''));
+    }
+  }
 }

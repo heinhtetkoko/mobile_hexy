@@ -186,10 +186,13 @@ class ForgotPasswordPage extends GetView<AuthViewModel> {
             tall: true,
           ),
           const SizedBox(height: 24),
-          _PrimaryButton(
-            label: 'Send Verification Code',
-            onPressed: controller.sendCode,
-            tall: true,
+          Obx(
+            () => _PrimaryButton(
+              label: 'Send Verification Code',
+              onPressed: controller.sendCode,
+              loading: controller.isRequestingOtp.value,
+              tall: true,
+            ),
           ),
           const SizedBox(height: 24),
           _BottomLink(
@@ -207,9 +210,12 @@ class OtpVerificationPage extends GetView<AuthViewModel> {
   const OtpVerificationPage({super.key});
   @override
   Widget build(BuildContext context) {
-    final email = Get.arguments is String
-        ? Get.arguments as String
-        : 'hello@hexcy.com';
+    final arguments = Get.arguments;
+    final email = arguments is Map
+        ? arguments['email']?.toString() ?? ''
+        : arguments is String
+        ? arguments
+        : '';
     return _AuthScaffold(
       child: _AuthCard(
         child: Column(
@@ -255,10 +261,13 @@ class OtpVerificationPage extends GetView<AuthViewModel> {
               ),
             ),
             const SizedBox(height: 24),
-            _PrimaryButton(
-              label: 'Verify Code',
-              onPressed: controller.verifyCode,
-              tall: true,
+            Obx(
+              () => _PrimaryButton(
+                label: 'Verify Code',
+                onPressed: controller.verifyCode,
+                loading: controller.isVerifyingOtp.value,
+                tall: true,
+              ),
             ),
           ],
         ),
@@ -312,10 +321,13 @@ class ResetPasswordPage extends GetView<AuthViewModel> {
             const SizedBox(height: 24),
             const _PasswordRules(),
             const SizedBox(height: 24),
-            _PrimaryButton(
-              label: 'Reset Password',
-              onPressed: controller.resetPassword,
-              tall: true,
+            Obx(
+              () => _PrimaryButton(
+                label: 'Reset Password',
+                onPressed: controller.resetPassword,
+                loading: controller.isResettingPassword.value,
+                tall: true,
+              ),
             ),
           ],
         ),

@@ -73,6 +73,7 @@ class ProfileViewModel extends BaseViewModel {
       'Privacy Policy' => AppRoutes.privacyPolicy,
       'Terms & Conditions' => AppRoutes.termsConditions,
       'My Orders' => AppRoutes.myOrders,
+      'Notifications' => AppRoutes.notifications,
       'Pending' => AppRoutes.myOrders,
       'Processing' => AppRoutes.myOrders,
       'Refunded' => AppRoutes.myOrders,

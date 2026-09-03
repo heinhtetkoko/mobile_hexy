@@ -9,6 +9,7 @@ import 'package:mobile_hexy/core/services/secure_storage.dart';
 import 'package:mobile_hexy/domain/usecases/login_user.dart';
 import 'package:mobile_hexy/domain/usecases/login_with_google.dart';
 import 'package:mobile_hexy/domain/usecases/register_user.dart';
+import 'package:mobile_hexy/data/datasources/auth_remote_data_source.dart';
 
 class AuthViewModel extends BaseViewModel {
   AuthViewModel(
@@ -16,12 +17,14 @@ class AuthViewModel extends BaseViewModel {
     this._loginWithGoogle,
     this._registerUser,
     this._secureStorage,
+    this._authRemoteDataSource,
   );
 
   final LoginUser _loginUser;
   final LoginWithGoogle _loginWithGoogle;
   final RegisterUser _registerUser;
   final SecureStorage _secureStorage;
+  final AuthRemoteDataSource _authRemoteDataSource;
 
   final email = TextEditingController();
   final username = TextEditingController();
@@ -32,6 +35,9 @@ class AuthViewModel extends BaseViewModel {
   final isLoggingIn = false.obs;
   final isGoogleLoggingIn = false.obs;
   final isRegistering = false.obs;
+  final isRequestingOtp = false.obs;
+  final isVerifyingOtp = false.obs;
+  final isResettingPassword = false.obs;
   final rememberLogin = false.obs;
   final otp = List.generate(6, (_) => TextEditingController());
   final otpFocus = List.generate(6, (_) => FocusNode());
@@ -46,6 +52,7 @@ class AuthViewModel extends BaseViewModel {
   }
 
   Future<void> _restoreRememberedLogin() async {
+    if (Get.currentRoute != AppRoutes.login) return;
     final remembered = await _secureStorage.read(
       AppConstants.rememberedLoginKey,
     );
@@ -197,12 +204,19 @@ class AuthViewModel extends BaseViewModel {
     }
   }
 
-  void sendCode() {
-    if (_validEmail()) {
-      Get.toNamed<void>(
-        AppRoutes.otpVerification,
-        arguments: email.text.trim(),
-      );
+  Future<void> sendCode() async {
+    if (!_validEmail() || isRequestingOtp.value) return;
+    final value = email.text.trim();
+    isRequestingOtp.value = true;
+    try {
+      await _authRemoteDataSource.requestPasswordOtp(value);
+      Get.toNamed<void>(AppRoutes.otpVerification, arguments: {'email': value});
+    } on ServerException catch (error) {
+      _message(error.message);
+    } catch (error) {
+      _message(error.toString().replaceFirst('Exception: ', ''));
+    } finally {
+      isRequestingOtp.value = false;
     }
   }
 
@@ -211,21 +225,72 @@ class AuthViewModel extends BaseViewModel {
     if (value.isEmpty && index > 0) otpFocus[index - 1].requestFocus();
   }
 
-  void verifyCode() {
-    if (otp.map((field) => field.text).join().length != 6) {
+  Future<void> verifyCode() async {
+    final code = otp.map((field) => field.text).join();
+    if (code.length != 6) {
       return _message('Please enter the 6-digit verification code.');
     }
-    Get.toNamed<void>(AppRoutes.resetPassword);
+    if (isVerifyingOtp.value) return;
+    final arguments = Get.arguments;
+    final resetEmail = arguments is Map
+        ? arguments['email']?.toString() ?? ''
+        : arguments?.toString() ?? '';
+    if (!GetUtils.isEmail(resetEmail)) {
+      return _message('The reset email address is unavailable.');
+    }
+    isVerifyingOtp.value = true;
+    try {
+      final resetToken = await _authRemoteDataSource.verifyPasswordOtp(
+        email: resetEmail,
+        otp: code,
+      );
+      Get.toNamed<void>(
+        AppRoutes.resetPassword,
+        arguments: {'email': resetEmail, 'resetToken': resetToken},
+      );
+    } on ServerException catch (error) {
+      _message(error.message);
+    } catch (error) {
+      _message(error.toString().replaceFirst('Exception: ', ''));
+    } finally {
+      isVerifyingOtp.value = false;
+    }
   }
 
-  void resetPassword() {
+  Future<void> resetPassword() async {
     if (password.text.length < 8) {
       return _message('Password must contain at least 8 characters.');
     }
     if (password.text != confirmPassword.text) {
       return _message('Passwords do not match.');
     }
-    Get.offNamed<void>(AppRoutes.passwordUpdated);
+    if (isResettingPassword.value) return;
+    final arguments = Get.arguments;
+    final resetToken = arguments is Map
+        ? arguments['resetToken']?.toString() ?? ''
+        : '';
+    if (resetToken.isEmpty) {
+      return _message(
+        'The password reset session is invalid. Request a new code.',
+      );
+    }
+    isResettingPassword.value = true;
+    try {
+      final accessToken = await _authRemoteDataSource.resetForgottenPassword(
+        resetToken: resetToken,
+        newPassword: password.text,
+      );
+      if (accessToken != null) {
+        await _secureStorage.write(AppConstants.accessTokenKey, accessToken);
+      }
+      Get.offNamed<void>(AppRoutes.passwordUpdated);
+    } on ServerException catch (error) {
+      _message(error.message);
+    } catch (error) {
+      _message(error.toString().replaceFirst('Exception: ', ''));
+    } finally {
+      isResettingPassword.value = false;
+    }
   }
 
   bool _validEmail() {
