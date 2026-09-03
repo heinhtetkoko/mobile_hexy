@@ -82,14 +82,14 @@ class _WishlistHeader extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
-                color: const Color(0xFFEEF2FF),
+                color: Theme.of(context).colorScheme.primaryContainer,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
                 '$itemCount ${itemCount == 1 ? 'Item'.tr : 'Items'.tr}',
                 maxLines: 1,
-                style: const TextStyle(
-                  color: AppColors.primary,
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onPrimaryContainer,
                   fontSize: 12,
                   fontWeight: FontWeight.w800,
                 ),

@@ -196,7 +196,7 @@ class _Gallery extends StatelessWidget {
                     ? const Icon(Icons.image_not_supported_outlined, size: 64)
                     : Image.network(
                         images[selectedImage],
-                        fit: BoxFit.contain,
+                        fit: BoxFit.cover,
                         errorBuilder: (_, _, _) => const Icon(
                           Icons.image_not_supported_outlined,
                           size: 64,
@@ -268,7 +268,7 @@ class _Gallery extends StatelessWidget {
                     ),
                     child: Image.network(
                       images[index],
-                      fit: BoxFit.contain,
+                      fit: BoxFit.cover,
                       errorBuilder: (_, _, _) =>
                           const Icon(Icons.image_not_supported_outlined),
                     ),

@@ -29,21 +29,29 @@ class _AppShimmerState extends State<AppShimmer>
   }
 
   @override
-  Widget build(BuildContext context) => AnimatedBuilder(
-    animation: _controller,
-    child: widget.child,
-    builder: (context, child) => ShaderMask(
-      blendMode: BlendMode.srcATop,
-      shaderCallback: (bounds) => LinearGradient(
-        begin: Alignment.centerLeft,
-        end: Alignment.centerRight,
-        colors: const [Color(0xFFE5E7EB), Color(0xFFF8FAFC), Color(0xFFE5E7EB)],
-        stops: const [0.25, 0.5, 0.75],
-        transform: _SlidingGradientTransform(_controller.value),
-      ).createShader(bounds),
-      child: child,
-    ),
-  );
+  Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final baseColor = dark ? const Color(0xFF27273A) : const Color(0xFFE5E7EB);
+    final highlightColor = dark
+        ? const Color(0xFF3D3D55)
+        : const Color(0xFFF8FAFC);
+
+    return AnimatedBuilder(
+      animation: _controller,
+      child: widget.child,
+      builder: (context, child) => ShaderMask(
+        blendMode: BlendMode.srcATop,
+        shaderCallback: (bounds) => LinearGradient(
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+          colors: [baseColor, highlightColor, baseColor],
+          stops: const [0.25, 0.5, 0.75],
+          transform: _SlidingGradientTransform(_controller.value),
+        ).createShader(bounds),
+        child: child,
+      ),
+    );
+  }
 }
 
 class _SlidingGradientTransform extends GradientTransform {
@@ -68,14 +76,19 @@ class ShimmerBox extends StatelessWidget {
   final double radius;
 
   @override
-  Widget build(BuildContext context) => Container(
-    width: width,
-    height: height,
-    decoration: BoxDecoration(
-      color: const Color(0xFFE5E7EB),
-      borderRadius: BorderRadius.circular(radius),
-    ),
-  );
+  Widget build(BuildContext context) {
+    final color = Theme.of(context).brightness == Brightness.dark
+        ? const Color(0xFF27273A)
+        : const Color(0xFFE5E7EB);
+    return Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(radius),
+      ),
+    );
+  }
 }
 
 class HorizontalProductShimmer extends StatelessWidget {

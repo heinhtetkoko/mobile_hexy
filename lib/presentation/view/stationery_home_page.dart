@@ -175,7 +175,6 @@ class StationeryHomePage extends GetView<StationeryHomeViewModel> {
                     const SliverToBoxAdapter(child: _CollectionsSection()),
                     const SliverToBoxAdapter(child: _ChatFooter()),
                     const SliverToBoxAdapter(child: _PaymentMethods()),
-                    const SliverToBoxAdapter(child: SizedBox(height: 20)),
                   ],
                 ),
               ),
@@ -1467,19 +1466,20 @@ class _HorizontalLoadingIndicator extends StatelessWidget {
 }
 
 class _RemoteOrAssetImage extends StatelessWidget {
-  const _RemoteOrAssetImage({required this.product});
+  const _RemoteOrAssetImage({required this.product, this.fit = BoxFit.contain});
 
   final HomeProduct product;
+  final BoxFit fit;
 
   @override
   Widget build(BuildContext context) => product.imageUrl?.isNotEmpty == true
       ? Image.network(
           product.imageUrl!,
-          fit: BoxFit.contain,
+          fit: fit,
           errorBuilder: (_, _, _) =>
               const Icon(Icons.image_not_supported_outlined, size: 36),
         )
-      : Image.asset(product.imageAsset, fit: BoxFit.contain);
+      : Image.asset(product.imageAsset, fit: fit);
 }
 
 class _RecommendedCard extends StatelessWidget {
@@ -1517,11 +1517,13 @@ class _RecommendedCard extends StatelessWidget {
                   top: Radius.circular(14),
                 ),
                 child: Container(
-                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
                   width: double.infinity,
                   height: 112,
-                  padding: const EdgeInsets.all(8),
-                  child: _RemoteOrAssetImage(product: product),
+                  color: Theme.of(context).colorScheme.surface,
+                  child: _RemoteOrAssetImage(
+                    product: product,
+                    fit: BoxFit.cover,
+                  ),
                 ),
               ),
               Positioned(
