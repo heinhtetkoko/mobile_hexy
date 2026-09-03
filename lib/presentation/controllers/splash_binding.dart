@@ -5,5 +5,5 @@ import 'package:mobile_hexy/presentation/viewmodel/splash_view_model.dart';
 class SplashBinding extends Bindings {
   @override
   void dependencies() =>
-      Get.lazyPut(() => SplashViewModel(Get.find<AppNavigator>()));
+      Get.lazyPut(() => SplashViewModel(Get.find<AppNavigator>(), Get.find()));
 }

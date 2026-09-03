@@ -35,7 +35,14 @@ import 'package:mobile_hexy/presentation/view/splash_page.dart';
 import 'package:mobile_hexy/presentation/view/shipping_addresses_page.dart';
 
 class HexyApp extends StatelessWidget {
-  const HexyApp({super.key});
+  const HexyApp({
+    super.key,
+    this.initialThemeMode = ThemeMode.system,
+    this.initialLocale = const Locale('en', 'US'),
+  });
+
+  final ThemeMode initialThemeMode;
+  final Locale initialLocale;
 
   @override
   Widget build(BuildContext context) => GetMaterialApp(
@@ -46,9 +53,9 @@ class HexyApp extends StatelessWidget {
     getPages: AppPages.pages,
     theme: AppTheme.light,
     darkTheme: AppTheme.dark,
-    themeMode: ThemeMode.system,
+    themeMode: initialThemeMode,
     translations: AppTranslations(),
-    locale: const Locale('en', 'US'),
+    locale: initialLocale,
     fallbackLocale: const Locale('en', 'US'),
   );
 }

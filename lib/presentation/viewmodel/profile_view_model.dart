@@ -10,6 +10,8 @@ import 'package:mobile_hexy/domain/usecases/logout_user.dart';
 import 'package:mobile_hexy/domain/usecases/get_profile.dart';
 import 'package:mobile_hexy/extensions/show_logout_sheet.dart';
 import 'package:mobile_hexy/data/models/profile_summary.dart';
+import 'package:mobile_hexy/core/services/app_constants.dart';
+import 'package:mobile_hexy/core/services/secure_storage.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class ProfileViewModel extends BaseViewModel {
@@ -18,7 +20,8 @@ class ProfileViewModel extends BaseViewModel {
   final LogoutUser _logoutUser;
   final GetProfile _getProfile;
   final darkModeEnabled = Get.isDarkMode.obs;
-  final currentLanguage = 'English'.obs;
+  final currentLanguage =
+      (Get.locale?.languageCode == 'my' ? 'Myanmar' : 'English').obs;
   final isLoggingOut = false.obs;
   final profile = Rxn<ProfileSummary>();
   final isProfileLoading = false.obs;
@@ -43,9 +46,13 @@ class ProfileViewModel extends BaseViewModel {
     }
   }
 
-  void toggleDarkMode(bool enabled) {
+  Future<void> toggleDarkMode(bool enabled) async {
     darkModeEnabled.value = enabled;
     Get.changeThemeMode(enabled ? ThemeMode.dark : ThemeMode.light);
+    await Get.find<SecureStorage>().write(
+      AppConstants.themeModeKey,
+      enabled ? 'dark' : 'light',
+    );
   }
 
   void openItem(String label) {
@@ -156,9 +163,13 @@ class ProfileViewModel extends BaseViewModel {
     );
   }
 
-  void _setLanguage(String language, Locale locale) {
+  Future<void> _setLanguage(String language, Locale locale) async {
     currentLanguage.value = language;
     Get.updateLocale(locale);
+    await Get.find<SecureStorage>().write(
+      AppConstants.languageCodeKey,
+      locale.languageCode,
+    );
     Get.back<void>();
   }
 

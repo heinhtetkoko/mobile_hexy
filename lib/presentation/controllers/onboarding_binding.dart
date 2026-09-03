@@ -9,6 +9,7 @@ class OnboardingBinding extends Bindings {
       () => OnboardingViewModel(
         getSlides: Get.find(),
         navigator: Get.find<AppNavigator>(),
+        storage: Get.find(),
       ),
     );
   }

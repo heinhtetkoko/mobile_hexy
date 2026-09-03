@@ -9,8 +9,17 @@ import 'package:mobile_hexy/presentation/viewmodel/main_view_model.dart';
 import 'package:mobile_hexy/data/datasources/wishlist_remote_data_source.dart';
 import 'package:mobile_hexy/data/datasources/cart_remote_data_source.dart';
 
-class MainView extends GetView<MainViewModel> {
+class MainView extends StatefulWidget {
   const MainView({super.key});
+
+  static bool _promotionShownThisLaunch = false;
+
+  @override
+  State<MainView> createState() => _MainViewState();
+}
+
+class _MainViewState extends State<MainView> {
+  MainViewModel get controller => Get.find<MainViewModel>();
 
   static const _pages = <Widget>[
     StationeryHomePage(),
@@ -19,6 +28,66 @@ class MainView extends GetView<MainViewModel> {
     CartPage(),
     ProfilePage(),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    if (!MainView._promotionShownThisLaunch) {
+      MainView._promotionShownThisLaunch = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _showPromotion();
+      });
+    }
+  }
+
+  Future<void> _showPromotion() => showDialog<void>(
+    context: context,
+    barrierDismissible: true,
+    barrierColor: Colors.black.withValues(alpha: .72),
+    builder: (dialogContext) => Dialog(
+      backgroundColor: Colors.transparent,
+      surfaceTintColor: Colors.transparent,
+      elevation: 0,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 32, vertical: 40),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.sizeOf(dialogContext).height * .70,
+        ),
+        child: AspectRatio(
+          aspectRatio: 2 / 3,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Positioned.fill(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(24),
+                  child: Image.asset(
+                    'assets/images/tdk.png',
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              ),
+              Positioned(
+                right: -10,
+                top: -10,
+                child: Material(
+                  color: Colors.white,
+                  shape: const CircleBorder(),
+                  child: IconButton(
+                    key: const Key('close-main-promotion'),
+                    tooltip: 'Close',
+                    onPressed: () => Navigator.of(dialogContext).pop(),
+                    color: Colors.black,
+                    icon: const Icon(Icons.close_rounded, size: 28),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
 
   @override
   Widget build(BuildContext context) => Obx(
