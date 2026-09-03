@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:mobile_hexy/core/base/request_state.dart';
-import 'package:mobile_hexy/core/theme/app_colors.dart';
 import 'package:mobile_hexy/data/models/shipping_address.dart';
 import 'package:mobile_hexy/presentation/viewmodel/shipping_addresses_view_model.dart';
 import 'package:mobile_hexy/presentation/widgets/clean_app_bar.dart';
@@ -15,8 +14,8 @@ class ShippingAddressesPage extends GetView<ShippingAddressesViewModel> {
     floatingActionButton: FloatingActionButton(
       key: const Key('new-shipping-address'),
       onPressed: controller.addNew,
-      backgroundColor: AppColors.primary,
-      foregroundColor: Colors.white,
+      backgroundColor: Theme.of(context).colorScheme.primary,
+      foregroundColor: Theme.of(context).colorScheme.onPrimary,
       shape: const CircleBorder(),
       child: const Icon(Icons.add_rounded, size: 30),
     ),
@@ -81,10 +80,12 @@ class _AddressCard extends StatelessWidget {
     decoration: BoxDecoration(
       color: Theme.of(context).colorScheme.surface,
       borderRadius: BorderRadius.circular(16),
-      border: Border.all(color: const Color(0xFFE8EAF0)),
-      boxShadow: const [
+      border: Border.all(color: Theme.of(context).dividerColor),
+      boxShadow: [
         BoxShadow(
-          color: Color(0x0A000000),
+          color: Theme.of(context).brightness == Brightness.dark
+              ? Colors.black.withValues(alpha: .4)
+              : const Color(0x0A000000),
           blurRadius: 10,
           offset: Offset(0, 4),
         ),
@@ -97,14 +98,14 @@ class _AddressCard extends StatelessWidget {
           width: 42,
           height: 42,
           decoration: BoxDecoration(
-            color: AppColors.primary.withValues(alpha: .08),
+            color: Theme.of(context).colorScheme.primaryContainer,
             shape: BoxShape.circle,
           ),
           child: Icon(
             address.addressType == 'office'
                 ? Icons.business_outlined
                 : Icons.home_outlined,
-            color: AppColors.primary,
+            color: Theme.of(context).colorScheme.onPrimaryContainer,
           ),
         ),
         const SizedBox(width: 12),
@@ -119,7 +120,8 @@ class _AddressCard extends StatelessWidget {
                       address.name.isEmpty
                           ? address.addressType.capitalizeFirst ?? 'Address'
                           : address.name,
-                      style: const TextStyle(
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface,
                         fontSize: 16,
                         fontWeight: FontWeight.w800,
                       ),
@@ -133,13 +135,15 @@ class _AddressCard extends StatelessWidget {
                         vertical: 3,
                       ),
                       decoration: BoxDecoration(
-                        color: AppColors.primary.withValues(alpha: .1),
+                        color: Theme.of(context).colorScheme.primaryContainer,
                         borderRadius: BorderRadius.circular(20),
                       ),
-                      child: const Text(
+                      child: Text(
                         'Default',
                         style: TextStyle(
-                          color: AppColors.primary,
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onPrimaryContainer,
                           fontSize: 10,
                           fontWeight: FontWeight.w700,
                         ),
@@ -152,7 +156,8 @@ class _AddressCard extends StatelessWidget {
                 const SizedBox(height: 5),
                 Text(
                   address.phone,
-                  style: const TextStyle(
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface,
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
                   ),
@@ -166,8 +171,8 @@ class _AddressCard extends StatelessWidget {
                   address.cityTownship,
                   address.stateRegion,
                 ].where((value) => value.isNotEmpty).join(', '),
-                style: const TextStyle(
-                  color: Color(0xFF6B7280),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                   fontSize: 13,
                   height: 1.45,
                 ),
@@ -225,17 +230,28 @@ class _MessageState extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 58, color: const Color(0xFF9CA3AF)),
+          Icon(
+            icon,
+            size: 58,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
           const SizedBox(height: 16),
           Text(
             title,
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface,
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+            ),
           ),
           const SizedBox(height: 8),
           Text(
             message,
             textAlign: TextAlign.center,
-            style: const TextStyle(color: Color(0xFF6B7280), height: 1.4),
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+              height: 1.4,
+            ),
           ),
           if (buttonText != null && onPressed != null) ...[
             const SizedBox(height: 22),
@@ -244,8 +260,8 @@ class _MessageState extends StatelessWidget {
               icon: const Icon(Icons.refresh_rounded),
               label: Text(buttonText!),
               style: FilledButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
+                backgroundColor: Theme.of(context).colorScheme.primary,
+                foregroundColor: Theme.of(context).colorScheme.onPrimary,
               ),
             ),
           ],

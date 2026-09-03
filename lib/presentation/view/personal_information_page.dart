@@ -79,8 +79,8 @@ class PersonalInformationPage extends GetView<PersonalInformationViewModel> {
                   const SizedBox(height: 8),
                   Text(
                     'Change Photo'.tr,
-                    style: const TextStyle(
-                      color: AppColors.primary,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.primary,
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
                     ),
@@ -105,11 +105,7 @@ class PersonalInformationPage extends GetView<PersonalInformationViewModel> {
           _Field(
             'Email Address',
             controller.email,
-            prefix: const Icon(
-              Icons.mail_outline_rounded,
-              color: Color(0xFF9CA3AF),
-              size: 20,
-            ),
+            prefix: const Icon(Icons.mail_outline_rounded, size: 20),
           ),
           const SizedBox(height: 8),
           SizedBox(
@@ -209,20 +205,28 @@ class _Field extends StatelessWidget {
       children: [
         Text(
           label.tr,
-          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurface,
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+          ),
         ),
         const SizedBox(height: 8),
         TextField(
           controller: controller,
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
           decoration: InputDecoration(
             prefixIcon: prefix,
             prefixIconConstraints: const BoxConstraints(minWidth: 44),
             filled: true,
-            fillColor: AppColors.surface,
+            fillColor: Theme.of(context).colorScheme.surface,
+            hintStyle: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+              borderSide: BorderSide(color: Theme.of(context).dividerColor),
             ),
           ),
         ),
@@ -231,7 +235,10 @@ class _Field extends StatelessWidget {
             padding: const EdgeInsets.only(top: 6),
             child: Text(
               helper!,
-              style: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 11),
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                fontSize: 11,
+              ),
             ),
           ),
       ],

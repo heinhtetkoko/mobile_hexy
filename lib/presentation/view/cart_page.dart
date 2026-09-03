@@ -1,14 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:mobile_hexy/app.dart';
 import 'package:mobile_hexy/core/theme/app_colors.dart';
 import 'package:mobile_hexy/data/models/cart_item.dart';
 import 'package:mobile_hexy/presentation/viewmodel/cart_view_model.dart';
 
 class CartPage extends GetView<CartViewModel> {
   const CartPage({super.key});
-
-  static const _border = Color(0xFFE5E7EB);
 
   static String money(int value) {
     final digits = value.toString();
@@ -60,17 +57,6 @@ class CartPage extends GetView<CartViewModel> {
                           _CouponCard(controller: controller),
                           const SizedBox(height: 12),
                           _OrderSummary(controller: controller),
-                          const SizedBox(height: 12),
-                          _AddressCard(
-                            address: controller.shippingAddress.value,
-                            onEdit: () => Get.toNamed<dynamic>(
-                              AppRoutes.shippingAddresses,
-                            ),
-                          ),
-                          if (controller.shippingMethods.isNotEmpty) ...[
-                            const SizedBox(height: 12),
-                            _ShippingMethod(controller: controller),
-                          ],
                         ],
                       ),
                     ),
@@ -123,13 +109,13 @@ class _CartHeader extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
-                color: const Color(0xFFEEF2FF),
+                color: Theme.of(context).colorScheme.primaryContainer,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
                 '$count ${count == 1 ? 'Item'.tr : 'Items'.tr}',
                 style: TextStyle(
-                  color: AppColors.primary,
+                  color: Theme.of(context).colorScheme.onPrimaryContainer,
                   fontSize: 12,
                   fontWeight: FontWeight.w800,
                 ),
@@ -159,7 +145,7 @@ class _CartItemCard extends StatelessWidget {
     padding: const EdgeInsets.all(12),
     decoration: BoxDecoration(
       color: Theme.of(context).colorScheme.surface,
-      border: Border.all(color: CartPage._border),
+      border: Border.all(color: Theme.of(context).dividerColor),
       borderRadius: BorderRadius.circular(16),
       boxShadow: const [
         BoxShadow(
@@ -209,7 +195,10 @@ class _CartItemCard extends StatelessWidget {
                   const SizedBox(height: 3),
                   Text(
                     'SKU: ${item.sku}'.tr,
-                    style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 11),
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      fontSize: 11,
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Row(
@@ -220,14 +209,16 @@ class _CartItemCard extends StatelessWidget {
                         decoration: BoxDecoration(
                           color: Color(item.variantColor),
                           shape: BoxShape.circle,
-                          border: Border.all(color: CartPage._border),
+                          border: Border.all(
+                            color: Theme.of(context).dividerColor,
+                          ),
                         ),
                       ),
                       const SizedBox(width: 6),
                       Text(
                         item.variant,
                         style: TextStyle(
-                          color: AppColors.textSecondary,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                           fontSize: 12,
                         ),
                       ),
@@ -239,7 +230,7 @@ class _CartItemCard extends StatelessWidget {
                       Text(
                         CartPage.money(item.unitPrice),
                         style: TextStyle(
-                          color: AppColors.primary,
+                          color: Theme.of(context).colorScheme.primary,
                           fontSize: 14,
                           fontWeight: FontWeight.w800,
                         ),
@@ -286,7 +277,7 @@ class _CartItemCard extends StatelessWidget {
             ),
           ],
         ),
-        const Divider(height: 24, color: CartPage._border),
+        Divider(height: 24, color: Theme.of(context).dividerColor),
         Align(
           alignment: Alignment.centerLeft,
           child: InkWell(
@@ -333,15 +324,19 @@ class _QuantityButton extends StatelessWidget {
       height: 28,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: filled ? AppColors.primary : AppColors.surface,
-        border: filled ? null : Border.all(color: CartPage._border),
+        color: filled
+            ? Theme.of(context).colorScheme.primary
+            : Theme.of(context).colorScheme.surfaceContainerHighest,
+        border: filled
+            ? null
+            : Border.all(color: Theme.of(context).dividerColor),
         shape: BoxShape.circle,
       ),
       child: Text(
         symbol,
         style: TextStyle(
           color: filled
-              ? Colors.white
+              ? Theme.of(context).colorScheme.onPrimary
               : Theme.of(context).colorScheme.onSurface,
           fontSize: 13,
           fontWeight: FontWeight.w700,
@@ -359,7 +354,8 @@ class _CouponCard extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.all(16),
     decoration: BoxDecoration(
-      color: AppColors.surface,
+      color: Theme.of(context).colorScheme.surface,
+      border: Border.all(color: Theme.of(context).dividerColor),
       borderRadius: BorderRadius.circular(12),
     ),
     child: Column(
@@ -380,18 +376,20 @@ class _CouponCard extends StatelessWidget {
                   decoration: InputDecoration(
                     hintText: 'Enter Code'.tr,
                     hintStyle: TextStyle(
-                      color: Color(0xFF9CA3AF),
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                       fontSize: 14,
                     ),
                     contentPadding: const EdgeInsets.symmetric(horizontal: 16),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(22),
-                      borderSide: const BorderSide(color: Color(0xFF9CA3AF)),
+                      borderSide: BorderSide(
+                        color: Theme.of(context).dividerColor,
+                      ),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(22),
-                      borderSide: const BorderSide(
-                        color: Color(0xFF9CA3AF),
+                      borderSide: BorderSide(
+                        color: Theme.of(context).dividerColor,
                         style: BorderStyle.solid,
                       ),
                     ),
@@ -480,8 +478,8 @@ class _OrderSummary extends StatelessWidget {
                   ),
                   Text(
                     _summaryDisplay(row),
-                    style: const TextStyle(
-                      color: AppColors.primary,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.primary,
                       fontSize: 18,
                       fontWeight: FontWeight.w800,
                     ),
@@ -511,15 +509,17 @@ class _SummaryRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
     height: 44,
-    decoration: const BoxDecoration(
-      border: Border(bottom: BorderSide(color: Color(0xFFF3F4F6))),
+    decoration: BoxDecoration(
+      border: Border(bottom: BorderSide(color: Theme.of(context).dividerColor)),
     ),
     child: Row(
       children: [
         Text(
           label.tr,
           style: TextStyle(
-            color: green ? AppColors.success : AppColors.textSecondary,
+            color: green
+                ? AppColors.success
+                : Theme.of(context).colorScheme.onSurfaceVariant,
             fontSize: 14,
           ),
         ),
@@ -538,6 +538,8 @@ class _SummaryRow extends StatelessWidget {
   );
 }
 
+// Retained for a possible checkout-address step; intentionally hidden in cart.
+// ignore: unused_element
 class _AddressCard extends StatelessWidget {
   const _AddressCard({required this.address, required this.onEdit});
   final CartShippingAddress? address;
@@ -638,6 +640,8 @@ class _AddressCard extends StatelessWidget {
   );
 }
 
+// Retained for a possible checkout-delivery step; intentionally hidden in cart.
+// ignore: unused_element
 class _ShippingMethod extends StatelessWidget {
   const _ShippingMethod({required this.controller});
   final CartViewModel controller;
@@ -760,7 +764,7 @@ class _Panel extends StatelessWidget {
     padding: const EdgeInsets.all(16),
     decoration: BoxDecoration(
       color: Theme.of(context).colorScheme.surface,
-      border: Border.all(color: CartPage._border),
+      border: Border.all(color: Theme.of(context).dividerColor),
       borderRadius: BorderRadius.circular(16),
       boxShadow: const [
         BoxShadow(
@@ -801,12 +805,15 @@ class _CheckoutBar extends StatelessWidget {
           children: [
             Text(
               'Total'.tr,
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                fontSize: 12,
+              ),
             ),
             Text(
               CartPage.money(total),
               style: TextStyle(
-                color: AppColors.primary,
+                color: Theme.of(context).colorScheme.primary,
                 fontSize: 18,
                 fontWeight: FontWeight.w800,
               ),
@@ -818,9 +825,17 @@ class _CheckoutBar extends StatelessWidget {
           key: const Key('proceed-to-checkout'),
           onPressed: onCheckout,
           style: FilledButton.styleFrom(
+            backgroundColor: Theme.of(context).colorScheme.primary,
+            foregroundColor: Theme.of(context).colorScheme.onPrimary,
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
           ),
-          label: Text('Proceed to Checkout'.tr),
+          label: Text(
+            'Proceed to Checkout'.tr,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onPrimary,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
           iconAlignment: IconAlignment.end,
           icon: Icon(Icons.arrow_forward_rounded, size: 18),
         ),
@@ -839,7 +854,7 @@ class _EmptyCart extends StatelessWidget {
       children: [
         Icon(
           Icons.shopping_cart_outlined,
-          color: AppColors.textSecondary,
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
           size: 56,
         ),
         SizedBox(height: 12),
@@ -863,11 +878,11 @@ class _CartImageFallback extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     width: 72,
     height: 72,
-    color: const Color(0xFFF3F4F6),
+    color: Theme.of(context).colorScheme.surfaceContainerHighest,
     alignment: Alignment.center,
-    child: const Icon(
+    child: Icon(
       Icons.inventory_2_outlined,
-      color: Color(0xFF9CA3AF),
+      color: Theme.of(context).colorScheme.onSurfaceVariant,
       size: 28,
     ),
   );

@@ -38,6 +38,7 @@ import 'package:mobile_hexy/domain/repositories/profile_repository.dart';
 import 'package:mobile_hexy/domain/usecases/get_home_catalog.dart';
 import 'package:mobile_hexy/domain/usecases/get_onboarding_slides.dart';
 import 'package:mobile_hexy/domain/usecases/login_user.dart';
+import 'package:mobile_hexy/domain/usecases/login_with_google.dart';
 import 'package:mobile_hexy/domain/usecases/logout_user.dart';
 import 'package:mobile_hexy/domain/usecases/register_user.dart';
 import 'package:mobile_hexy/domain/usecases/get_profile.dart';
@@ -109,6 +110,7 @@ class InitialBinding extends Bindings {
     );
 
     Get.lazyPut(() => LoginUser(Get.find()), fenix: true);
+    Get.lazyPut(() => LoginWithGoogle(Get.find()), fenix: true);
     Get.lazyPut(() => LogoutUser(Get.find()), fenix: true);
     Get.lazyPut(() => RegisterUser(Get.find()), fenix: true);
     Get.lazyPut(() => GetProfile(Get.find()), fenix: true);

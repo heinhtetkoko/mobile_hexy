@@ -2,11 +2,13 @@ abstract final class ApiEndpoints {
   static const baseUrl = String.fromEnvironment(
     'API_BASE_URL',
     defaultValue:
-        'https://heinhtetkoko-odooecommerce-main-37214843.dev.odoo.com/',
+        'https://heinhtetkoko-odooecommerce-main-37354534.dev.odoo.com/',
   );
   static const login = 'api/v1/auth/token';
+  static const googleLogin = 'api/v1/auth/google';
   static const signup = 'api/v1/auth/signup';
   static const banners = 'api/v1/banners';
+  static const promoBanners = 'api/v1/promo-banners';
   static const profile = 'api/v1/profile';
   static const personalInfo = 'api/v1/profile/personal-info';
   static const avatar = 'api/v1/profile/avatar';

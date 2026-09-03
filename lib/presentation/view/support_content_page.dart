@@ -3,8 +3,24 @@ import 'package:get/get.dart';
 import 'package:mobile_hexy/core/networks/api_endpoints.dart';
 import 'package:mobile_hexy/data/datasources/support_content_remote_data_source.dart';
 import 'package:mobile_hexy/presentation/widgets/clean_app_bar.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 enum SupportContentType { contact, faq, document }
+
+Future<void> _openContactLink(Uri uri, {required String label}) async {
+  try {
+    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (opened) return;
+  } catch (_) {
+    // The message below handles missing apps and invalid external links.
+  }
+
+  Get.snackbar(
+    'Unable to open $label',
+    'Please make sure $label is installed and try again.',
+    snackPosition: SnackPosition.BOTTOM,
+  );
+}
 
 class SupportContentPage extends StatefulWidget {
   const SupportContentPage({
@@ -106,9 +122,6 @@ class _ContactContent extends StatelessWidget {
                 map['banner_image'] ??
                 map['hero_image'])
             ?.toString();
-    final facebook = map['facebook_url'] ?? map['facebook'];
-    final viber = map['viber_url'] ?? map['viber'];
-    final tiktok = map['tiktok_url'] ?? map['tiktok'];
     return ListView(
       padding: EdgeInsets.zero,
       children: [
@@ -187,7 +200,10 @@ class _ContactContent extends StatelessWidget {
                       label: 'FB Page',
                       icon: Icons.facebook,
                       color: Color(0xFF1877F2),
-                      enabled: facebook != null,
+                      onPressed: () => _openContactLink(
+                        Uri.parse('https://www.facebook.com/share/19ZDP3opBp/'),
+                        label: 'Facebook',
+                      ),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -196,7 +212,14 @@ class _ContactContent extends StatelessWidget {
                       label: 'Viber Call',
                       icon: Icons.phone_outlined,
                       color: Color(0xFF7354ED),
-                      enabled: viber != null,
+                      onPressed: () => _openContactLink(
+                        Uri(
+                          scheme: 'viber',
+                          host: 'chat',
+                          queryParameters: const {'number': '+959752473565'},
+                        ),
+                        label: 'Viber',
+                      ),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -205,7 +228,12 @@ class _ContactContent extends StatelessWidget {
                       label: 'TikTok',
                       icon: Icons.play_arrow_rounded,
                       color: Colors.black,
-                      enabled: tiktok != null,
+                      onPressed: () => _openContactLink(
+                        Uri.parse(
+                          'https://www.tiktok.com/@hexcy.stationery?_r=1&_t=ZS-99Q8z9h6u2O',
+                        ),
+                        label: 'TikTok',
+                      ),
                     ),
                   ),
                 ],
@@ -328,19 +356,17 @@ class _ContactSocialButton extends StatelessWidget {
     required this.label,
     required this.icon,
     required this.color,
-    required this.enabled,
+    required this.onPressed,
   });
 
   final String label;
   final IconData icon;
   final Color color;
-  final bool enabled;
+  final VoidCallback? onPressed;
 
   @override
   Widget build(BuildContext context) => FilledButton.icon(
-    onPressed: enabled
-        ? () => Get.snackbar(label, '$label link is ready.')
-        : null,
+    onPressed: onPressed,
     style: FilledButton.styleFrom(
       backgroundColor: color,
       disabledBackgroundColor: color.withValues(alpha: .55),

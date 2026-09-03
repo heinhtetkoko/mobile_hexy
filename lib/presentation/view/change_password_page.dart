@@ -54,7 +54,7 @@ class ChangePasswordPage extends GetView<ChangePasswordViewModel> {
                     decoration: BoxDecoration(
                       color: i < strength
                           ? AppColors.success
-                          : const Color(0xFFE5E7EB),
+                          : Theme.of(context).dividerColor,
                       borderRadius: BorderRadius.circular(3),
                     ),
                   ),
@@ -65,7 +65,7 @@ class ChangePasswordPage extends GetView<ChangePasswordViewModel> {
                 style: TextStyle(
                   color: strength >= 3
                       ? AppColors.success
-                      : const Color(0xFF9CA3AF),
+                      : Theme.of(context).colorScheme.onSurfaceVariant,
                   fontSize: 11,
                 ),
               ),
@@ -92,7 +92,7 @@ class ChangePasswordPage extends GetView<ChangePasswordViewModel> {
                 controller.matches ? Icons.check_circle : Icons.circle_outlined,
                 color: controller.matches
                     ? AppColors.success
-                    : const Color(0xFF9CA3AF),
+                    : Theme.of(context).colorScheme.onSurfaceVariant,
                 size: 15,
               ),
               const SizedBox(width: 6),
@@ -101,7 +101,7 @@ class ChangePasswordPage extends GetView<ChangePasswordViewModel> {
                 style: TextStyle(
                   color: controller.matches
                       ? AppColors.success
-                      : const Color(0xFF9CA3AF),
+                      : Theme.of(context).colorScheme.onSurfaceVariant,
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
                 ),
@@ -154,15 +154,23 @@ class _PasswordField extends StatelessWidget {
     children: [
       Text(
         '$label  *'.tr,
-        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+        style: TextStyle(
+          color: Theme.of(context).colorScheme.onSurface,
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+        ),
       ),
       const SizedBox(height: 8),
       TextField(
         controller: controller,
         obscureText: hidden,
         onChanged: onChanged,
+        style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
         decoration: InputDecoration(
-          prefixIcon: Icon(icon, color: const Color(0xFF9CA3AF)),
+          prefixIcon: Icon(
+            icon,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
           suffixIcon: IconButton(
             onPressed: onEye,
             icon: Icon(
@@ -172,11 +180,11 @@ class _PasswordField extends StatelessWidget {
             ),
           ),
           filled: true,
-          fillColor: AppColors.surface,
+          fillColor: Theme.of(context).colorScheme.surface,
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(14),
-            borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+            borderSide: BorderSide(color: Theme.of(context).dividerColor),
           ),
         ),
       ),
@@ -195,13 +203,18 @@ class _Req extends StatelessWidget {
       children: [
         Icon(
           met ? Icons.check : Icons.close,
-          color: met ? AppColors.success : const Color(0xFF9CA3AF),
+          color: met
+              ? AppColors.success
+              : Theme.of(context).colorScheme.onSurfaceVariant,
           size: 15,
         ),
         const SizedBox(width: 6),
         Text(
           label.tr,
-          style: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 12),
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+            fontSize: 12,
+          ),
         ),
       ],
     ),

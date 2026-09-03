@@ -8,6 +8,7 @@ import 'package:mobile_hexy/data/models/product_list_request.dart';
 import 'package:mobile_hexy/presentation/widgets/shimmer_skeletons.dart';
 import 'package:mobile_hexy/presentation/viewmodel/stationery_home_view_model.dart';
 import 'package:mobile_hexy/presentation/viewmodel/main_view_model.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class StationeryHomePage extends GetView<StationeryHomeViewModel> {
   const StationeryHomePage({super.key});
@@ -81,6 +82,7 @@ class StationeryHomePage extends GetView<StationeryHomeViewModel> {
                           () => _RemoteProductContent(
                             items: controller.bestSellers,
                             useReferenceCard: true,
+                            useRecommendedListBackground: true,
                             loading: controller.isBestSellersLoading.value,
                             loadingMore:
                                 controller.isBestSellersLoadingMore.value,
@@ -105,6 +107,7 @@ class StationeryHomePage extends GetView<StationeryHomeViewModel> {
                           () => _RemoteProductContent(
                             items: controller.newArrivals,
                             useReferenceCard: true,
+                            useRecommendedListBackground: true,
                             loading: controller.isNewArrivalsLoading.value,
                             loadingMore:
                                 controller.isNewArrivalsLoadingMore.value,
@@ -117,7 +120,19 @@ class StationeryHomePage extends GetView<StationeryHomeViewModel> {
                         ),
                       ),
                     ),
-                    const SliverToBoxAdapter(child: _OfferCard()),
+                    SliverToBoxAdapter(
+                      child: Obx(() {
+                        if (controller.isPromoBannersLoading.value) {
+                          return const _OfferCardLoading();
+                        }
+                        if (controller.promoBanners.isEmpty) {
+                          return const SizedBox.shrink();
+                        }
+                        return _OfferCard(
+                          banner: controller.promoBanners.first,
+                        );
+                      }),
+                    ),
                     SliverToBoxAdapter(
                       child: Obx(
                         () => _FlashSaleContent(
@@ -182,24 +197,26 @@ class _Header extends StatelessWidget {
       Container(
         height: 58,
         padding: const EdgeInsets.symmetric(horizontal: 16),
-        color: StationeryHomePage._ink,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+            colors: [Color(0xFF1E1B4B), Color(0xFF4338CA), Color(0xFFDB2777)],
+          ),
+        ),
         child: Row(
           children: [
             Container(
               width: 40,
               height: 40,
-              alignment: Alignment.center,
+              clipBehavior: Clip.antiAlias,
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(4),
               ),
-              child: Text(
-                'H'.tr,
-                style: TextStyle(
-                  color: StationeryHomePage._ink,
-                  fontSize: 25,
-                  fontWeight: FontWeight.w900,
-                ),
+              child: Image.asset(
+                'assets/images/Frame_hexy.png',
+                fit: BoxFit.cover,
               ),
             ),
             const Spacer(),
@@ -672,16 +689,24 @@ class _ProductList extends StatelessWidget {
     this.onLoadMore,
     this.loadingMore = false,
     this.useReferenceCard = false,
+    this.useRecommendedListBackground = false,
     required this.onAddToCart,
   });
   final List<HomeProduct> items;
   final VoidCallback? onLoadMore;
   final bool loadingMore;
   final bool useReferenceCard;
+  final bool useRecommendedListBackground;
   final ValueChanged<HomeProduct> onAddToCart;
   @override
   Widget build(BuildContext context) => Container(
-    color: useReferenceCard ? Colors.white : null,
+    color: useRecommendedListBackground
+        ? null
+        : useReferenceCard
+        ? Theme.of(context).brightness == Brightness.dark
+              ? Theme.of(context).colorScheme.surface
+              : Colors.white
+        : null,
     height: useReferenceCard ? 200 : 186,
     child: NotificationListener<ScrollNotification>(
       onNotification: (notification) {
@@ -734,7 +759,9 @@ class _ProductCard extends StatelessWidget {
         padding: EdgeInsets.all(useReferenceCard ? 0 : 8),
         decoration: BoxDecoration(
           color: useReferenceCard
-              ? Colors.white
+              ? Theme.of(context).brightness == Brightness.dark
+                    ? Theme.of(context).colorScheme.surfaceContainerHighest
+                    : Colors.white
               : Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(useReferenceCard ? 18 : 12),
           border: useReferenceCard
@@ -908,6 +935,7 @@ class _RemoteProductContent extends StatelessWidget {
     required this.onLoadMore,
     required this.onAddToCart,
     this.useReferenceCard = false,
+    this.useRecommendedListBackground = false,
   });
 
   final List<HomeProduct> items;
@@ -919,6 +947,7 @@ class _RemoteProductContent extends StatelessWidget {
   final VoidCallback onLoadMore;
   final ValueChanged<HomeProduct> onAddToCart;
   final bool useReferenceCard;
+  final bool useRecommendedListBackground;
 
   @override
   Widget build(BuildContext context) {
@@ -946,6 +975,7 @@ class _RemoteProductContent extends StatelessWidget {
     return _ProductList(
       items: items,
       useReferenceCard: useReferenceCard,
+      useRecommendedListBackground: useRecommendedListBackground,
       onAddToCart: onAddToCart,
       onLoadMore: hasMore ? onLoadMore : null,
       loadingMore: loadingMore,
@@ -954,7 +984,10 @@ class _RemoteProductContent extends StatelessWidget {
 }
 
 class _OfferCard extends StatelessWidget {
-  const _OfferCard();
+  const _OfferCard({required this.banner});
+
+  final HomePromoBanner banner;
+
   @override
   Widget build(BuildContext context) => Container(
     margin: const EdgeInsets.fromLTRB(16, 14, 16, 4),
@@ -972,7 +1005,7 @@ class _OfferCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Buy 2 Get 1 FREE'.tr,
+                banner.title.tr,
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 22,
@@ -981,11 +1014,12 @@ class _OfferCard extends StatelessWidget {
               ),
               SizedBox(height: 5),
               Text(
-                'On all notebooks & stationery sets'.tr,
+                banner.subtitle.tr,
                 style: TextStyle(color: Color(0xFFC7D2FE), fontSize: 12),
               ),
               SizedBox(height: 14),
-              _LabelBadge(value: 'Grab Deal'),
+              if (banner.buttonText.isNotEmpty)
+                _LabelBadge(value: banner.buttonText),
             ],
           ),
         ),
@@ -996,13 +1030,38 @@ class _OfferCard extends StatelessWidget {
             color: Colors.white.withValues(alpha: .2),
             borderRadius: BorderRadius.circular(12),
           ),
-          child: const Icon(
-            Icons.inventory_2_outlined,
-            color: Colors.white,
-            size: 42,
-          ),
+          clipBehavior: Clip.antiAlias,
+          child: banner.imageUrl?.isNotEmpty == true
+              ? Image.network(
+                  banner.imageUrl!,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, _, _) => const Icon(
+                    Icons.inventory_2_outlined,
+                    color: Colors.white,
+                    size: 42,
+                  ),
+                )
+              : const Icon(
+                  Icons.inventory_2_outlined,
+                  color: Colors.white,
+                  size: 42,
+                ),
         ),
       ],
+    ),
+  );
+}
+
+class _OfferCardLoading extends StatelessWidget {
+  const _OfferCardLoading();
+
+  @override
+  Widget build(BuildContext context) => Container(
+    height: 132,
+    margin: const EdgeInsets.fromLTRB(16, 14, 16, 4),
+    decoration: BoxDecoration(
+      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+      borderRadius: BorderRadius.circular(16),
     ),
   );
 }
@@ -1751,26 +1810,43 @@ class _ChatFooter extends StatelessWidget {
               icon: Icons.smart_display_rounded,
               label: 'YouTube',
               color: Color(0xFFFF0000),
+              onTap: () => _openExternalUrl(
+                url: 'https://www.youtube.com/@hexcystationery',
+                channelName: 'YouTube',
+              ),
             ),
             _SupportChannel(
               icon: Icons.message_rounded,
               label: 'Messenger',
               color: Color(0xFF7C3AED),
+              onTap: () => _openExternalUrl(
+                url: 'https://m.me/hexcystationery',
+                channelName: 'Messenger',
+              ),
             ),
             _SupportChannel(
               icon: Icons.send_rounded,
               label: 'Telegram',
               color: Color(0xFF38BDF8),
+              onTap: () => _openExternalUrl(
+                url: 'https://www.hexcymegastore.com/',
+                channelName: 'browser',
+              ),
             ),
             _SupportChannel(
               icon: Icons.phone_in_talk_rounded,
               label: 'Viber',
               color: Color(0xFF8B5CF6),
+              onTap: _openViberChat,
             ),
             _SupportChannel(
               icon: Icons.camera_alt_rounded,
               label: 'Instagram',
               color: Color(0xFFEC4899),
+              onTap: () => _openExternalUrl(
+                url: 'https://www.instagram.com/hexcystationery/',
+                channelName: 'Instagram',
+              ),
             ),
           ],
         ),
@@ -1784,6 +1860,49 @@ class _ChatFooter extends StatelessWidget {
       ],
     ),
   );
+
+  static Future<void> _openViberChat() async {
+    const phoneNumber = '+959752473565';
+    final uri = Uri(
+      scheme: 'viber',
+      host: 'chat',
+      queryParameters: const {'number': phoneNumber},
+    );
+
+    try {
+      final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (opened) return;
+    } catch (_) {
+      // The error message below handles devices without Viber.
+    }
+
+    Get.snackbar(
+      'Unable to open Viber',
+      'Please install Viber and try again.',
+      snackPosition: SnackPosition.BOTTOM,
+    );
+  }
+
+  static Future<void> _openExternalUrl({
+    required String url,
+    required String channelName,
+  }) async {
+    try {
+      final opened = await launchUrl(
+        Uri.parse(url),
+        mode: LaunchMode.externalApplication,
+      );
+      if (opened) return;
+    } catch (_) {
+      // The error message below handles unavailable external applications.
+    }
+
+    Get.snackbar(
+      'Unable to open $channelName',
+      'Please try again later.',
+      snackPosition: SnackPosition.BOTTOM,
+    );
+  }
 }
 
 class _SupportChannel extends StatelessWidget {
@@ -1791,33 +1910,42 @@ class _SupportChannel extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.color,
+    this.onTap,
   });
   final IconData icon;
   final String label;
   final Color color;
+  final VoidCallback? onTap;
   @override
-  Widget build(BuildContext context) => Column(
-    children: [
-      Container(
-        width: 48,
-        height: 48,
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: .12),
-          shape: BoxShape.circle,
-          border: Border.all(color: Colors.white.withValues(alpha: .2)),
-        ),
-        child: Icon(icon, color: color, size: 24),
+  Widget build(BuildContext context) => InkWell(
+    onTap: onTap,
+    borderRadius: BorderRadius.circular(28),
+    child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+      child: Column(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: .12),
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white.withValues(alpha: .2)),
+            ),
+            child: Icon(icon, color: color, size: 24),
+          ),
+          const SizedBox(height: 5),
+          Text(
+            label.tr,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 9,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
       ),
-      const SizedBox(height: 5),
-      Text(
-        label.tr,
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 9,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-    ],
+    ),
   );
 }
 

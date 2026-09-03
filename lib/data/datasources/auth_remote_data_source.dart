@@ -33,6 +33,25 @@ class AuthRemoteDataSource {
     }
   }
 
+  Future<AuthSessionModel> loginWithGoogle(String idToken) async {
+    try {
+      final response = await _apiService.post<Map<String, dynamic>>(
+        ApiEndpoints.googleLogin,
+        data: {'id_token': idToken},
+        options: Options(extra: {ApiEndpoints.requiresAuthKey: false}),
+      );
+      final body = response.data;
+      if (body == null) {
+        throw const ServerException('The server returned an empty response.');
+      }
+      return AuthSessionModel.fromJson(body);
+    } on ServerException {
+      rethrow;
+    } on Exception catch (error) {
+      throw ServerException(error.toString().replaceFirst('Exception: ', ''));
+    }
+  }
+
   Future<AuthSessionModel> signup({
     required String username,
     required String email,

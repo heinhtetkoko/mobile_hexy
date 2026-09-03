@@ -3,6 +3,8 @@ import 'package:mobile_hexy/data/models/auth_session.dart';
 abstract interface class AuthRepository {
   Future<AuthSession> login({required String login, required String password});
 
+  Future<AuthSession> loginWithGoogle(String idToken);
+
   Future<AuthSession> signup({
     required String username,
     required String email,

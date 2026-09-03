@@ -24,7 +24,7 @@ class CheckoutViewModel extends BaseViewModel {
       );
       return;
     }
-    Get.offNamed<void>(AppRoutes.paymentSuccess);
+    Get.offNamed<dynamic>(AppRoutes.paymentSuccess);
   }
 
   @override

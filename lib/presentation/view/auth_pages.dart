@@ -69,7 +69,12 @@ class LoginPage extends GetView<AuthViewModel> {
           const SizedBox(height: 24),
           const _DividerLabel('Or login with'),
           const SizedBox(height: 24),
-          const _SocialButton(),
+          Obx(
+            () => _SocialButton(
+              onPressed: controller.loginWithGoogle,
+              loading: controller.isGoogleLoggingIn.value,
+            ),
+          ),
           const SizedBox(height: 24),
           _BottomLink(
             prefix: "Don't have an account?",
@@ -136,7 +141,12 @@ class RegisterPage extends GetView<AuthViewModel> {
           const SizedBox(height: 24),
           const _DividerLabel('Or login with'),
           const SizedBox(height: 24),
-          const _SocialButton(),
+          Obx(
+            () => _SocialButton(
+              onPressed: controller.loginWithGoogle,
+              loading: controller.isGoogleLoggingIn.value,
+            ),
+          ),
           const SizedBox(height: 24),
           _BottomLink(
             prefix: 'Already have an account?',
@@ -548,19 +558,28 @@ class _DividerLabel extends StatelessWidget {
 }
 
 class _SocialButton extends StatelessWidget {
-  const _SocialButton();
+  const _SocialButton({required this.onPressed, required this.loading});
+
+  final VoidCallback onPressed;
+  final bool loading;
+
   @override
   Widget build(BuildContext context) => SizedBox(
     width: double.infinity,
     height: 48,
     child: OutlinedButton.icon(
-      onPressed: () {},
+      onPressed: loading ? null : onPressed,
       style: OutlinedButton.styleFrom(
         foregroundColor: Theme.of(context).colorScheme.onSurface,
         side: BorderSide(color: Theme.of(context).dividerColor),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
-      icon: const Icon(Icons.g_mobiledata_rounded, size: 24),
+      icon: loading
+          ? const SizedBox.square(
+              dimension: 18,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : const Icon(Icons.g_mobiledata_rounded, size: 24),
       label: Text(
         'Login with Google'.tr,
         style: TextStyle(fontWeight: FontWeight.w600),

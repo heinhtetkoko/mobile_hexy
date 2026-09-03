@@ -190,7 +190,7 @@ class _Gallery extends StatelessWidget {
               Container(
                 height: 300,
                 width: double.infinity,
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.surface,
                 padding: const EdgeInsets.all(24),
                 child: images.isEmpty
                     ? const Icon(Icons.image_not_supported_outlined, size: 64)
@@ -255,10 +255,12 @@ class _Gallery extends StatelessWidget {
                     width: 54,
                     padding: const EdgeInsets.all(4),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF5F6F8),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.surfaceContainerHighest,
                       border: Border.all(
                         color: selectedImage == index
-                            ? ProductDetailPage._ink
+                            ? Theme.of(context).colorScheme.primary
                             : Colors.transparent,
                         width: 1.5,
                       ),
@@ -561,8 +563,8 @@ class _ProductInfo extends StatelessWidget {
                   const SizedBox(width: 12),
                   Text(
                     product.formattedCompareAtPrice!,
-                    style: const TextStyle(
-                      color: Color(0xFF9CA3AF),
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                       decoration: TextDecoration.lineThrough,
                     ),
                   ),
@@ -677,9 +679,13 @@ class _Variants extends StatelessWidget {
                         showCheckmark: false,
                         onSelected: (_) =>
                             controller.selectVariantValue(section.key, value),
-                        selectedColor: ProductDetailPage._ink,
-                        backgroundColor: const Color(0xFFF5F6F8),
-                        disabledColor: const Color(0xFFF0F1F3),
+                        selectedColor: Theme.of(context).colorScheme.primary,
+                        backgroundColor: Theme.of(
+                          context,
+                        ).colorScheme.surfaceContainerHighest,
+                        disabledColor: Theme.of(
+                          context,
+                        ).colorScheme.surfaceContainerHighest,
                         side: BorderSide.none,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(18),
@@ -692,7 +698,7 @@ class _Variants extends StatelessWidget {
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
                           color: selected
-                              ? Colors.white
+                              ? Theme.of(context).colorScheme.onPrimary
                               : Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
                       );
@@ -781,9 +787,9 @@ class _ProductRecommendations extends StatelessWidget {
                     AppRoutes.productList,
                     arguments: const ProductListRequest.search(),
                   ),
-                  icon: const Icon(
+                  icon: Icon(
                     Icons.arrow_forward_rounded,
-                    color: Color(0xFF9CA3AF),
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                 ),
               ],
@@ -819,12 +825,14 @@ class _RecommendationCard extends StatelessWidget {
       width: 142,
       margin: const EdgeInsets.symmetric(vertical: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFF0F0F0)),
-        boxShadow: const [
+        border: Border.all(color: Theme.of(context).dividerColor),
+        boxShadow: [
           BoxShadow(
-            color: Color(0x0D000000),
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.black.withValues(alpha: .4)
+                : const Color(0x0D000000),
             blurRadius: 12,
             offset: Offset(0, 4),
           ),
@@ -908,7 +916,11 @@ class _RecommendationCard extends StatelessWidget {
               product.name,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800),
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface,
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+              ),
             ),
           ),
           const SizedBox(height: 4),
@@ -1062,25 +1074,33 @@ class _BottomActions extends StatelessWidget {
                     ? null
                     : controller.addToCart,
                 style: FilledButton.styleFrom(
-                  backgroundColor: ProductDetailPage._ink,
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                  disabledForegroundColor: Theme.of(
+                    context,
+                  ).colorScheme.onSurfaceVariant,
                   padding: const EdgeInsets.symmetric(horizontal: 10),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
                 child: controller.isAddingToCart.value
-                    ? const SizedBox(
+                    ? SizedBox(
                         width: 16,
                         height: 16,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          color: Colors.white,
+                          color: Theme.of(context).colorScheme.onPrimary,
                         ),
                       )
                     : Text(
                         'Add to Cart'.tr,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onPrimary,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
               ),
             ),

@@ -466,7 +466,7 @@ class CartViewModel extends BaseViewModel {
       .replaceFirst('FormatException: ', '');
   void _showError(String title, Object error) =>
       Get.snackbar(title, _message(error), snackPosition: SnackPosition.BOTTOM);
-  void checkout() => Get.toNamed<void>(AppRoutes.checkout);
+  void checkout() => Get.toNamed<dynamic>(AppRoutes.checkout);
 
   @override
   void onClose() {

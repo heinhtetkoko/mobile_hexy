@@ -27,6 +27,16 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
+  Future<AuthSession> loginWithGoogle(String idToken) async {
+    final session = await _remoteDataSource.loginWithGoogle(idToken);
+    await _secureStorage.write(
+      AppConstants.accessTokenKey,
+      session.accessToken,
+    );
+    return session;
+  }
+
+  @override
   Future<AuthSession> signup({
     required String username,
     required String email,

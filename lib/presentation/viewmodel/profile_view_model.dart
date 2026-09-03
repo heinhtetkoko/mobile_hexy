@@ -95,7 +95,7 @@ class ProfileViewModel extends BaseViewModel {
   }
 
   Future<void> _openHotline() async {
-    const hotline = '09-123-456-789';
+    const hotline = '09-786-837-620';
     final phoneNumber = hotline.replaceAll(RegExp(r'[^0-9+]'), '');
     var opened = false;
     try {

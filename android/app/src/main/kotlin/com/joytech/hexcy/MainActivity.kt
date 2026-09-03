@@ -1,4 +1,4 @@
-package com.example.mobile_hexy
+package com.joytech.hexcy
 
 import android.content.Intent
 import android.net.Uri

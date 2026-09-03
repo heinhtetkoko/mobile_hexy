@@ -52,6 +52,8 @@ class StationeryHomeViewModel extends BaseViewModel {
   late final HomeCatalog catalog;
   final banners = <HomeBanner>[].obs;
   final isBannersLoading = false.obs;
+  final promoBanners = <HomePromoBanner>[].obs;
+  final isPromoBannersLoading = false.obs;
   final homeCategories = <CatalogCategory>[].obs;
   final isCategoriesLoading = false.obs;
   final categoriesError = RxnString();
@@ -156,6 +158,7 @@ class StationeryHomeViewModel extends BaseViewModel {
     super.onInit();
     catalog = _getHomeCatalog();
     loadBanners();
+    loadPromoBanners();
     loadCategories();
     loadBrands();
     loadBestSellers();
@@ -181,9 +184,21 @@ class StationeryHomeViewModel extends BaseViewModel {
     }
   }
 
+  Future<void> loadPromoBanners() async {
+    isPromoBannersLoading.value = true;
+    try {
+      promoBanners.assignAll(await _bannersDataSource.fetchPromoBanners());
+    } catch (_) {
+      promoBanners.clear();
+    } finally {
+      isPromoBannersLoading.value = false;
+    }
+  }
+
   Future<void> refreshHome() async {
     await Future.wait([
       loadBanners(),
+      loadPromoBanners(),
       loadCategories(),
       loadBrands(),
       loadBestSellers(),

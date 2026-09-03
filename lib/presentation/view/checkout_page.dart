@@ -8,8 +8,6 @@ import 'package:mobile_hexy/presentation/viewmodel/checkout_view_model.dart';
 class CheckoutPage extends GetView<CheckoutViewModel> {
   const CheckoutPage({super.key});
 
-  static const _border = Color(0xFFE5E7EB);
-
   @override
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -76,7 +74,7 @@ class _CheckoutHeader extends StatelessWidget {
           child: Align(
             alignment: Alignment.centerLeft,
             child: Material(
-              color: AppColors.surface,
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
               shape: const CircleBorder(),
               child: IconButton(
                 key: const Key('checkout-back'),
@@ -102,7 +100,10 @@ class _CheckoutHeader extends StatelessWidget {
           child: Text(
             'Step 2/3'.tr,
             textAlign: TextAlign.right,
-            style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+              fontSize: 12,
+            ),
           ),
         ),
       ],
@@ -114,22 +115,33 @@ class _ProgressSteps extends StatelessWidget {
   const _ProgressSteps();
 
   @override
-  Widget build(BuildContext context) => const Padding(
-    padding: EdgeInsets.symmetric(horizontal: 40, vertical: 18),
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 18),
     child: Row(
       children: [
-        _Step(
+        const _Step(
           icon: Icons.check_rounded,
           label: 'Cart',
           color: AppColors.success,
         ),
-        Expanded(child: Divider(color: AppColors.primary, thickness: 2)),
-        _Step(number: '2', label: 'Checkout', color: AppColors.primary),
-        Expanded(child: Divider(color: Color(0xFFF3F4F6), thickness: 2)),
+        Expanded(
+          child: Divider(
+            color: Theme.of(context).colorScheme.primary,
+            thickness: 2,
+          ),
+        ),
+        _Step(
+          number: '2',
+          label: 'Checkout',
+          color: Theme.of(context).colorScheme.primary,
+        ),
+        Expanded(
+          child: Divider(color: Theme.of(context).dividerColor, thickness: 2),
+        ),
         _Step(
           number: '3',
           label: 'Confirm',
-          color: Color(0xFF9CA3AF),
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
           pale: true,
         ),
       ],
@@ -159,7 +171,9 @@ class _Step extends StatelessWidget {
         height: 24,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: pale ? const Color(0xFFF3F4F6) : color,
+          color: pale
+              ? Theme.of(context).colorScheme.surfaceContainerHighest
+              : color,
           shape: BoxShape.circle,
         ),
         child: icon != null
@@ -209,12 +223,18 @@ class _DeliveryInformation extends StatelessWidget {
         SizedBox(height: 4),
         Text(
           '09-123456789'.tr,
-          style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+            fontSize: 12,
+          ),
         ),
         SizedBox(height: 4),
         Text(
           'No.25, Main Street, Sanchaung Township, Yangon'.tr,
-          style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+            fontSize: 12,
+          ),
         ),
       ],
     ),
@@ -228,7 +248,7 @@ class _DeliveryMethod extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.all(16),
     decoration: BoxDecoration(
-      color: const Color(0xFFEEF2FF),
+      color: Theme.of(context).colorScheme.primaryContainer,
       borderRadius: BorderRadius.circular(12),
     ),
     child: Row(
@@ -240,7 +260,7 @@ class _DeliveryMethod extends StatelessWidget {
               Text(
                 '🚚 Standard Delivery'.tr,
                 style: TextStyle(
-                  color: AppColors.primary,
+                  color: Theme.of(context).colorScheme.onPrimaryContainer,
                   fontSize: 14,
                   fontWeight: FontWeight.w800,
                 ),
@@ -248,7 +268,10 @@ class _DeliveryMethod extends StatelessWidget {
               SizedBox(height: 2),
               Text(
                 'Estimated: 2–3 business days'.tr,
-                style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onPrimaryContainer,
+                  fontSize: 12,
+                ),
               ),
             ],
           ),
@@ -256,7 +279,7 @@ class _DeliveryMethod extends StatelessWidget {
         Text(
           '3,000 Ks'.tr,
           style: TextStyle(
-            color: AppColors.primary,
+            color: Theme.of(context).colorScheme.onPrimaryContainer,
             fontSize: 14,
             fontWeight: FontWeight.w800,
           ),
@@ -297,9 +320,12 @@ class _PaymentMethod extends StatelessWidget {
                   decoration: BoxDecoration(
                     border: Border(
                       left: selected
-                          ? const BorderSide(color: AppColors.primary, width: 4)
+                          ? BorderSide(
+                              color: Theme.of(context).colorScheme.primary,
+                              width: 4,
+                            )
                           : BorderSide.none,
-                      bottom: const BorderSide(color: Color(0xFFF3F4F6)),
+                      bottom: BorderSide(color: Theme.of(context).dividerColor),
                     ),
                   ),
                   child: Row(
@@ -311,8 +337,8 @@ class _PaymentMethod extends StatelessWidget {
                             : Icons.radio_button_off,
                         size: 18,
                         color: selected
-                            ? AppColors.primary
-                            : const Color(0xFF9CA3AF),
+                            ? Theme.of(context).colorScheme.primary
+                            : Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                       SizedBox(width: 10),
                       Text(
@@ -320,7 +346,7 @@ class _PaymentMethod extends StatelessWidget {
                         style: TextStyle(
                           color: selected
                               ? Theme.of(context).colorScheme.onSurface
-                              : AppColors.textSecondary,
+                              : Theme.of(context).colorScheme.onSurfaceVariant,
                           fontSize: 14,
                           fontWeight: selected
                               ? FontWeight.w800
@@ -331,7 +357,7 @@ class _PaymentMethod extends StatelessWidget {
                       if (selected)
                         Icon(
                           Icons.account_balance_wallet_outlined,
-                          color: AppColors.primary,
+                          color: Theme.of(context).colorScheme.primary,
                           size: 22,
                         ),
                     ],
@@ -372,14 +398,25 @@ class _ItemsSummary extends StatelessWidget {
                 children: [
                   ClipRRect(
                     borderRadius: BorderRadius.circular(8),
-                    child: Image.asset(
-                      item.id == 'STA-1001'
-                          ? 'assets/images/checkout/notebook.png'
-                          : item.imageAsset,
-                      width: 48,
-                      height: 48,
-                      fit: BoxFit.cover,
-                    ),
+                    child: item.imageUrl?.isNotEmpty == true
+                        ? Image.network(
+                            item.imageUrl!,
+                            width: 48,
+                            height: 48,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, _, _) =>
+                                const _CheckoutImageFallback(),
+                          )
+                        : item.imageAsset.isNotEmpty
+                        ? Image.asset(
+                            item.imageAsset,
+                            width: 48,
+                            height: 48,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, _, _) =>
+                                const _CheckoutImageFallback(),
+                          )
+                        : const _CheckoutImageFallback(),
                   ),
                   SizedBox(width: 12),
                   Expanded(
@@ -399,7 +436,9 @@ class _ItemsSummary extends StatelessWidget {
                           '${item.quantity} x ${CartPage.money(item.unitPrice)}'
                               .tr,
                           style: TextStyle(
-                            color: AppColors.textSecondary,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurfaceVariant,
                             fontSize: 11,
                           ),
                         ),
@@ -409,7 +448,7 @@ class _ItemsSummary extends StatelessWidget {
                   Text(
                     CartPage.money(item.quantity * item.unitPrice),
                     style: TextStyle(
-                      color: AppColors.primary,
+                      color: Theme.of(context).colorScheme.primary,
                       fontSize: 14,
                       fontWeight: FontWeight.w800,
                     ),
@@ -421,7 +460,10 @@ class _ItemsSummary extends StatelessWidget {
           if (!controller.itemsExpanded.value && items.length > 1)
             Text(
               '+${items.length - 1} more items'.tr,
-              style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 12),
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                fontSize: 12,
+              ),
             ),
         ],
       ),
@@ -429,42 +471,53 @@ class _ItemsSummary extends StatelessWidget {
   });
 }
 
+class _CheckoutImageFallback extends StatelessWidget {
+  const _CheckoutImageFallback();
+
+  @override
+  Widget build(BuildContext context) => Container(
+    width: 48,
+    height: 48,
+    color: Theme.of(context).colorScheme.surfaceContainerHighest,
+    alignment: Alignment.center,
+    child: const Icon(Icons.image_not_supported_outlined, size: 20),
+  );
+}
+
 class _PriceBreakdown extends StatelessWidget {
   const _PriceBreakdown({required this.controller});
   final CheckoutViewModel controller;
 
   @override
-  Widget build(BuildContext context) => Obx(
-    () => _Panel(
-      child: Column(
-        children: [
-          _PriceRow('Product Total', CartPage.money(controller.cart.subtotal)),
-          _PriceRow('Shipping', CartPage.money(controller.cart.shipping)),
-          _PriceRow(
-            'Discount',
-            '−${CartPage.money(controller.cart.discount)}',
-            green: true,
-          ),
-          const Divider(height: 18, color: CheckoutPage._border),
-          Row(
-            children: [
-              Text(
-                'Grand Total'.tr,
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+  Widget build(BuildContext context) => _Panel(
+    child: Column(
+      children: [
+        _PriceRow('Product Total', CartPage.money(controller.cart.subtotal)),
+        _PriceRow('Shipping', CartPage.money(controller.cart.shipping)),
+        _PriceRow(
+          'Discount',
+          '−${CartPage.money(controller.cart.discount)}',
+          green: true,
+        ),
+        Divider(height: 18, color: Theme.of(context).dividerColor),
+        Row(
+          children: [
+            Text(
+              'Grand Total'.tr,
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+            ),
+            const Spacer(),
+            Text(
+              CartPage.money(controller.cart.grandTotal),
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.primary,
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
               ),
-              const Spacer(),
-              Text(
-                CartPage.money(controller.cart.grandTotal),
-                style: TextStyle(
-                  color: AppColors.primary,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
+            ),
+          ],
+        ),
+      ],
     ),
   );
 }
@@ -482,13 +535,18 @@ class _PriceRow extends StatelessWidget {
       children: [
         Text(
           label.tr,
-          style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+            fontSize: 14,
+          ),
         ),
         const Spacer(),
         Text(
           value,
           style: TextStyle(
-            color: green ? AppColors.success : Colors.black,
+            color: green
+                ? AppColors.success
+                : Theme.of(context).colorScheme.onSurface,
             fontSize: 14,
           ),
         ),
@@ -514,12 +572,15 @@ class _DeliveryNotes extends StatelessWidget {
           maxLines: 3,
           decoration: InputDecoration(
             hintText: 'Add delivery instructions...'.tr,
-            hintStyle: TextStyle(color: Color(0xFF9CA3AF), fontSize: 14),
+            hintStyle: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+              fontSize: 14,
+            ),
             filled: true,
-            fillColor: AppColors.surface,
+            fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(color: CheckoutPage._border),
+              borderSide: BorderSide(color: Theme.of(context).dividerColor),
             ),
           ),
         ),
@@ -543,29 +604,32 @@ class _TermsRow extends StatelessWidget {
             controller.termsAccepted.value
                 ? Icons.check_box_rounded
                 : Icons.check_box_outline_blank_rounded,
-            color: AppColors.primary,
+            color: Theme.of(context).colorScheme.primary,
             size: 20,
           ),
           SizedBox(width: 10),
-          const Expanded(
+          Expanded(
             child: Text.rich(
               TextSpan(
-                style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  fontSize: 12,
+                ),
                 children: [
-                  TextSpan(text: 'I agree to the '),
+                  const TextSpan(text: 'I agree to the '),
                   TextSpan(
                     text: 'Terms & Conditions',
                     style: TextStyle(
-                      color: AppColors.primary,
+                      color: Theme.of(context).colorScheme.primary,
                       fontWeight: FontWeight.w800,
                       decoration: TextDecoration.underline,
                     ),
                   ),
-                  TextSpan(text: ' and '),
+                  const TextSpan(text: ' and '),
                   TextSpan(
                     text: 'Privacy Policy',
                     style: TextStyle(
-                      color: AppColors.primary,
+                      color: Theme.of(context).colorScheme.primary,
                       fontWeight: FontWeight.w800,
                       decoration: TextDecoration.underline,
                     ),
@@ -612,12 +676,15 @@ class _PlaceOrderBar extends StatelessWidget {
           children: [
             Text(
               'Grand Total'.tr,
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                fontSize: 12,
+              ),
             ),
             Text(
               CartPage.money(total),
               style: TextStyle(
-                color: AppColors.primary,
+                color: Theme.of(context).colorScheme.primary,
                 fontSize: 18,
                 fontWeight: FontWeight.w800,
               ),
@@ -631,7 +698,8 @@ class _PlaceOrderBar extends StatelessWidget {
           style: FilledButton.styleFrom(
             backgroundColor: enabled
                 ? AppColors.accent
-                : const Color(0xFF9CA3AF),
+                : Theme.of(context).disabledColor,
+            foregroundColor: Colors.white,
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
           ),
           label: Text('Place Order'.tr),
@@ -696,7 +764,7 @@ class _Panel extends StatelessWidget {
     padding: const EdgeInsets.all(16),
     decoration: BoxDecoration(
       color: Theme.of(context).colorScheme.surface,
-      border: Border.all(color: CheckoutPage._border),
+      border: Border.all(color: Theme.of(context).dividerColor),
       borderRadius: BorderRadius.circular(16),
       boxShadow: const [
         BoxShadow(

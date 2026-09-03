@@ -14,134 +14,154 @@ class ProfilePage extends GetView<ProfileViewModel> {
     backgroundColor: Theme.of(context).scaffoldBackgroundColor,
     body: SafeArea(
       bottom: false,
-      child: CustomScrollView(
-        slivers: [
-          SliverToBoxAdapter(child: _ProfileAppBar(onTap: controller.openItem)),
-          SliverToBoxAdapter(
-            child: Obx(
-              () => _ProfileHero(
-                profile: controller.profile.value,
-                loading: controller.isProfileLoading.value,
-                error: controller.profileError.value,
-                onRetry: controller.loadProfile,
-              ),
-            ),
-          ),
-          SliverToBoxAdapter(
-            child: Obx(
-              () => _Orders(
-                onTap: controller.openItem,
-                profile: controller.profile.value,
-              ),
-            ),
-          ),
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-            sliver: SliverList.list(
-              children: [
-                _MenuSection(
-                  title: 'MY ACCOUNT',
-                  items: const [
-                    _MenuItem(
-                      Icons.person_outline_rounded,
-                      'Personal Information',
-                    ),
-                    _MenuItem(Icons.location_on_outlined, 'Shipping Addresses'),
-                    _MenuItem(Icons.lock_outline_rounded, 'Change Password'),
-                  ],
-                  onTap: controller.openItem,
-                ),
-                _MenuSection(
-                  title: 'SUPPORT',
-                  items: const [
-                    _MenuItem(
-                      Icons.phone_outlined,
-                      'Hot Line',
-                      trailingText: '09-123-456-789',
-                    ),
-                    _MenuItem(Icons.contact_mail_outlined, 'Contact Us'),
-                    _MenuItem(Icons.format_list_bulleted_rounded, 'FAQ'),
-                  ],
-                  onTap: controller.openItem,
-                ),
-                Obx(
-                  () => _MenuSection(
-                    title: 'APPLICATION',
-                    items: [
-                      _MenuItem(
-                        Icons.language_rounded,
-                        'Language',
-                        trailingText: controller.currentLanguage.value,
-                      ),
-                      _MenuItem(
-                        Icons.dark_mode_outlined,
-                        'Dark Mode',
-                        toggleValue: controller.darkModeEnabled.value,
-                        onToggle: controller.toggleDarkMode,
-                      ),
-                      const _MenuItem(Icons.info_outline_rounded, 'About Us'),
-                      const _MenuItem(Icons.shield_outlined, 'Privacy Policy'),
-                      const _MenuItem(
-                        Icons.description_outlined,
-                        'Terms & Conditions',
-                      ),
-                    ],
-                    onTap: controller.openItem,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Obx(
-                  () => SizedBox(
-                    height: 52,
-                    child: OutlinedButton.icon(
-                      key: const Key('profile-log-out'),
-                      onPressed: controller.isLoggingOut.value
-                          ? null
-                          : controller.confirmLogout,
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color(0xFFEF4444),
-                        side: const BorderSide(
-                          color: Color(0xFFEF4444),
-                          width: 1.2,
-                        ),
-                        shape: const StadiumBorder(),
-                        textStyle: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      icon: controller.isLoggingOut.value
-                          ? const SizedBox.square(
-                              dimension: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Icons.logout_rounded, size: 20),
-                      label: Text(
-                        controller.isLoggingOut.value
-                            ? 'Logging Out...'.tr
-                            : 'Log Out'.tr,
-                      ),
+      child: Column(
+        children: [
+          _ProfileAppBar(onTap: controller.openItem),
+          Expanded(
+            child: CustomScrollView(
+              slivers: [
+                SliverToBoxAdapter(
+                  child: Obx(
+                    () => _ProfileHero(
+                      profile: controller.profile.value,
+                      loading: controller.isProfileLoading.value,
+                      error: controller.profileError.value,
+                      onRetry: controller.loadProfile,
                     ),
                   ),
                 ),
-                Padding(
-                  padding: EdgeInsets.symmetric(vertical: 15),
-                  child: Column(
+                SliverToBoxAdapter(
+                  child: Obx(
+                    () => _Orders(
+                      onTap: controller.openItem,
+                      profile: controller.profile.value,
+                    ),
+                  ),
+                ),
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                  sliver: SliverList.list(
                     children: [
-                      Text(
-                        'HEXY STATIONERY'.tr,
-                        style: TextStyle(
-                          color: Color(0xFF9CA3AF),
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
+                      _MenuSection(
+                        title: 'MY ACCOUNT',
+                        items: const [
+                          _MenuItem(
+                            Icons.person_outline_rounded,
+                            'Personal Information',
+                          ),
+                          _MenuItem(
+                            Icons.location_on_outlined,
+                            'Shipping Addresses',
+                          ),
+                          _MenuItem(
+                            Icons.lock_outline_rounded,
+                            'Change Password',
+                          ),
+                        ],
+                        onTap: controller.openItem,
+                      ),
+                      _MenuSection(
+                        title: 'SUPPORT',
+                        items: const [
+                          _MenuItem(
+                            Icons.phone_outlined,
+                            'Hot Line',
+                            trailingText: '+95 9 786-837-620',
+                          ),
+                          _MenuItem(Icons.contact_mail_outlined, 'Contact Us'),
+                          _MenuItem(Icons.format_list_bulleted_rounded, 'FAQ'),
+                        ],
+                        onTap: controller.openItem,
+                      ),
+                      Obx(
+                        () => _MenuSection(
+                          title: 'APPLICATION',
+                          items: [
+                            _MenuItem(
+                              Icons.language_rounded,
+                              'Language',
+                              trailingText: controller.currentLanguage.value,
+                            ),
+                            _MenuItem(
+                              Icons.dark_mode_outlined,
+                              'Dark Mode',
+                              toggleValue: controller.darkModeEnabled.value,
+                              onToggle: controller.toggleDarkMode,
+                            ),
+                            const _MenuItem(
+                              Icons.info_outline_rounded,
+                              'About Us',
+                            ),
+                            const _MenuItem(
+                              Icons.shield_outlined,
+                              'Privacy Policy',
+                            ),
+                            const _MenuItem(
+                              Icons.description_outlined,
+                              'Terms & Conditions',
+                            ),
+                          ],
+                          onTap: controller.openItem,
                         ),
                       ),
-                      SizedBox(height: 3),
-                      Text(
-                        'Version 2.4.1'.tr,
-                        style: TextStyle(
-                          color: Color(0xFF9CA3AF),
-                          fontSize: 11,
+                      const SizedBox(height: 4),
+                      Obx(
+                        () => SizedBox(
+                          height: 52,
+                          child: OutlinedButton.icon(
+                            key: const Key('profile-log-out'),
+                            onPressed: controller.isLoggingOut.value
+                                ? null
+                                : controller.confirmLogout,
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: const Color(0xFFEF4444),
+                              side: const BorderSide(
+                                color: Color(0xFFEF4444),
+                                width: 1.2,
+                              ),
+                              shape: const StadiumBorder(),
+                              textStyle: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            icon: controller.isLoggingOut.value
+                                ? const SizedBox.square(
+                                    dimension: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Icon(Icons.logout_rounded, size: 20),
+                            label: Text(
+                              controller.isLoggingOut.value
+                                  ? 'Logging Out...'.tr
+                                  : 'Log Out'.tr,
+                            ),
+                          ),
+                        ),
+                      ),
+                      Padding(
+                        padding: EdgeInsets.symmetric(vertical: 15),
+                        child: Column(
+                          children: [
+                            Text(
+                              'HEXY STATIONERY'.tr,
+                              style: TextStyle(
+                                color: Color(0xFF9CA3AF),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            SizedBox(height: 3),
+                            Text(
+                              'Version 2.4.1'.tr,
+                              style: TextStyle(
+                                color: Color(0xFF9CA3AF),
+                                fontSize: 11,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
@@ -205,7 +225,7 @@ class _RoundAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Material(
-    color: AppColors.surface,
+    color: Theme.of(context).colorScheme.surfaceContainerHighest,
     shape: const CircleBorder(),
     child: InkWell(
       onTap: onTap,
@@ -274,24 +294,36 @@ class _ProfileHero extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 12),
-              Text(
-                (profile?.name.isNotEmpty == true
-                        ? profile!.name
-                        : 'My Account')
-                    .tr,
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Text(
+                  (profile?.name.isNotEmpty == true
+                          ? profile!.name
+                          : 'My Account')
+                      .tr,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
               ),
               if (profile?.email.isNotEmpty == true) ...[
                 const SizedBox(height: 3),
-                Text(
-                  profile!.email,
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: .8),
-                    fontSize: 12,
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Text(
+                    profile!.email,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: .8),
+                      fontSize: 12,
+                    ),
                   ),
                 ),
               ],
@@ -374,7 +406,6 @@ class _Orders extends StatelessWidget {
       ),
     ];
     return Container(
-      color: Theme.of(context).colorScheme.surface,
       padding: const EdgeInsets.fromLTRB(10, 16, 10, 16),
       child: Column(
         children: [
@@ -394,7 +425,7 @@ class _Orders extends StatelessWidget {
                 child: Text(
                   'View All'.tr,
                   style: TextStyle(
-                    color: AppColors.textSecondary,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
                   ),
@@ -446,10 +477,12 @@ class _OrderStatus extends StatelessWidget {
                 width: 64,
                 height: 64,
                 decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(12),
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Theme.of(context).colorScheme.surfaceContainerHighest
+                      : const Color(0xFFF7F9FC),
+                  borderRadius: BorderRadius.circular(18),
                 ),
-                child: Icon(item.icon, color: AppColors.accent, size: 24),
+                child: Icon(item.icon, color: AppColors.accent, size: 28),
               ),
               if (item.count != null)
                 Positioned(
@@ -457,20 +490,20 @@ class _OrderStatus extends StatelessWidget {
                   top: -4,
                   child: Container(
                     constraints: const BoxConstraints(
-                      minWidth: 18,
-                      minHeight: 16,
+                      minWidth: 22,
+                      minHeight: 22,
                     ),
-                    padding: const EdgeInsets.symmetric(horizontal: 5),
+                    padding: const EdgeInsets.symmetric(horizontal: 6),
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
                       color: item.badgeColor,
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
                       item.count!,
                       style: TextStyle(
                         color: Colors.white,
-                        fontSize: 10,
+                        fontSize: 11,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
@@ -515,7 +548,7 @@ class _MenuSection extends StatelessWidget {
           child: Text(
             title.tr,
             style: TextStyle(
-              color: AppColors.textSecondary,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
               fontSize: 13,
               fontWeight: FontWeight.w600,
             ),
@@ -568,8 +601,10 @@ class _MenuSection extends StatelessWidget {
                                 item.trailingText!.tr,
                                 style: TextStyle(
                                   color: item.label == 'Hot Line'
-                                      ? AppColors.primary
-                                      : AppColors.textSecondary,
+                                      ? Theme.of(context).colorScheme.primary
+                                      : Theme.of(
+                                          context,
+                                        ).colorScheme.onSurfaceVariant,
                                   fontSize: 13,
                                   fontWeight: item.label == 'Hot Line'
                                       ? FontWeight.w600

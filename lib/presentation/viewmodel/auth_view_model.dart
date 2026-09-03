@@ -1,17 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:mobile_hexy/core/base/base_view_model.dart';
 import 'package:mobile_hexy/app.dart';
 import 'package:mobile_hexy/core/base/exceptions.dart';
 import 'package:mobile_hexy/core/services/app_constants.dart';
 import 'package:mobile_hexy/core/services/secure_storage.dart';
 import 'package:mobile_hexy/domain/usecases/login_user.dart';
+import 'package:mobile_hexy/domain/usecases/login_with_google.dart';
 import 'package:mobile_hexy/domain/usecases/register_user.dart';
 
 class AuthViewModel extends BaseViewModel {
-  AuthViewModel(this._loginUser, this._registerUser, this._secureStorage);
+  AuthViewModel(
+    this._loginUser,
+    this._loginWithGoogle,
+    this._registerUser,
+    this._secureStorage,
+  );
 
   final LoginUser _loginUser;
+  final LoginWithGoogle _loginWithGoogle;
   final RegisterUser _registerUser;
   final SecureStorage _secureStorage;
 
@@ -22,6 +30,7 @@ class AuthViewModel extends BaseViewModel {
   final passwordHidden = true.obs;
   final confirmPasswordHidden = true.obs;
   final isLoggingIn = false.obs;
+  final isGoogleLoggingIn = false.obs;
   final isRegistering = false.obs;
   final rememberLogin = false.obs;
   final otp = List.generate(6, (_) => TextEditingController());
@@ -74,32 +83,7 @@ class AuthViewModel extends BaseViewModel {
         await _secureStorage.remove(AppConstants.rememberedLoginKey);
         await _secureStorage.remove(AppConstants.rememberedPasswordKey);
       }
-      final loginArguments = Get.arguments;
-      final returnProductId = loginArguments is Map
-          ? int.tryParse(loginArguments['returnProductId']?.toString() ?? '')
-          : null;
-      if (returnProductId != null && returnProductId > 0) {
-        final productArguments = <String, Object?>{
-          'productId': returnProductId,
-          'pendingAction': loginArguments['pendingAction'],
-          'quantity': loginArguments['quantity'],
-        };
-        Get.offAllNamed<dynamic>(AppRoutes.home);
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          Get.toNamed<dynamic>(
-            AppRoutes.productDetail,
-            arguments: productArguments,
-          );
-        });
-        return;
-      }
-      final tabIndex = loginArguments is Map
-          ? loginArguments['tabIndex']
-          : null;
-      await Get.offAllNamed<dynamic>(
-        AppRoutes.home,
-        arguments: tabIndex is int ? {'tabIndex': tabIndex} : null,
-      );
+      await _finishLogin();
     } on ServerException catch (error) {
       _message(error.message);
     } catch (_) {
@@ -107,6 +91,80 @@ class AuthViewModel extends BaseViewModel {
     } finally {
       isLoggingIn.value = false;
     }
+  }
+
+  Future<void> loginWithGoogle() async {
+    if (isGoogleLoggingIn.value || isLoggingIn.value) return;
+    isGoogleLoggingIn.value = true;
+    try {
+      const serverClientId = String.fromEnvironment(
+        'GOOGLE_SERVER_CLIENT_ID',
+        defaultValue:
+            '976257170411-ilje208fkdmfdsou1ko0ccqr10vkru96.apps.googleusercontent.com',
+      );
+      if (serverClientId.isEmpty) {
+        _message(
+          'Google Sign-In is not configured. Add GOOGLE_SERVER_CLIENT_ID and rebuild the app.',
+        );
+        return;
+      }
+      final googleSignIn = GoogleSignIn(
+        scopes: const ['email', 'profile'],
+        serverClientId: serverClientId,
+      );
+      final account = await googleSignIn.signIn();
+      if (account == null) return;
+      final authentication = await account.authentication;
+      final idToken = authentication.idToken;
+      if (idToken == null || idToken.isEmpty) {
+        _message(
+          'Google did not return an ID token. Configure GOOGLE_SERVER_CLIENT_ID.',
+        );
+        return;
+      } else {
+        print('Google ID Token: $idToken');
+      }
+      await _loginWithGoogle(idToken);
+      await _finishLogin();
+    } on ServerException catch (error) {
+      _message(error.message);
+    } catch (error) {
+      _message(
+        error
+            .toString()
+            .replaceFirst('Exception: ', '')
+            .replaceFirst('PlatformException', 'Google Sign-In error'),
+      );
+    } finally {
+      isGoogleLoggingIn.value = false;
+    }
+  }
+
+  Future<void> _finishLogin() async {
+    final loginArguments = Get.arguments;
+    final returnProductId = loginArguments is Map
+        ? int.tryParse(loginArguments['returnProductId']?.toString() ?? '')
+        : null;
+    if (returnProductId != null && returnProductId > 0) {
+      final productArguments = <String, Object?>{
+        'productId': returnProductId,
+        'pendingAction': loginArguments['pendingAction'],
+        'quantity': loginArguments['quantity'],
+      };
+      Get.offAllNamed<dynamic>(AppRoutes.home);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Get.toNamed<dynamic>(
+          AppRoutes.productDetail,
+          arguments: productArguments,
+        );
+      });
+      return;
+    }
+    final tabIndex = loginArguments is Map ? loginArguments['tabIndex'] : null;
+    await Get.offAllNamed<dynamic>(
+      AppRoutes.home,
+      arguments: tabIndex is int ? {'tabIndex': tabIndex} : null,
+    );
   }
 
   Future<void> register() async {

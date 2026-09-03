@@ -7,8 +7,6 @@ import 'package:mobile_hexy/presentation/widgets/clean_app_bar.dart';
 class AddressFormPage extends GetView<AddressFormViewModel> {
   const AddressFormPage({super.key});
 
-  static const _border = Color(0xFFE5E7EB);
-
   @override
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -65,16 +63,22 @@ class AddressFormPage extends GetView<AddressFormViewModel> {
                             labelStyle: TextStyle(
                               color: selected
                                   ? Colors.white
-                                  : AppColors.textSecondary,
+                                  : Theme.of(
+                                      context,
+                                    ).colorScheme.onSurfaceVariant,
                               fontSize: 13,
                               fontWeight: selected
                                   ? FontWeight.w800
                                   : FontWeight.w500,
                             ),
                             selectedColor: AppColors.primary,
-                            backgroundColor: AppColors.surface,
+                            backgroundColor: Theme.of(
+                              context,
+                            ).colorScheme.surface,
                             side: BorderSide(
-                              color: selected ? AppColors.primary : _border,
+                              color: selected
+                                  ? AppColors.primary
+                                  : Theme.of(context).dividerColor,
                             ),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
@@ -132,7 +136,7 @@ class AddressFormPage extends GetView<AddressFormViewModel> {
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   decoration: BoxDecoration(
                     color: Theme.of(context).colorScheme.surface,
-                    border: Border.all(color: _border),
+                    border: Border.all(color: Theme.of(context).dividerColor),
                     borderRadius: BorderRadius.circular(12),
                     boxShadow: const [
                       BoxShadow(
@@ -146,7 +150,7 @@ class AddressFormPage extends GetView<AddressFormViewModel> {
                     children: [
                       Icon(
                         Icons.star_outline_rounded,
-                        color: AppColors.primary,
+                        color: Theme.of(context).colorScheme.primary,
                         size: 22,
                       ),
                       const SizedBox(width: 10),
@@ -262,18 +266,31 @@ class _DropdownField extends StatelessWidget {
         initialValue: value,
         hint: Text(
           hint ?? '',
-          style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 14),
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+            fontSize: 14,
+          ),
         ),
         items: items
-            .map((item) => DropdownMenuItem(value: item, child: Text(item.tr)))
+            .map(
+              (item) => DropdownMenuItem(
+                value: item,
+                child: Text(
+                  item.tr,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                ),
+              ),
+            )
             .toList(),
         onChanged: onChanged,
         icon: Icon(
           Icons.keyboard_arrow_down_rounded,
-          color: Color(0xFF9CA3AF),
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
           size: 20,
         ),
-        decoration: _inputDecoration(),
+        decoration: _inputDecoration(context),
       ),
     ],
   );
@@ -315,22 +332,23 @@ class _TextField extends StatelessWidget {
           color: Theme.of(context).colorScheme.onSurface,
           fontSize: 14,
         ),
-        decoration: _inputDecoration(),
+        decoration: _inputDecoration(context),
       ),
     ],
   );
 }
 
-InputDecoration _inputDecoration() => InputDecoration(
+InputDecoration _inputDecoration(BuildContext context) => InputDecoration(
   filled: true,
-  fillColor: AppColors.surface,
+  fillColor: Theme.of(context).colorScheme.surface,
+  hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
   contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
   border: OutlineInputBorder(
     borderRadius: BorderRadius.circular(10),
-    borderSide: const BorderSide(color: AddressFormPage._border),
+    borderSide: BorderSide(color: Theme.of(context).dividerColor),
   ),
   enabledBorder: OutlineInputBorder(
     borderRadius: BorderRadius.circular(10),
-    borderSide: const BorderSide(color: AddressFormPage._border),
+    borderSide: BorderSide(color: Theme.of(context).dividerColor),
   ),
 );

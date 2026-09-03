@@ -210,8 +210,9 @@ class _Toolbar extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     height: 48,
     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-    decoration: const BoxDecoration(
-      border: Border(bottom: BorderSide(color: Color(0xFFE5E7EB))),
+    decoration: BoxDecoration(
+      color: Theme.of(context).colorScheme.surface,
+      border: Border(bottom: BorderSide(color: Theme.of(context).dividerColor)),
     ),
     child: Row(
       children: [
@@ -251,20 +252,20 @@ class _FilterSheet extends StatelessWidget {
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        border: Border(top: BorderSide(color: Color(0xFFE5E7EB))),
+        border: Border(top: BorderSide(color: Theme.of(context).dividerColor)),
       ),
       child: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Align(
+            Align(
               child: SizedBox(
                 width: 32,
                 height: 4,
                 child: DecoratedBox(
                   decoration: BoxDecoration(
-                    color: Color(0xFFE5E7EB),
+                    color: Theme.of(context).dividerColor,
                     borderRadius: BorderRadius.all(Radius.circular(2)),
                   ),
                 ),
@@ -313,17 +314,19 @@ class _FilterSheet extends StatelessWidget {
                       showCheckmark: false,
                       onSelected: (_) => controller.pendingCategory.value =
                           selected ? '' : category.name,
-                      selectedColor: AppColors.primary,
-                      backgroundColor: AppColors.surface,
+                      selectedColor: Theme.of(context).colorScheme.primary,
+                      backgroundColor: Theme.of(
+                        context,
+                      ).colorScheme.surfaceContainerHighest,
                       side: BorderSide(
                         color: selected
-                            ? AppColors.primary
-                            : const Color(0xFFE5E7EB),
+                            ? Theme.of(context).colorScheme.primary
+                            : Theme.of(context).dividerColor,
                       ),
                       label: Text(category.name.tr),
                       labelStyle: TextStyle(
                         color: selected
-                            ? Colors.white
+                            ? Theme.of(context).colorScheme.onPrimary
                             : Theme.of(context).colorScheme.onSurface,
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
@@ -354,8 +357,8 @@ class _FilterSheet extends StatelessWidget {
                                   ? Icons.check_box_rounded
                                   : Icons.check_box_outline_blank_rounded,
                               color: selected
-                                  ? AppColors.primary
-                                  : const Color(0xFFE5E7EB),
+                                  ? Theme.of(context).colorScheme.primary
+                                  : Theme.of(context).colorScheme.outline,
                               size: 22,
                             ),
                             const SizedBox(width: 8),
@@ -394,7 +397,7 @@ class _FilterSheet extends StatelessWidget {
                           '${_money(controller.pendingPriceRange.value.start)} — ${_money(controller.pendingPriceRange.value.end)}'
                               .tr,
                           style: TextStyle(
-                            color: AppColors.primary,
+                            color: Theme.of(context).colorScheme.primary,
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
                           ),
@@ -406,8 +409,8 @@ class _FilterSheet extends StatelessWidget {
                       min: 0,
                       max: 15000,
                       divisions: 15,
-                      activeColor: AppColors.primary,
-                      inactiveColor: const Color(0xFFE5E7EB),
+                      activeColor: Theme.of(context).colorScheme.primary,
+                      inactiveColor: Theme.of(context).dividerColor,
                       onChanged: (value) =>
                           controller.pendingPriceRange.value = value,
                     ),
@@ -425,7 +428,7 @@ class _FilterSheet extends StatelessWidget {
                     style: const TextStyle(fontWeight: FontWeight.w700),
                   ),
                   value: controller.pendingInStockOnly.value,
-                  activeThumbColor: AppColors.primary,
+                  activeThumbColor: Theme.of(context).colorScheme.primary,
                   onChanged: (value) =>
                       controller.pendingInStockOnly.value = value,
                 ),
@@ -523,13 +526,13 @@ class _SortBySheet extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Align(
+          Align(
             child: SizedBox(
               width: 32,
               height: 4,
               child: DecoratedBox(
                 decoration: BoxDecoration(
-                  color: Color(0xFFE5E7EB),
+                  color: Theme.of(context).dividerColor,
                   borderRadius: BorderRadius.all(Radius.circular(2)),
                 ),
               ),
@@ -564,8 +567,10 @@ class _SortBySheet extends StatelessWidget {
                                 ? Icons.radio_button_checked
                                 : Icons.radio_button_off,
                             color: selected
-                                ? AppColors.primary
-                                : const Color(0xFF9CA3AF),
+                                ? Theme.of(context).colorScheme.primary
+                                : Theme.of(
+                                    context,
+                                  ).colorScheme.onSurfaceVariant,
                             size: 22,
                           ),
                           const SizedBox(width: 12),
@@ -634,18 +639,22 @@ class _ToolChip extends StatelessWidget {
       height: 36,
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        border: Border.all(color: const Color(0xFFE5E7EB)),
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        border: Border.all(color: Theme.of(context).dividerColor),
         borderRadius: BorderRadius.circular(18),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 15),
+          Icon(icon, size: 15, color: Theme.of(context).colorScheme.onSurface),
           const SizedBox(width: 5),
           Text(
             label.tr,
-            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
           ),
           if (trailing != null) ...[const SizedBox(width: 4), trailing!],
         ],
@@ -692,9 +701,14 @@ class _ProductCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Material(
     color: Theme.of(context).colorScheme.surface,
-    borderRadius: BorderRadius.circular(16),
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(16),
+      side: BorderSide(color: Theme.of(context).dividerColor),
+    ),
     elevation: 2,
-    shadowColor: const Color(0x18000000),
+    shadowColor: Theme.of(context).brightness == Brightness.dark
+        ? Colors.black.withValues(alpha: .45)
+        : const Color(0x18000000),
     clipBehavior: Clip.antiAlias,
     child: InkWell(
       onTap: onOpen,
@@ -722,7 +736,9 @@ class _ProductCard extends StatelessWidget {
                   right: 8,
                   top: 8,
                   child: Material(
-                    color: Colors.white.withValues(alpha: .9),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.surface.withValues(alpha: .92),
                     shape: const CircleBorder(),
                     child: InkWell(
                       onTap: onFavorite,
@@ -797,7 +813,7 @@ class _ProductCard extends StatelessWidget {
                     Text(
                       product.price,
                       style: TextStyle(
-                        color: AppColors.primary,
+                        color: Theme.of(context).colorScheme.primary,
                         fontSize: 13,
                         fontWeight: FontWeight.w800,
                       ),
@@ -809,7 +825,9 @@ class _ProductCard extends StatelessWidget {
                           product.originalPrice!,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            color: Color(0xFF9CA3AF),
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurfaceVariant,
                             fontSize: 10,
                             decoration: TextDecoration.lineThrough,
                           ),
