@@ -14,13 +14,13 @@ class AddressFormPage extends GetView<AddressFormViewModel> {
       title: controller.isEditing ? 'Edit Address' : 'New Address',
     ),
     body: SafeArea(
-      bottom: false,
       child: Column(
         children: [
           Expanded(
             child: ListView(
               keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-              padding: const EdgeInsets.all(16),
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
               children: [
                 _TextField(
                   label: 'Address Name*',

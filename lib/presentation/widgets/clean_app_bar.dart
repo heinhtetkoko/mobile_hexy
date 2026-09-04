@@ -2,10 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 class CleanAppBar extends StatelessWidget implements PreferredSizeWidget {
-  const CleanAppBar({super.key, required this.title, this.showBack = true});
+  const CleanAppBar({
+    super.key,
+    required this.title,
+    this.showBack = true,
+    this.action,
+  });
 
   final String title;
   final bool showBack;
+  final Widget? action;
 
   @override
   Size get preferredSize => const Size.fromHeight(57);
@@ -34,7 +40,9 @@ class CleanAppBar extends StatelessWidget implements PreferredSizeWidget {
         fontWeight: FontWeight.w800,
       ),
     ),
-    actions: const [SizedBox(width: 70)],
+    actions: [
+      SizedBox(width: 70, child: action == null ? null : Center(child: action)),
+    ],
     bottom: PreferredSize(
       preferredSize: const Size.fromHeight(1),
       child: Divider(height: 1, color: Theme.of(context).dividerColor),

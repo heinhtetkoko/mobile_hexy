@@ -273,61 +273,59 @@ class ResetPasswordPage extends GetView<AuthViewModel> {
   const ResetPasswordPage({super.key});
   @override
   Widget build(BuildContext context) => _AuthScaffold(
-    child: SingleChildScrollView(
-      child: _AuthCard(
-        child: Column(
-          children: [
-            const _BackButton(),
-            const _AuthIllustration(
+    child: _AuthCard(
+      child: Column(
+        children: [
+          const _BackButton(),
+          const _AuthIllustration(
+            icon: Icons.lock_outline_rounded,
+            badge: Icons.key_rounded,
+          ),
+          const _CenteredHeading(
+            title: 'Create New Password',
+            subtitle:
+                'Your new password must be different from previously used passwords.',
+          ),
+          const SizedBox(height: 24),
+          Obx(
+            () => _AuthField(
+              controller: controller.password,
+              hint: 'New Password',
               icon: Icons.lock_outline_rounded,
-              badge: Icons.key_rounded,
+              obscureText: controller.passwordHidden.value,
+              onVisibility: controller.togglePassword,
+              onChanged: controller.onPasswordChanged,
+              tall: true,
             ),
-            const _CenteredHeading(
-              title: 'Create New Password',
-              subtitle:
-                  'Your new password must be different from previously used passwords.',
+          ),
+          const SizedBox(height: 7),
+          Obx(() => _PasswordStrength(score: controller.passwordStrength)),
+          const SizedBox(height: 16),
+          Obx(
+            () => _AuthField(
+              controller: controller.confirmPassword,
+              hint: 'Confirm Password',
+              icon: Icons.lock_outline_rounded,
+              obscureText: controller.confirmPasswordHidden.value,
+              onVisibility: controller.toggleConfirmPassword,
+              onChanged: controller.onConfirmPasswordChanged,
+              tall: true,
             ),
-            const SizedBox(height: 24),
-            Obx(
-              () => _AuthField(
-                controller: controller.password,
-                hint: 'New Password',
-                icon: Icons.lock_outline_rounded,
-                obscureText: controller.passwordHidden.value,
-                onVisibility: controller.togglePassword,
-                onChanged: controller.onPasswordChanged,
-                tall: true,
-              ),
+          ),
+          const SizedBox(height: 24),
+          Obx(() => _PasswordRules(validity: controller.passwordRules)),
+          const SizedBox(height: 24),
+          Obx(
+            () => _PrimaryButton(
+              label: 'Reset Password',
+              onPressed: controller.canResetPassword
+                  ? controller.resetPassword
+                  : null,
+              loading: controller.isResettingPassword.value,
+              tall: true,
             ),
-            const SizedBox(height: 7),
-            Obx(() => _PasswordStrength(score: controller.passwordStrength)),
-            const SizedBox(height: 16),
-            Obx(
-              () => _AuthField(
-                controller: controller.confirmPassword,
-                hint: 'Confirm Password',
-                icon: Icons.lock_outline_rounded,
-                obscureText: controller.confirmPasswordHidden.value,
-                onVisibility: controller.toggleConfirmPassword,
-                onChanged: controller.onConfirmPasswordChanged,
-                tall: true,
-              ),
-            ),
-            const SizedBox(height: 24),
-            Obx(() => _PasswordRules(validity: controller.passwordRules)),
-            const SizedBox(height: 24),
-            Obx(
-              () => _PrimaryButton(
-                label: 'Reset Password',
-                onPressed: controller.canResetPassword
-                    ? controller.resetPassword
-                    : null,
-                loading: controller.isResettingPassword.value,
-                tall: true,
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     ),
   );
@@ -389,6 +387,7 @@ class _AuthScaffold extends StatelessWidget {
     body: SafeArea(
       child: Center(
         child: SingleChildScrollView(
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
           child: child,
         ),

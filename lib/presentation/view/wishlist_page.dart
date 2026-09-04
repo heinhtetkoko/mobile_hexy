@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:mobile_hexy/core/theme/app_colors.dart';
 import 'package:mobile_hexy/data/models/wishlist_item.dart';
 import 'package:mobile_hexy/presentation/viewmodel/wishlist_view_model.dart';
+import 'package:mobile_hexy/presentation/widgets/shimmer_skeletons.dart';
 
 class WishlistPage extends GetView<WishlistViewModel> {
   const WishlistPage({super.key});
@@ -18,7 +19,7 @@ class WishlistPage extends GetView<WishlistViewModel> {
           Expanded(
             child: Obx(
               () => controller.isLoading.value
-                  ? const Center(child: CircularProgressIndicator())
+                  ? const _WishlistShimmer()
                   : controller.errorMessage.value != null
                   ? _WishlistError(
                       message: controller.errorMessage.value!,
@@ -26,24 +27,44 @@ class WishlistPage extends GetView<WishlistViewModel> {
                     )
                   : controller.items.isEmpty
                   ? const _EmptyWishlist()
-                  : ListView.builder(
-                      padding: EdgeInsets.zero,
-                      itemCount: controller.items.length,
-                      itemExtent: 110,
-                      itemBuilder: (context, index) {
-                        final item = controller.items[index];
-                        return _WishlistCard(
-                          key: ValueKey(item.id),
-                          item: item,
-                          onAddToCart: () => controller.addToCart(item),
-                          onRemove: () => controller.removeItem(item),
-                        );
-                      },
+                  : RefreshIndicator(
+                      onRefresh: controller.loadWishlist,
+                      child: ListView.builder(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: EdgeInsets.zero,
+                        itemCount: controller.items.length,
+                        itemExtent: 110,
+                        itemBuilder: (context, index) {
+                          final item = controller.items[index];
+                          return _WishlistCard(
+                            key: ValueKey(item.id),
+                            item: item,
+                            onAddToCart: () => controller.addToCart(item),
+                            onRemove: () => controller.removeItem(item),
+                          );
+                        },
+                      ),
                     ),
             ),
           ),
         ],
       ),
+    ),
+  );
+}
+
+class _WishlistShimmer extends StatelessWidget {
+  const _WishlistShimmer();
+
+  @override
+  Widget build(BuildContext context) => AppShimmer(
+    child: ListView.separated(
+      physics: const NeverScrollableScrollPhysics(),
+      padding: const EdgeInsets.all(16),
+      itemCount: 6,
+      separatorBuilder: (_, _) => const SizedBox(height: 10),
+      itemBuilder: (_, _) =>
+          const ShimmerBox(width: double.infinity, height: 94, radius: 14),
     ),
   );
 }

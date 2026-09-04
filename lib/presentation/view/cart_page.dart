@@ -14,7 +14,10 @@ class CartPage extends GetView<CartViewModel> {
       if (index > 0 && (digits.length - index) % 3 == 0) buffer.write(',');
       buffer.write(digits[index]);
     }
-    return '$buffer Ks';
+    final symbol = Get.isRegistered<CartViewModel>()
+        ? Get.find<CartViewModel>().currencySymbol.value.trim()
+        : 'Ks';
+    return '$buffer $symbol'.trim();
   }
 
   @override

@@ -4,6 +4,7 @@ import 'package:mobile_hexy/core/theme/app_colors.dart';
 import 'package:mobile_hexy/data/models/shipping_address.dart';
 import 'package:mobile_hexy/presentation/view/cart_page.dart';
 import 'package:mobile_hexy/presentation/viewmodel/checkout_view_model.dart';
+import 'package:mobile_hexy/presentation/widgets/shimmer_skeletons.dart';
 import 'package:mobile_hexy/app.dart';
 
 const _addShippingAddressAction = 'add_shipping_address';
@@ -15,7 +16,6 @@ class CheckoutPage extends GetView<CheckoutViewModel> {
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: Theme.of(context).scaffoldBackgroundColor,
     body: SafeArea(
-      bottom: false,
       child: Column(
         children: [
           const _CheckoutHeader(),
@@ -38,51 +38,65 @@ class CheckoutPage extends GetView<CheckoutViewModel> {
 
   Widget _content(BuildContext context) {
     if (controller.isLoading.value && !controller.hasCheckoutData.value) {
-      return const Center(child: CircularProgressIndicator());
+      return const _CheckoutShimmer();
     }
     final error = controller.errorMessage.value;
     if (error != null && !controller.hasCheckoutData.value) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+      return RefreshIndicator(
+        onRefresh: controller.loadCheckout,
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
           children: [
-            Padding(
-              padding: const EdgeInsets.all(24),
-              child: Text(error, textAlign: TextAlign.center),
-            ),
-            FilledButton(
-              onPressed: controller.loadCheckout,
-              child: Text('Try Again'.tr),
+            SizedBox(
+              height: MediaQuery.sizeOf(context).height * .55,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Text(error, textAlign: TextAlign.center),
+                  ),
+                  FilledButton(
+                    onPressed: controller.loadCheckout,
+                    child: Text('Try Again'.tr),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
       );
     }
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-      children: [
-        _DeliveryInformation(
-          address: controller.selectedAddress.value,
-          updating: controller.isUpdatingAddress.value,
-          onEdit: () => _showAddressDialog(context),
-        ),
-        const SizedBox(height: 10),
-        _DeliveryMethod(
-          method: controller.selectedDeliveryMethod.value,
-          updating: controller.isUpdatingDeliveryMethod.value,
-          onTap: () => _showDeliveryMethodDialog(context),
-        ),
-        const SizedBox(height: 10),
-        _PaymentMethod(controller: controller),
-        const SizedBox(height: 10),
-        _ItemsSummary(controller: controller),
-        const SizedBox(height: 10),
-        _PriceBreakdown(controller: controller),
-        const SizedBox(height: 10),
-        _DeliveryNotes(controller: controller),
-        const SizedBox(height: 12),
-        _TermsRow(controller: controller),
-      ],
+    return RefreshIndicator(
+      onRefresh: controller.loadCheckout,
+      child: ListView(
+        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+        children: [
+          _DeliveryInformation(
+            address: controller.selectedAddress.value,
+            updating: controller.isUpdatingAddress.value,
+            onEdit: () => _showAddressDialog(context),
+          ),
+          const SizedBox(height: 10),
+          _DeliveryMethod(
+            method: controller.selectedDeliveryMethod.value,
+            updating: controller.isUpdatingDeliveryMethod.value,
+            onTap: () => _showDeliveryMethodDialog(context),
+          ),
+          const SizedBox(height: 10),
+          _PaymentMethod(controller: controller),
+          const SizedBox(height: 10),
+          _ItemsSummary(controller: controller),
+          const SizedBox(height: 10),
+          _PriceBreakdown(controller: controller),
+          const SizedBox(height: 10),
+          _DeliveryNotes(controller: controller),
+          const SizedBox(height: 12),
+          _TermsRow(controller: controller),
+        ],
+      ),
     );
   }
 
@@ -111,6 +125,29 @@ class CheckoutPage extends GetView<CheckoutViewModel> {
     );
     if (method != null) await controller.selectDeliveryMethod(method);
   }
+}
+
+class _CheckoutShimmer extends StatelessWidget {
+  const _CheckoutShimmer();
+
+  @override
+  Widget build(BuildContext context) => AppShimmer(
+    child: ListView(
+      physics: const NeverScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+      children: const [
+        ShimmerBox(width: double.infinity, height: 128, radius: 16),
+        SizedBox(height: 10),
+        ShimmerBox(width: double.infinity, height: 86, radius: 16),
+        SizedBox(height: 10),
+        ShimmerBox(width: double.infinity, height: 116, radius: 16),
+        SizedBox(height: 10),
+        ShimmerBox(width: double.infinity, height: 142, radius: 16),
+        SizedBox(height: 10),
+        ShimmerBox(width: double.infinity, height: 166, radius: 16),
+      ],
+    ),
+  );
 }
 
 class _CheckoutHeader extends StatelessWidget {

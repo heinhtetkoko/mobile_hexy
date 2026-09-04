@@ -65,6 +65,7 @@ class ProductListViewModel extends BaseViewModel {
   final categoryName = 'Products'.obs;
   int _categoryId = 0;
   int? _collectionId;
+  int? _brandId;
   int _page = 1;
   ProductListMode? _mode;
   Worker? _searchWorker;
@@ -90,9 +91,11 @@ class ProductListViewModel extends BaseViewModel {
         ProductListMode.recommended => 'Recommended For You',
         ProductListMode.discountProducts => 'Promo Products',
         ProductListMode.collection => category.collectionName ?? 'Collection',
+        ProductListMode.brand => category.brandName ?? 'Brand Products',
         ProductListMode.search => 'All Products',
       };
       _collectionId = category.collectionId;
+      _brandId = category.brandId;
       activeFilters.value = 0;
       if (_mode == ProductListMode.search) {
         query.value = category.query;
@@ -181,7 +184,7 @@ class ProductListViewModel extends BaseViewModel {
       name: 'Staedtler Triplus Fineliner Set',
       price: '8,500 Ks',
       originalPrice: '10,000 Ks',
-      discount: '-15%',
+      discount: '15%',
       imageAsset: 'assets/images/product_list/product_03.png',
     ),
     CatalogProduct(
@@ -195,7 +198,7 @@ class ProductListViewModel extends BaseViewModel {
       name: 'Pentel EnerGel 0.5mm',
       price: '1,500 Ks',
       originalPrice: '1,800 Ks',
-      discount: '-17%',
+      discount: '17%',
       imageAsset: 'assets/images/product_list/product_05.png',
     ),
     CatalogProduct(
@@ -203,7 +206,7 @@ class ProductListViewModel extends BaseViewModel {
       name: 'Uni-ball Signo 207 Retractable',
       price: '1,900 Ks',
       originalPrice: '2,200 Ks',
-      discount: '-14%',
+      discount: '14%',
       imageAsset: 'assets/images/product_list/product_06.png',
     ),
     CatalogProduct(
@@ -216,7 +219,7 @@ class ProductListViewModel extends BaseViewModel {
       id: '8',
       name: 'Staedtler 2B Pencil Set 12pcs',
       price: '4,500 Ks',
-      discount: '-18%',
+      discount: '18%',
       imageAsset: 'assets/images/product_list/product_08.png',
     ),
     CatalogProduct(
@@ -230,7 +233,7 @@ class ProductListViewModel extends BaseViewModel {
       name: 'Faber-Castell Colour Set 24',
       price: '11,500 Ks',
       originalPrice: '13,500 Ks',
-      discount: '-15%',
+      discount: '15%',
       imageAsset: 'assets/images/product_list/product_10.png',
     ),
     CatalogProduct(
@@ -238,7 +241,7 @@ class ProductListViewModel extends BaseViewModel {
       name: 'Zebra Fountain Pen Zensation',
       price: '4,200 Ks',
       originalPrice: '5,000 Ks',
-      discount: '-16%',
+      discount: '16%',
       imageAsset: 'assets/images/product_list/product_11.png',
     ),
     CatalogProduct(
@@ -246,7 +249,7 @@ class ProductListViewModel extends BaseViewModel {
       name: 'Pentel Brush Sign Pen Artist',
       price: '2,800 Ks',
       originalPrice: '3,500 Ks',
-      discount: '-20%',
+      discount: '20%',
       imageAsset: 'assets/images/product_list/product_12.png',
     ),
   ];
@@ -469,6 +472,27 @@ class ProductListViewModel extends BaseViewModel {
         );
         if (result.name.isNotEmpty) categoryName.value = result.name;
         return (products: result.products, page: 1, hasNext: false);
+      case ProductListMode.brand:
+        final brandId = _brandId;
+        if (brandId == null || brandId <= 0) {
+          throw const FormatException('Brand information is incomplete.');
+        }
+        final result = await _remoteDataSource.fetchAllProducts(
+          query: '',
+          categoryId: null,
+          brandId: brandId,
+          minPrice: null,
+          maxPrice: null,
+          inStock: null,
+          sort: _sortValue,
+          page: page,
+          limit: pageLimit,
+        );
+        return (
+          products: result.products,
+          page: result.page,
+          hasNext: result.hasNext,
+        );
       case ProductListMode.search:
         final selectedCategoryId = filterCategories
             .firstWhereOrNull((item) => item.name == selectedCategory.value)
@@ -522,7 +546,7 @@ class ProductListViewModel extends BaseViewModel {
               discount:
                   product.discountPercent != null &&
                       product.discountPercent! > 0
-                  ? '-${_formatDiscount(product.discountPercent!)}%'
+                  ? '${_formatDiscount(product.discountPercent!)}%'
                   : null,
             ),
           )

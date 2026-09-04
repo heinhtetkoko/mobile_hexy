@@ -19,11 +19,13 @@ class OnboardingPage extends GetView<OnboardingViewModel> {
                 physics: const NeverScrollableScrollPhysics(),
                 itemCount: controller.slides.length,
                 onPageChanged: controller.updatePage,
-                itemBuilder: (context, index) => Image.asset(
-                  controller.slides[index].imageAsset,
-                  fit: BoxFit.cover,
-                  width: double.infinity,
-                  height: double.infinity,
+                itemBuilder: (context, index) => SingleChildScrollView(
+                  reverse: true,
+                  child: Image.asset(
+                    controller.slides[index].imageAsset,
+                    fit: BoxFit.fitWidth,
+                    width: constraints.maxWidth,
+                  ),
                 ),
               ),
             ),
@@ -67,18 +69,14 @@ class OnboardingPage extends GetView<OnboardingViewModel> {
       Rect.fromLTRB(380, 2848, 1180, 3040),
     ];
     final sourceRect = imageButtonRects[page.clamp(0, 2)];
-    final scale =
-        (viewport.width / imageSize.width) >
-            (viewport.height / imageSize.height)
-        ? viewport.width / imageSize.width
-        : viewport.height / imageSize.height;
+    final scale = viewport.width / imageSize.width;
     final renderedSize = Size(
       imageSize.width * scale,
       imageSize.height * scale,
     );
     final offset = Offset(
       (viewport.width - renderedSize.width) / 2,
-      (viewport.height - renderedSize.height) / 2,
+      viewport.height - renderedSize.height,
     );
     return Rect.fromLTRB(
       offset.dx + sourceRect.left * scale,

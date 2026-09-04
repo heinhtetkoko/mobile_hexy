@@ -15,6 +15,7 @@ class CartViewModel extends BaseViewModel {
   final shippingMethods = <CartShippingMethod>[].obs;
   final selectedShippingMethodId = RxnString();
   final orderSummaryRows = <CartSummaryRow>[].obs;
+  final currencySymbol = 'Ks'.obs;
   final isLoading = false.obs;
   final updatingLineIds = <String>{}.obs;
   final isApplyingCoupon = false.obs;
@@ -145,6 +146,23 @@ class CartViewModel extends BaseViewModel {
               itemsSource['lines'] ??
               itemsSource['order_items']
         : itemsSource;
+    final apiCurrencySymbol = _currencySymbol(
+      data['currency'] ??
+          data['currency_symbol'] ??
+          (data['order_summary'] is Map
+              ? (data['order_summary'] as Map)['currency']
+              : null) ??
+          (data['totals'] is Map
+              ? (data['totals'] as Map)['currency']
+              : null) ??
+          (itemsSource is Map ? itemsSource['currency'] : null) ??
+          (rawItems is List && rawItems.isNotEmpty && rawItems.first is Map
+              ? (rawItems.first as Map)['currency']
+              : null),
+    );
+    if (apiCurrencySymbol.isNotEmpty) {
+      currencySymbol.value = apiCurrencySymbol;
+    }
     items.assignAll(
       rawItems is List
           ? rawItems.whereType<Map>().map(_parseItem)
@@ -367,6 +385,19 @@ class CartViewModel extends BaseViewModel {
             value['display'] ??
             value['text'])
         ?.toString();
+  }
+
+  String _currencySymbol(Object? value) {
+    if (value is Map) {
+      return (value['symbol'] ??
+                  value['currency_symbol'] ??
+                  value['code'] ??
+                  value['name'])
+              ?.toString()
+              .trim() ??
+          '';
+    }
+    return value?.toString().trim() ?? '';
   }
 
   int? _intValue(Object? value) {

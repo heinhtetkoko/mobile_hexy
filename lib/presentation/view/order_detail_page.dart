@@ -1,169 +1,158 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:mobile_hexy/presentation/viewmodel/order_detail_view_model.dart';
+import 'package:mobile_hexy/presentation/widgets/clean_app_bar.dart';
 
 class OrderDetailPage extends GetView<OrderDetailViewModel> {
   const OrderDetailPage({super.key});
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(
-      leadingWidth: 68,
-      leading: Padding(
-        padding: const EdgeInsets.only(left: 16),
-        child: Material(
-          color: Theme.of(context).colorScheme.surfaceContainerHighest,
-          shape: const CircleBorder(),
-          child: IconButton(
-            onPressed: Get.back,
-            icon: const Icon(Icons.arrow_back_rounded, size: 20),
-          ),
-        ),
-      ),
-      title: Text(
-        'Order Detail'.tr,
-        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
-      ),
-      centerTitle: true,
-    ),
-    body: Obx(() {
-      if (controller.isLoading.value) {
-        return const Center(child: CircularProgressIndicator());
-      }
-      final error = controller.errorMessage.value;
-      if (error != null) {
-        return Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(24),
-                child: Text(error, textAlign: TextAlign.center),
-              ),
-              FilledButton(
-                onPressed: controller.loadDetail,
-                child: Text('Try Again'.tr),
-              ),
-            ],
-          ),
-        );
-      }
-      final number = controller.text(const [
-        'number',
-        'name',
-        'order_number',
-      ], fallback: controller.orderId);
-      return ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          _Panel(
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Order #$number',
-                        style: const TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      const SizedBox(height: 5),
-                      Text(
-                        controller.text(const [
-                          'order_date',
-                          'date_order',
-                          'date',
-                        ]),
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                _StatusBadge(
-                  label: controller.text(const [
-                    'status_label',
-                    'status',
-                    'state',
-                  ], fallback: 'Pending'),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
-          _Section(
-            title: 'Order Items',
-            child: controller.items.isEmpty
-                ? Text('No order items found.'.tr)
-                : Column(
-                    children: controller.items
-                        .map((item) => _OrderItemRow(item: item))
-                        .toList(),
-                  ),
-          ),
-          const SizedBox(height: 12),
-          _Section(
-            title: 'Delivery Information',
-            child: _AddressBlock(address: controller.address),
-          ),
-          const SizedBox(height: 12),
-          _Section(
-            title: 'Delivery & Payment',
+    appBar: const CleanAppBar(title: 'Order Detail'),
+    body: SafeArea(
+      top: false,
+      child: Obx(() {
+        if (controller.isLoading.value) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        final error = controller.errorMessage.value;
+        if (error != null) {
+          return Center(
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                _DetailRow(
-                  label: 'Delivery Method',
-                  value: _nestedText(controller.detail['delivery_method']),
+                Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Text(error, textAlign: TextAlign.center),
                 ),
-                _DetailRow(
-                  label: 'Payment Method',
-                  value: _nestedText(controller.detail['payment_method']),
-                ),
-                _DetailRow(
-                  label: 'Delivery Notes',
-                  value: _nestedText(controller.detail['delivery_notes']),
+                FilledButton(
+                  onPressed: controller.loadDetail,
+                  child: Text('Try Again'.tr),
                 ),
               ],
             ),
-          ),
-          const SizedBox(height: 12),
-          _Section(
-            title: 'Order Summary',
-            child: controller.summaryRows.isEmpty
-                ? _DetailRow(
-                    label: 'Grand Total',
-                    value: controller.text(const [
-                      'formatted_total',
-                      'grand_total',
-                      'amount_total',
-                      'total',
-                    ]),
-                    bold: true,
-                  )
-                : Column(
-                    children: controller.summaryRows
-                        .map(
-                          (row) => _DetailRow(
-                            label:
-                                (row['label'] ?? row['name'] ?? row['key'])
-                                    ?.toString() ??
-                                '',
-                            value: _amountText(row),
-                            bold:
-                                row['is_total'] == true ||
-                                row['key']?.toString() == 'grand_total',
+          );
+        }
+        final number = controller.text(const [
+          'number',
+          'name',
+          'order_number',
+        ], fallback: controller.orderId);
+        return ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+          children: [
+            _Panel(
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Order #$number',
+                          style: const TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w800,
                           ),
-                        )
-                        .toList(),
+                        ),
+                        const SizedBox(height: 5),
+                        Text(
+                          controller.text(const [
+                            'order_date',
+                            'date_order',
+                            'date',
+                          ]),
+                          style: TextStyle(
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-          ),
-        ],
-      );
-    }),
+                  _StatusBadge(
+                    label: controller.text(const [
+                      'status_label',
+                      'status',
+                      'state',
+                    ], fallback: 'Pending'),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            _Section(
+              title: 'Order Items',
+              child: controller.items.isEmpty
+                  ? Text('No order items found.'.tr)
+                  : Column(
+                      children: controller.items
+                          .map((item) => _OrderItemRow(item: item))
+                          .toList(),
+                    ),
+            ),
+            const SizedBox(height: 12),
+            _Section(
+              title: 'Delivery Information',
+              child: _AddressBlock(address: controller.address),
+            ),
+            const SizedBox(height: 12),
+            _Section(
+              title: 'Delivery & Payment',
+              child: Column(
+                children: [
+                  _DetailRow(
+                    label: 'Delivery Method',
+                    value: _nestedText(controller.detail['delivery_method']),
+                  ),
+                  _DetailRow(
+                    label: 'Payment Method',
+                    value: _nestedText(controller.detail['payment_method']),
+                  ),
+                  _DetailRow(
+                    label: 'Delivery Notes',
+                    value: _nestedText(controller.detail['delivery_notes']),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            _Section(
+              title: 'Order Summary',
+              child: controller.summaryRows.isEmpty
+                  ? _DetailRow(
+                      label: 'Grand Total',
+                      value: controller.text(const [
+                        'formatted_total',
+                        'grand_total',
+                        'amount_total',
+                        'total',
+                      ]),
+                      bold: true,
+                    )
+                  : Column(
+                      children: controller.summaryRows
+                          .map(
+                            (row) => _DetailRow(
+                              label:
+                                  (row['label'] ?? row['name'] ?? row['key'])
+                                      ?.toString() ??
+                                  '',
+                              value: _amountText(row),
+                              bold:
+                                  row['is_total'] == true ||
+                                  row['key']?.toString() == 'grand_total',
+                            ),
+                          )
+                          .toList(),
+                    ),
+            ),
+          ],
+        );
+      }),
+    ),
   );
 
   static String _nestedText(Object? value) {

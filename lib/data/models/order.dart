@@ -67,15 +67,23 @@ class OrderSummary {
   static int _int(Object? value) =>
       value is num ? value.toInt() : int.tryParse(value?.toString() ?? '') ?? 0;
   static String _money(Object? value, Object? currency) {
+    final symbol = currency is Map ? currency['symbol']?.toString() ?? '' : '';
     if (value is Map) {
       final formatted = (value['formatted'] ?? value['display_value'])
           ?.toString();
-      if (formatted?.isNotEmpty == true) return formatted!;
+      if (formatted?.isNotEmpty == true) {
+        return _moveSymbolAfterAmount(formatted!, symbol);
+      }
       value = value['amount'] ?? value['value'];
     }
-    final symbol = currency is Map ? currency['symbol']?.toString() ?? '' : '';
-    if (value is num) return '$symbol${_number(value)}';
+    if (value is num) return '${_number(value)} $symbol'.trim();
     return value?.toString() ?? '';
+  }
+
+  static String _moveSymbolAfterAmount(String value, String symbol) {
+    if (symbol.isEmpty) return value;
+    final amount = value.replaceAll(symbol, '').trim();
+    return '$amount $symbol'.trim();
   }
 
   static String _number(num value) => value == value.roundToDouble()

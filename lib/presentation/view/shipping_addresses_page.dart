@@ -4,6 +4,7 @@ import 'package:mobile_hexy/core/base/request_state.dart';
 import 'package:mobile_hexy/data/models/shipping_address.dart';
 import 'package:mobile_hexy/presentation/viewmodel/shipping_addresses_view_model.dart';
 import 'package:mobile_hexy/presentation/widgets/clean_app_bar.dart';
+import 'package:mobile_hexy/presentation/widgets/shimmer_skeletons.dart';
 
 class ShippingAddressesPage extends GetView<ShippingAddressesViewModel> {
   const ShippingAddressesPage({super.key});
@@ -22,7 +23,7 @@ class ShippingAddressesPage extends GetView<ShippingAddressesViewModel> {
     body: Obx(() {
       if (controller.requestState.value == RequestState.loading &&
           controller.addresses.isEmpty) {
-        return const Center(child: CircularProgressIndicator());
+        return const _AddressesShimmer();
       }
       if (controller.requestState.value == RequestState.error &&
           controller.addresses.isEmpty) {
@@ -59,6 +60,22 @@ class ShippingAddressesPage extends GetView<ShippingAddressesViewModel> {
         ),
       );
     }),
+  );
+}
+
+class _AddressesShimmer extends StatelessWidget {
+  const _AddressesShimmer();
+
+  @override
+  Widget build(BuildContext context) => AppShimmer(
+    child: ListView.separated(
+      physics: const NeverScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(16, 18, 16, 28),
+      itemCount: 5,
+      separatorBuilder: (_, _) => const SizedBox(height: 12),
+      itemBuilder: (_, _) =>
+          const ShimmerBox(width: double.infinity, height: 150, radius: 16),
+    ),
   );
 }
 

@@ -26,8 +26,7 @@ class StationeryHomePage extends GetView<StationeryHomeViewModel> {
         child: Column(
           children: [
             _Header(
-              onNotificationTap: () =>
-                  Get.toNamed<void>(AppRoutes.notifications),
+              onNotificationTap: controller.openNotifications,
               onSearchTap: () => Get.toNamed<void>(
                 AppRoutes.productList,
                 arguments: const ProductListRequest.search(),
@@ -69,6 +68,13 @@ class StationeryHomePage extends GetView<StationeryHomeViewModel> {
                             loading: controller.isBrandsLoading.value,
                             error: controller.brandsError.value,
                             onRetry: controller.loadBrands,
+                            onTap: (brand) => Get.toNamed<void>(
+                              AppRoutes.productList,
+                              arguments: ProductListRequest.brand(
+                                id: brand.id,
+                                name: brand.name,
+                              ),
+                            ),
                           ),
                         ),
                       ),
@@ -519,17 +525,19 @@ class _HomeBrandsContent extends StatelessWidget {
     required this.loading,
     required this.error,
     required this.onRetry,
+    required this.onTap,
   });
 
   final List<CatalogBrand> items;
   final bool loading;
   final String? error;
   final VoidCallback onRetry;
+  final ValueChanged<CatalogBrand> onTap;
 
   @override
   Widget build(BuildContext context) {
     if (loading) {
-      return const HorizontalProductShimmer(height: 86, itemWidth: 64);
+      return const HorizontalProductShimmer(height: 92, itemWidth: 88);
     }
     if (error != null) {
       return _HomeTaxonomyError(message: error!, onRetry: onRetry);
@@ -537,7 +545,7 @@ class _HomeBrandsContent extends StatelessWidget {
     if (items.isEmpty) {
       return const _HomeTaxonomyEmpty(message: 'No brands found.');
     }
-    return _BrandList(items: items);
+    return _BrandList(items: items, onTap: onTap);
   }
 }
 
@@ -661,41 +669,27 @@ class _CategoryList extends StatelessWidget {
 }
 
 class _BrandList extends StatelessWidget {
-  const _BrandList({required this.items});
+  const _BrandList({required this.items, required this.onTap});
   final List<CatalogBrand> items;
+  final ValueChanged<CatalogBrand> onTap;
   @override
   Widget build(BuildContext context) => SizedBox(
-    height: 86,
+    height: 88,
     child: ListView.separated(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       scrollDirection: Axis.horizontal,
       itemCount: items.length,
       separatorBuilder: (_, _) => const SizedBox(width: 14),
       itemBuilder: (_, index) => SizedBox(
-        width: 64,
-        child: Column(
-          children: [
-            Container(
-              width: 48,
-              height: 48,
-              padding: const EdgeInsets.all(5),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface,
-                border: Border.all(color: Theme.of(context).dividerColor),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: _BrandImage(item: items[index]),
-            ),
-            const SizedBox(height: 5),
-            Text(
-              items[index].name.tr,
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurface,
-                fontSize: 10,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
+        width: 88,
+        child: InkWell(
+          key: Key('home-brand-${items[index].id}'),
+          onTap: () => onTap(items[index]),
+          borderRadius: BorderRadius.circular(14),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(14),
+            child: _BrandImage(item: items[index]),
+          ),
         ),
       ),
     ),
@@ -1023,70 +1017,63 @@ class _OfferCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
+    height: 168,
     margin: const EdgeInsets.fromLTRB(16, 14, 16, 4),
-    padding: const EdgeInsets.all(18),
-    decoration: BoxDecoration(
-      gradient: const LinearGradient(
-        colors: [Color(0xFF252269), Color(0xFF5948E4)],
-      ),
+    child: ClipRRect(
       borderRadius: BorderRadius.circular(16),
-    ),
-    child: Row(
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                banner.title.tr,
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              SizedBox(height: 5),
-              Text(
-                banner.subtitle.tr,
-                style: TextStyle(color: Color(0xFFC7D2FE), fontSize: 12),
-              ),
-              SizedBox(height: 14),
-              if (banner.buttonText.isNotEmpty)
-                _LabelBadge(
-                  value: banner.buttonText,
-                  onTap: () => Get.toNamed<void>(
-                    AppRoutes.productList,
-                    arguments: const ProductListRequest.discountProducts(),
-                  ),
-                ),
-            ],
-          ),
-        ),
-        Container(
-          width: 78,
-          height: 78,
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: .2),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: banner.imageUrl?.isNotEmpty == true
-              ? Image.network(
-                  banner.imageUrl!,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, _, _) => const Icon(
-                    Icons.inventory_2_outlined,
-                    color: Colors.white,
-                    size: 42,
-                  ),
-                )
-              : const Icon(
-                  Icons.inventory_2_outlined,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          Image.network(
+            banner.imageUrl!,
+            fit: BoxFit.cover,
+            errorBuilder: (_, _, _) => const ColoredBox(
+              color: Color(0xFF252269),
+              child: Center(
+                child: Icon(
+                  Icons.image_not_supported_outlined,
                   color: Colors.white,
                   size: 42,
                 ),
-        ),
-      ],
+              ),
+            ),
+          ),
+          const DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Colors.transparent, Color(0x99000000)],
+                stops: [.52, 1],
+              ),
+            ),
+          ),
+          Positioned(
+            left: 14,
+            bottom: 14,
+            child: FilledButton(
+              key: const Key('promo-banner-action'),
+              onPressed: () => Get.toNamed<void>(
+                AppRoutes.productList,
+                arguments: const ProductListRequest.discountProducts(),
+              ),
+              style: FilledButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: const Color(0xFF252269),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 18,
+                  vertical: 11,
+                ),
+                shape: const StadiumBorder(),
+                textStyle: const TextStyle(fontWeight: FontWeight.w800),
+              ),
+              child: Text(
+                (banner.buttonText.isEmpty ? 'Shop Now' : banner.buttonText).tr,
+              ),
+            ),
+          ),
+        ],
+      ),
     ),
   );
 }
@@ -1096,7 +1083,7 @@ class _OfferCardLoading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    height: 132,
+    height: 168,
     margin: const EdgeInsets.fromLTRB(16, 14, 16, 4),
     decoration: BoxDecoration(
       color: Theme.of(context).colorScheme.surfaceContainerHighest,
@@ -1394,23 +1381,21 @@ class _FlashSaleCard extends StatelessWidget {
             Positioned(
               left: -3,
               top: -3,
-              child: Container(
-                width: 66,
-                height: 22,
-                alignment: Alignment.center,
-                decoration: const BoxDecoration(
+              child: ClipPath(
+                clipper: const _ArrowFlagClipper(),
+                child: Container(
+                  width: 72,
+                  height: 24,
+                  padding: const EdgeInsets.only(right: 8),
+                  alignment: Alignment.center,
                   color: StationeryHomePage._pink,
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(18),
-                    topRight: Radius.circular(14),
-                  ),
-                ),
-                child: Text(
-                  '-${_quantityText(product.discountPercent!)}%',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w800,
+                  child: Text(
+                    '${_quantityText(product.discountPercent!)}%',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                 ),
               ),
@@ -1419,6 +1404,22 @@ class _FlashSaleCard extends StatelessWidget {
       ),
     ),
   );
+}
+
+class _ArrowFlagClipper extends CustomClipper<Path> {
+  const _ArrowFlagClipper();
+
+  @override
+  Path getClip(Size size) => Path()
+    ..moveTo(0, 0)
+    ..lineTo(size.width - 10, 0)
+    ..lineTo(size.width, size.height / 2)
+    ..lineTo(size.width - 10, size.height)
+    ..lineTo(0, size.height)
+    ..close();
+
+  @override
+  bool shouldReclip(covariant _ArrowFlagClipper oldClipper) => false;
 }
 
 String _quantityText(double quantity) => quantity == quantity.truncateToDouble()
@@ -1438,7 +1439,7 @@ class _HomeDiscountFlag extends StatelessWidget {
       borderRadius: BorderRadius.circular(8),
     ),
     child: Text(
-      '-${_quantityText(percent)}%',
+      '${_quantityText(percent)}%',
       style: const TextStyle(
         color: Colors.white,
         fontSize: 10,
@@ -2174,26 +2175,21 @@ class _CountBadge extends StatelessWidget {
 }
 
 class _LabelBadge extends StatelessWidget {
-  const _LabelBadge({required this.value, this.onTap});
+  const _LabelBadge({required this.value});
   final String value;
-  final VoidCallback? onTap;
   @override
-  Widget build(BuildContext context) => Material(
-    color: StationeryHomePage._pink,
-    borderRadius: BorderRadius.circular(10),
-    child: InkWell(
-      onTap: onTap,
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+    decoration: BoxDecoration(
+      color: StationeryHomePage._pink,
       borderRadius: BorderRadius.circular(10),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-        child: Text(
-          value,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 10,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
+    ),
+    child: Text(
+      value,
+      style: const TextStyle(
+        color: Colors.white,
+        fontSize: 10,
+        fontWeight: FontWeight.w800,
       ),
     ),
   );

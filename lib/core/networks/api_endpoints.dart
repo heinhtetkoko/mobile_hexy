@@ -12,6 +12,7 @@ abstract final class ApiEndpoints {
   static const forgotPasswordReset = 'api/v1/auth/forgot-password/reset';
   static const banners = 'api/v1/banners';
   static const promoBanners = 'api/v1/promo-banners';
+  static const popupAds = 'api/v1/popup-ads';
   static const profile = 'api/v1/profile';
   static const personalInfo = 'api/v1/profile/personal-info';
   static const avatar = 'api/v1/profile/avatar';

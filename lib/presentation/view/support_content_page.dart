@@ -7,6 +7,7 @@ import 'package:get/get.dart';
 import 'package:mobile_hexy/core/networks/api_endpoints.dart';
 import 'package:mobile_hexy/data/datasources/support_content_remote_data_source.dart';
 import 'package:mobile_hexy/presentation/widgets/clean_app_bar.dart';
+import 'package:mobile_hexy/presentation/widgets/shimmer_skeletons.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 enum SupportContentType { contact, faq, document }
@@ -113,6 +114,11 @@ class _SupportContentPageState extends State<SupportContentPage> {
 
   void _retry() => setState(_load);
 
+  Future<void> _refresh() async {
+    setState(_load);
+    await _future;
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: CleanAppBar(title: widget.title),
@@ -120,17 +126,39 @@ class _SupportContentPageState extends State<SupportContentPage> {
       future: _future,
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
-          return const Center(child: CircularProgressIndicator());
+          return const _SupportContentShimmer();
         }
         if (snapshot.hasError || snapshot.data == null) {
           return _SupportError(error: snapshot.error, onRetry: _retry);
         }
-        return switch (widget.type) {
+        final content = switch (widget.type) {
           SupportContentType.contact => _ContactContent(data: snapshot.data!),
           SupportContentType.faq => _FaqContent(data: snapshot.data!),
           SupportContentType.document => _DocumentContent(data: snapshot.data!),
         };
+        return RefreshIndicator(onRefresh: _refresh, child: content);
       },
+    ),
+  );
+}
+
+class _SupportContentShimmer extends StatelessWidget {
+  const _SupportContentShimmer();
+
+  @override
+  Widget build(BuildContext context) => AppShimmer(
+    child: ListView(
+      physics: const NeverScrollableScrollPhysics(),
+      padding: const EdgeInsets.all(16),
+      children: const [
+        ShimmerBox(width: double.infinity, height: 210, radius: 16),
+        SizedBox(height: 18),
+        ShimmerBox(width: double.infinity, height: 72, radius: 14),
+        SizedBox(height: 10),
+        ShimmerBox(width: double.infinity, height: 72, radius: 14),
+        SizedBox(height: 10),
+        ShimmerBox(width: double.infinity, height: 112, radius: 14),
+      ],
     ),
   );
 }
@@ -179,6 +207,7 @@ class _ContactContent extends StatelessWidget {
                 map['hero_image'])
             ?.toString();
     return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: EdgeInsets.zero,
       children: [
         SizedBox(
@@ -646,6 +675,7 @@ class _FaqContent extends StatelessWidget {
     final items = source is List ? source.whereType<Map>().toList() : const [];
     if (items.isEmpty) return _DocumentContent(data: data);
     return ListView.separated(
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.all(16),
       itemCount: items.length,
       separatorBuilder: (_, _) => const SizedBox(height: 8),
@@ -695,6 +725,7 @@ class _DocumentContent extends StatelessWidget {
                 (data is String ? data : ''))
             .toString();
     return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.all(20),
       children: [
         if (title.isNotEmpty) ...[

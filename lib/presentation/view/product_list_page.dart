@@ -49,54 +49,61 @@ class ProductListPage extends GetView<ProductListViewModel> {
                   }
                   return false;
                 },
-                child: CustomScrollView(
-                  slivers: [
-                    if (products.isEmpty)
-                      SliverFillRemaining(
-                        child: Center(child: Text('No products found'.tr)),
-                      )
-                    else
-                      SliverPadding(
-                        padding: const EdgeInsets.all(16),
-                        sliver: SliverGrid.builder(
-                          itemCount: products.length,
-                          gridDelegate:
-                              const SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: 2,
-                                crossAxisSpacing: 12,
-                                mainAxisSpacing: 12,
-                                childAspectRatio: .82,
+                child: RefreshIndicator(
+                  onRefresh: controller.loadProducts,
+                  child: CustomScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    slivers: [
+                      if (products.isEmpty)
+                        SliverFillRemaining(
+                          child: Center(child: Text('No products found'.tr)),
+                        )
+                      else
+                        SliverPadding(
+                          padding: const EdgeInsets.all(16),
+                          sliver: SliverGrid.builder(
+                            itemCount: products.length,
+                            gridDelegate:
+                                const SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: 2,
+                                  crossAxisSpacing: 12,
+                                  mainAxisSpacing: 12,
+                                  childAspectRatio: .82,
+                                ),
+                            itemBuilder: (_, index) => _ProductCard(
+                              product: products[index],
+                              favorite: controller.favorites.contains(
+                                products[index].id,
                               ),
-                          itemBuilder: (_, index) => _ProductCard(
-                            product: products[index],
-                            favorite: controller.favorites.contains(
-                              products[index].id,
-                            ),
-                            onFavorite: () =>
-                                controller.toggleFavorite(products[index].id),
-                            onCart: () => controller.addToCart(products[index]),
-                            onOpen: () => Get.toNamed<void>(
-                              AppRoutes.productDetail,
-                              arguments: products[index].id,
+                              onFavorite: () =>
+                                  controller.toggleFavorite(products[index].id),
+                              onCart: () =>
+                                  controller.addToCart(products[index]),
+                              onOpen: () => Get.toNamed<void>(
+                                AppRoutes.productDetail,
+                                arguments: products[index].id,
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    if (controller.isLoadingMore.value)
-                      SliverToBoxAdapter(
-                        child: Padding(
-                          padding: const EdgeInsets.all(20),
-                          child: Center(
-                            child: SizedBox(
-                              width: 22,
-                              height: 22,
-                              child: CircularProgressIndicator(strokeWidth: 2),
+                      if (controller.isLoadingMore.value)
+                        SliverToBoxAdapter(
+                          child: Padding(
+                            padding: const EdgeInsets.all(20),
+                            child: Center(
+                              child: SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    const SliverToBoxAdapter(child: SizedBox(height: 24)),
-                  ],
+                      const SliverToBoxAdapter(child: SizedBox(height: 24)),
+                    ],
+                  ),
                 ),
               );
             }),
@@ -674,7 +681,7 @@ class _Badge extends StatelessWidget {
       borderRadius: BorderRadius.circular(10),
     ),
     child: Text(
-      value,
+      value.replaceFirst(RegExp(r'^[-−]\s*'), ''),
       style: TextStyle(
         color: Colors.white,
         fontSize: 10,

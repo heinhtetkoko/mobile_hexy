@@ -8,6 +8,49 @@ class BannersRemoteDataSource {
 
   final ApiService _apiService;
 
+  Future<String?> fetchPopupAdImage() async {
+    final response = await _apiService.get<dynamic>(
+      ApiEndpoints.popupAds,
+      options: Options(extra: const {ApiEndpoints.requiresAuthKey: false}),
+    );
+    final body = response.data;
+    if (body is! Map || body['success'] == false) {
+      throw const FormatException('Could not load popup ads.');
+    }
+
+    final rawData = body['data'];
+    final candidates = rawData is List
+        ? rawData.whereType<Map>()
+        : rawData is Map
+        ? ((rawData['items'] ?? rawData['ads']) is List
+              ? ((rawData['items'] ?? rawData['ads']) as List).whereType<Map>()
+              : [rawData])
+        : const <Map>[];
+
+    for (final item in candidates) {
+      if (item['active'] == false || item['is_active'] == false) continue;
+      final url = _firstValue(item, const [
+        'mobile_image_url',
+        'popup_image_url',
+        'image_url',
+        'banner_url',
+        'image',
+      ]);
+      if (url.isNotEmpty) {
+        return Uri.parse(ApiEndpoints.baseUrl).resolve(url).toString();
+      }
+    }
+    return null;
+  }
+
+  String _firstValue(Map<dynamic, dynamic> data, List<String> keys) {
+    for (final key in keys) {
+      final value = data[key]?.toString().trim() ?? '';
+      if (value.isNotEmpty) return value;
+    }
+    return '';
+  }
+
   Future<List<HomeBanner>> fetchBanners() async {
     final response = await _apiService.get<dynamic>(
       ApiEndpoints.banners,
@@ -88,10 +131,12 @@ class BannersRemoteDataSource {
             title: title,
             subtitle: subtitle,
             buttonText: buttonText,
-            imageUrl: imageUrl.isEmpty ? null : imageUrl,
+            imageUrl: imageUrl.isEmpty
+                ? null
+                : Uri.parse(ApiEndpoints.baseUrl).resolve(imageUrl).toString(),
           );
         })
-        .where((banner) => banner.title.isNotEmpty)
+        .where((banner) => banner.imageUrl?.isNotEmpty == true)
         .toList(growable: false);
   }
 }

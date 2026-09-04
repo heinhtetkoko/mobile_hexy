@@ -83,11 +83,13 @@ class CollectionsRemoteDataSource {
     return CatalogProduct(
       id: (source['product_id'] ?? source['id'])?.toString() ?? '',
       name: source['name']?.toString() ?? '',
-      price: '$symbol${_format(price)}',
-      originalPrice: original == null ? null : '$symbol${_format(original)}',
+      price: '${_format(price)} $symbol'.trim(),
+      originalPrice: original == null
+          ? null
+          : '${_format(original)} $symbol'.trim(),
       discount: discount == null || discount <= 0
           ? null
-          : '-${_format(discount)}%',
+          : '${_format(discount)}%',
       imageAsset: '',
       imageUrl:
           (source['image_url'] ?? source['image'] ?? source['thumbnail_url'])

@@ -187,11 +187,11 @@ class CategoryProductsRemoteDataSource {
     return CatalogProduct(
       id: json['id']?.toString() ?? '',
       name: json['name']?.toString() ?? '',
-      price: '$symbol${price.toStringAsFixed(2)}',
+      price: '${price.toStringAsFixed(2)} $symbol'.trim(),
       originalPrice: compareAt == null
           ? null
-          : '$symbol${compareAt.toStringAsFixed(2)}',
-      discount: discount > 0 ? '-${_formatPercent(discount)}%' : null,
+          : '${compareAt.toStringAsFixed(2)} $symbol'.trim(),
+      discount: discount > 0 ? '${_formatPercent(discount)}%' : null,
       imageAsset: '',
       imageUrl: json['image_url']?.toString(),
     );

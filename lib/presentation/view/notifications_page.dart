@@ -8,54 +8,135 @@ class NotificationsPage extends GetView<NotificationsViewModel> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: _appBar(context, 'Notifications'),
-    body: Obx(() {
-      if (controller.isLoading.value) {
-        return const Center(child: CircularProgressIndicator());
-      }
-      final error = controller.errorMessage.value;
-      if (error != null) {
-        return _MessageState(
-          icon: Icons.cloud_off_outlined,
-          message: error,
-          action: controller.loadNotifications,
-        );
-      }
-      if (controller.notifications.isEmpty) {
-        return const _MessageState(
-          icon: Icons.notifications_none_rounded,
-          message: 'No notifications found.',
-        );
-      }
-      return RefreshIndicator(
-        onRefresh: controller.loadNotifications,
-        child: NotificationListener<ScrollNotification>(
-          onNotification: (notification) {
-            if (controller.hasMore && notification.metrics.extentAfter < 250) {
-              controller.loadMore();
-            }
-            return false;
-          },
-          child: ListView.separated(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 30),
-            itemCount:
-                controller.notifications.length +
-                (controller.isLoadingMore.value ? 1 : 0),
-            separatorBuilder: (_, _) => const SizedBox(height: 10),
-            itemBuilder: (_, index) => index == controller.notifications.length
-                ? const Padding(
-                    padding: EdgeInsets.all(12),
-                    child: Center(child: CircularProgressIndicator()),
-                  )
-                : _NotificationCard(
-                    notification: controller.notifications[index],
-                    onTap: () =>
-                        controller.openDetail(controller.notifications[index]),
-                  ),
+    backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+    body: SafeArea(
+      bottom: false,
+      child: Column(
+        children: [
+          Obx(
+            () => _NotificationsHeader(
+              itemCount: controller.notifications.length,
+            ),
+          ),
+          Expanded(child: Obx(() => _content())),
+        ],
+      ),
+    ),
+  );
+
+  Widget _content() {
+    if (controller.isLoading.value) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    final error = controller.errorMessage.value;
+    if (error != null) {
+      return _MessageState(
+        icon: Icons.cloud_off_outlined,
+        message: error,
+        action: controller.loadNotifications,
+      );
+    }
+    if (controller.notifications.isEmpty) {
+      return const _MessageState(
+        icon: Icons.notifications_none_rounded,
+        message: 'No notifications found.',
+      );
+    }
+    return RefreshIndicator(
+      onRefresh: controller.loadNotifications,
+      child: NotificationListener<ScrollNotification>(
+        onNotification: (notification) {
+          if (controller.hasMore && notification.metrics.extentAfter < 250) {
+            controller.loadMore();
+          }
+          return false;
+        },
+        child: ListView.separated(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 30),
+          itemCount:
+              controller.notifications.length +
+              (controller.isLoadingMore.value ? 1 : 0),
+          separatorBuilder: (_, _) => const SizedBox(height: 10),
+          itemBuilder: (_, index) => index == controller.notifications.length
+              ? const Padding(
+                  padding: EdgeInsets.all(12),
+                  child: Center(child: CircularProgressIndicator()),
+                )
+              : _NotificationCard(
+                  notification: controller.notifications[index],
+                  onTap: () =>
+                      controller.openDetail(controller.notifications[index]),
+                ),
+        ),
+      ),
+    );
+  }
+}
+
+class _NotificationsHeader extends StatelessWidget {
+  const _NotificationsHeader({required this.itemCount});
+
+  final int itemCount;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    height: 56,
+    padding: const EdgeInsets.symmetric(horizontal: 16),
+    decoration: BoxDecoration(
+      color: Theme.of(context).colorScheme.surface,
+      border: Border(bottom: BorderSide(color: Theme.of(context).dividerColor)),
+    ),
+    child: Row(
+      children: [
+        SizedBox(
+          width: 70,
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Material(
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+              shape: const CircleBorder(),
+              child: IconButton(
+                key: const Key('notifications-back-button'),
+                onPressed: Get.back,
+                icon: const Icon(Icons.arrow_back_rounded, size: 20),
+              ),
+            ),
           ),
         ),
-      );
-    }),
+        Expanded(
+          child: Text(
+            'Notifications'.tr,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface,
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ),
+        SizedBox(
+          width: 70,
+          child: Align(
+            alignment: Alignment.centerRight,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primaryContainer,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                '$itemCount',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onPrimaryContainer,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    ),
   );
 }
 

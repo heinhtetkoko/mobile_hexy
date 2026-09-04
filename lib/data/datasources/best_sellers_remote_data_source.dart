@@ -55,7 +55,7 @@ class BestSellersRemoteDataSource {
     return HomeProduct(
       id: json['id']?.toString() ?? '',
       name: json['name']?.toString() ?? '',
-      price: '$symbol${price.toStringAsFixed(2)}',
+      price: '${price.toStringAsFixed(2)} $symbol'.trim(),
       imageAsset: '',
       imageUrl: json['image_url']?.toString(),
       hot: json['in_stock'] == true,

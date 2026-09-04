@@ -3,6 +3,8 @@ import 'package:get/get.dart';
 import 'package:mobile_hexy/core/theme/app_colors.dart';
 import 'package:mobile_hexy/data/models/order.dart';
 import 'package:mobile_hexy/presentation/viewmodel/my_orders_view_model.dart';
+import 'package:mobile_hexy/presentation/widgets/clean_app_bar.dart';
+import 'package:mobile_hexy/presentation/widgets/shimmer_skeletons.dart';
 
 class MyOrdersPage extends GetView<MyOrdersViewModel> {
   const MyOrdersPage({super.key});
@@ -12,29 +14,19 @@ class MyOrdersPage extends GetView<MyOrdersViewModel> {
     final colors = Theme.of(context).colorScheme;
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: AppBar(
-        toolbarHeight: 56,
-        leadingWidth: 68,
-        leading: Padding(
-          padding: const EdgeInsets.only(left: 16),
-          child: _CircleButton(icon: Icons.arrow_back_rounded, onTap: Get.back),
-        ),
-        title: Text(
-          'My Orders'.tr,
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
-        ),
-        centerTitle: true,
-        actions: [
-          Obx(
-            () => _CircleButton(
-              icon: controller.searchVisible.value
+      appBar: CleanAppBar(
+        title: 'My Orders',
+        action: Obx(
+          () => IconButton(
+            key: const Key('my-orders-search-button'),
+            icon: Icon(
+              controller.searchVisible.value
                   ? Icons.close_rounded
                   : Icons.search_rounded,
-              onTap: controller.toggleSearch,
             ),
+            onPressed: controller.toggleSearch,
           ),
-          const SizedBox(width: 16),
-        ],
+        ),
       ),
       body: Obx(() {
         final orders = controller.filteredOrders;
@@ -137,7 +129,7 @@ class MyOrdersPage extends GetView<MyOrdersViewModel> {
             ),
             Expanded(
               child: controller.isLoading.value
-                  ? const Center(child: CircularProgressIndicator())
+                  ? const _OrdersShimmer()
                   : controller.errorMessage.value != null
                   ? _OrdersError(
                       message: controller.errorMessage.value!,
@@ -153,20 +145,25 @@ class MyOrdersPage extends GetView<MyOrdersViewModel> {
                         }
                         return false;
                       },
-                      child: ListView.separated(
-                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
-                        itemCount:
-                            orders.length +
-                            (controller.isLoadingMore.value ? 1 : 0),
-                        separatorBuilder: (_, _) => const SizedBox(height: 12),
-                        itemBuilder: (_, index) => index == orders.length
-                            ? const Center(
-                                child: Padding(
-                                  padding: EdgeInsets.all(12),
-                                  child: CircularProgressIndicator(),
-                                ),
-                              )
-                            : _OrderCard(order: orders[index]),
+                      child: RefreshIndicator(
+                        onRefresh: controller.loadOrders,
+                        child: ListView.separated(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
+                          itemCount:
+                              orders.length +
+                              (controller.isLoadingMore.value ? 1 : 0),
+                          separatorBuilder: (_, _) =>
+                              const SizedBox(height: 12),
+                          itemBuilder: (_, index) => index == orders.length
+                              ? const Center(
+                                  child: Padding(
+                                    padding: EdgeInsets.all(12),
+                                    child: CircularProgressIndicator(),
+                                  ),
+                                )
+                              : _OrderCard(order: orders[index]),
+                        ),
                       ),
                     ),
             ),
@@ -177,18 +174,18 @@ class MyOrdersPage extends GetView<MyOrdersViewModel> {
   }
 }
 
-class _CircleButton extends StatelessWidget {
-  const _CircleButton({required this.icon, required this.onTap});
-  final IconData icon;
-  final VoidCallback onTap;
+class _OrdersShimmer extends StatelessWidget {
+  const _OrdersShimmer();
+
   @override
-  Widget build(BuildContext context) => Material(
-    color: Theme.of(context).colorScheme.surfaceContainerHighest,
-    shape: const CircleBorder(),
-    child: InkWell(
-      onTap: onTap,
-      customBorder: const CircleBorder(),
-      child: SizedBox(width: 36, height: 36, child: Icon(icon, size: 20)),
+  Widget build(BuildContext context) => AppShimmer(
+    child: ListView.separated(
+      physics: const NeverScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
+      itemCount: 5,
+      separatorBuilder: (_, _) => const SizedBox(height: 12),
+      itemBuilder: (_, _) =>
+          const ShimmerBox(width: double.infinity, height: 178, radius: 16),
     ),
   );
 }

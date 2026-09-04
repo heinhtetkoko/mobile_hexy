@@ -160,6 +160,17 @@ class StationeryHomeViewModel extends BaseViewModel {
     }
   }
 
+  Future<void> openNotifications() async {
+    final token = await Get.find<SecureStorage>().read(
+      AppConstants.accessTokenKey,
+    );
+    if (token == null || token.trim().isEmpty) {
+      await Get.toNamed<dynamic>(AppRoutes.login);
+      return;
+    }
+    await Get.toNamed<void>(AppRoutes.notifications);
+  }
+
   @override
   void onInit() {
     super.onInit();

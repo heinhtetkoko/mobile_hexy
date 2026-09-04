@@ -309,8 +309,8 @@ class CheckoutDeliveryMethod {
           json['estimated_delivery']?.toString(),
       price: _amount(priceValue),
       formattedPrice:
-          (json['formatted_price'] ?? json['price_display'])?.toString() ??
-          _formattedPrice(priceValue, json['currency']),
+          _formattedPrice(priceValue, json['currency']) ??
+          (json['formatted_price'] ?? json['price_display'])?.toString(),
       selected: json['selected'] == true || json['is_selected'] == true,
     );
   }
@@ -337,6 +337,6 @@ class CheckoutDeliveryMethod {
     final value = amount == amount.roundToDouble()
         ? amount.toInt().toString()
         : amount.toStringAsFixed(2);
-    return '$symbol$value';
+    return '$value $symbol';
   }
 }
