@@ -11,6 +11,7 @@ import 'package:mobile_hexy/data/datasources/home_products_remote_data_source.da
 import 'package:mobile_hexy/data/datasources/new_arrivals_remote_data_source.dart';
 import 'package:mobile_hexy/data/datasources/cart_remote_data_source.dart';
 import 'package:mobile_hexy/data/datasources/wishlist_remote_data_source.dart';
+import 'package:mobile_hexy/data/datasources/collections_remote_data_source.dart';
 import 'package:mobile_hexy/app.dart';
 import 'package:mobile_hexy/core/networks/api_endpoints.dart';
 import 'package:mobile_hexy/core/services/app_constants.dart';
@@ -18,6 +19,7 @@ import 'package:mobile_hexy/core/services/secure_storage.dart';
 import 'package:mobile_hexy/data/models/home_catalog.dart';
 import 'package:mobile_hexy/data/models/catalog_brand.dart';
 import 'package:mobile_hexy/data/models/catalog_category.dart';
+import 'package:mobile_hexy/data/models/product_collection.dart';
 import 'package:mobile_hexy/domain/usecases/get_home_catalog.dart';
 
 class StationeryHomeViewModel extends BaseViewModel {
@@ -31,6 +33,7 @@ class StationeryHomeViewModel extends BaseViewModel {
     this._bannersDataSource,
     this._cartRemoteDataSource,
     this._wishlistRemoteDataSource,
+    this._collectionsRemoteDataSource,
   );
 
   final GetHomeCatalog _getHomeCatalog;
@@ -42,6 +45,7 @@ class StationeryHomeViewModel extends BaseViewModel {
   final BannersRemoteDataSource _bannersDataSource;
   final CartRemoteDataSource _cartRemoteDataSource;
   final WishlistRemoteDataSource _wishlistRemoteDataSource;
+  final CollectionsRemoteDataSource _collectionsRemoteDataSource;
   final addingToCartIds = <String>{}.obs;
   final recommendedFavoriteIds = <String>{}.obs;
   final updatingRecommendedWishlistIds = <String>{}.obs;
@@ -55,6 +59,8 @@ class StationeryHomeViewModel extends BaseViewModel {
   final isBannersLoading = false.obs;
   final promoBanners = <HomePromoBanner>[].obs;
   final isPromoBannersLoading = false.obs;
+  final collections = <ProductCollection>[].obs;
+  final isCollectionsLoading = false.obs;
   final homeCategories = <CatalogCategory>[].obs;
   final isCategoriesLoading = false.obs;
   final categoriesError = RxnString();
@@ -166,6 +172,7 @@ class StationeryHomeViewModel extends BaseViewModel {
     loadNewArrivals();
     loadFlashSale();
     loadRecommendedProducts();
+    loadCollections();
   }
 
   Future<void> loadBanners() async {
@@ -207,7 +214,21 @@ class StationeryHomeViewModel extends BaseViewModel {
       loadNewArrivals(),
       loadFlashSale(),
       loadRecommendedProducts(),
+      loadCollections(),
     ]);
+  }
+
+  Future<void> loadCollections() async {
+    isCollectionsLoading.value = true;
+    try {
+      collections.assignAll(
+        await _collectionsRemoteDataSource.fetchCollections(),
+      );
+    } catch (_) {
+      collections.clear();
+    } finally {
+      isCollectionsLoading.value = false;
+    }
   }
 
   void _startBannerAutoplay() {

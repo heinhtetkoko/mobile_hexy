@@ -21,6 +21,7 @@ import 'package:mobile_hexy/data/datasources/cart_remote_data_source.dart';
 import 'package:mobile_hexy/data/datasources/checkout_remote_data_source.dart';
 import 'package:mobile_hexy/data/datasources/orders_remote_data_source.dart';
 import 'package:mobile_hexy/data/datasources/notifications_remote_data_source.dart';
+import 'package:mobile_hexy/data/datasources/collections_remote_data_source.dart';
 import 'package:mobile_hexy/data/datasources/wishlist_remote_data_source.dart';
 import 'package:mobile_hexy/data/datasources/support_content_remote_data_source.dart';
 import 'package:mobile_hexy/data/datasources/shipping_address_remote_data_source.dart';
@@ -84,6 +85,7 @@ class InitialBinding extends Bindings {
     Get.lazyPut(() => CheckoutRemoteDataSource(Get.find()), fenix: true);
     Get.lazyPut(() => OrdersRemoteDataSource(Get.find()), fenix: true);
     Get.lazyPut(() => NotificationsRemoteDataSource(Get.find()), fenix: true);
+    Get.lazyPut(() => CollectionsRemoteDataSource(Get.find()), fenix: true);
     Get.put(WishlistRemoteDataSource(Get.find()), permanent: true);
     Get.lazyPut(() => SupportContentRemoteDataSource(Get.find()), fenix: true);
     Get.lazyPut(() => ShippingAddressRemoteDataSource(Get.find()), fenix: true);

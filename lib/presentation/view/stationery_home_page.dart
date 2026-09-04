@@ -5,6 +5,7 @@ import 'package:mobile_hexy/data/models/home_catalog.dart';
 import 'package:mobile_hexy/data/models/catalog_brand.dart';
 import 'package:mobile_hexy/data/models/catalog_category.dart';
 import 'package:mobile_hexy/data/models/product_list_request.dart';
+import 'package:mobile_hexy/data/models/product_collection.dart';
 import 'package:mobile_hexy/presentation/widgets/shimmer_skeletons.dart';
 import 'package:mobile_hexy/presentation/viewmodel/stationery_home_view_model.dart';
 import 'package:mobile_hexy/presentation/viewmodel/main_view_model.dart';
@@ -174,7 +175,9 @@ class StationeryHomePage extends GetView<StationeryHomeViewModel> {
                         ),
                       ),
                     ),
-                    const SliverToBoxAdapter(child: _CollectionsSection()),
+                    SliverToBoxAdapter(
+                      child: _CollectionsSection(controller: controller),
+                    ),
                     const SliverToBoxAdapter(child: _ChatFooter()),
                     const SliverToBoxAdapter(child: _PaymentMethods()),
                   ],
@@ -1646,7 +1649,8 @@ class _RecommendedCard extends StatelessWidget {
 }
 
 class _CollectionsSection extends StatelessWidget {
-  const _CollectionsSection();
+  const _CollectionsSection({required this.controller});
+  final StationeryHomeViewModel controller;
 
   @override
   Widget build(BuildContext context) => Padding(
@@ -1678,30 +1682,37 @@ class _CollectionsSection extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 14),
-        SizedBox(
-          height: 170,
-          child: ListView(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            scrollDirection: Axis.horizontal,
-            children: const [
-              _CollectionCard(
-                title: 'Office\nSupplies',
-                subtitle: 'Shop essentials',
-                count: '50+ ITEMS',
-                image: 'assets/images/figma_home/product_1.png',
-                colors: [Color(0xFF4338CA), Color(0xFF1E1B4B)],
+        Obx(() {
+          if (controller.isCollectionsLoading.value) {
+            return const SizedBox(
+              height: 170,
+              child: Center(child: CircularProgressIndicator()),
+            );
+          }
+          if (controller.collections.isEmpty) return const SizedBox.shrink();
+          return SizedBox(
+            height: 170,
+            child: ListView.separated(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              scrollDirection: Axis.horizontal,
+              itemCount: controller.collections.length,
+              separatorBuilder: (_, _) => const SizedBox(width: 12),
+              itemBuilder: (_, index) => _CollectionCard(
+                collection: controller.collections[index],
+                colors: index.isEven
+                    ? const [Color(0xFF4338CA), Color(0xFF1E1B4B)]
+                    : const [Color(0xFFDB2777), Color(0xFF9D174D)],
+                onExplore: () => Get.toNamed<void>(
+                  AppRoutes.productList,
+                  arguments: ProductListRequest.collection(
+                    id: controller.collections[index].id,
+                    name: controller.collections[index].name,
+                  ),
+                ),
               ),
-              SizedBox(width: 12),
-              _CollectionCard(
-                title: 'School\nSupplies',
-                subtitle: 'Back to school',
-                count: '80+ ITEMS',
-                image: 'assets/images/cart/notebook.png',
-                colors: [Color(0xFFDB2777), Color(0xFF9D174D)],
-              ),
-            ],
-          ),
-        ),
+            ),
+          );
+        }),
       ],
     ),
   );
@@ -1709,17 +1720,13 @@ class _CollectionsSection extends StatelessWidget {
 
 class _CollectionCard extends StatelessWidget {
   const _CollectionCard({
-    required this.title,
-    required this.subtitle,
-    required this.count,
-    required this.image,
+    required this.collection,
     required this.colors,
+    required this.onExplore,
   });
-  final String title;
-  final String subtitle;
-  final String count;
-  final String image;
+  final ProductCollection collection;
   final List<Color> colors;
+  final VoidCallback onExplore;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -1737,16 +1744,30 @@ class _CollectionCard extends StatelessWidget {
           child: SizedBox(
             width: 105,
             height: 120,
-            child: Image.asset(image, fit: BoxFit.contain),
+            child: collection.imageUrl?.isNotEmpty == true
+                ? Image.network(
+                    collection.imageUrl!,
+                    fit: BoxFit.contain,
+                    errorBuilder: (_, _, _) => const Icon(
+                      Icons.inventory_2_outlined,
+                      color: Colors.white,
+                      size: 54,
+                    ),
+                  )
+                : const Icon(
+                    Icons.inventory_2_outlined,
+                    color: Colors.white,
+                    size: 54,
+                  ),
           ),
         ),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _CollectionBadge(value: count),
+            _CollectionBadge(value: '${collection.itemCount} ITEMS'),
             const SizedBox(height: 12),
             Text(
-              title.tr,
+              collection.name.tr,
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 20,
@@ -1756,22 +1777,29 @@ class _CollectionCard extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             Text(
-              subtitle.tr,
+              collection.subtitle.tr,
               style: const TextStyle(color: Color(0xFFD8D5FF), fontSize: 11),
             ),
             const Spacer(),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-              decoration: BoxDecoration(
-                color: colors.last.withValues(alpha: .85),
+            Material(
+              color: colors.last.withValues(alpha: .85),
+              borderRadius: BorderRadius.circular(18),
+              child: InkWell(
+                onTap: onExplore,
                 borderRadius: BorderRadius.circular(18),
-              ),
-              child: Text(
-                'Explore →'.tr,
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 8,
+                  ),
+                  child: Text(
+                    'Explore →'.tr,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                 ),
               ),
             ),

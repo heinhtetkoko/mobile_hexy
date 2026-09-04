@@ -16,6 +16,8 @@ class LoginPage extends GetView<AuthViewModel> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          const _BackButton(),
+          const SizedBox(height: 4),
           const _AuthTitle('Login Now'),
           const SizedBox(height: 22),
           _AuthField(

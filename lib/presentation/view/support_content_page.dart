@@ -1,4 +1,8 @@
+import 'dart:math' as math;
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:mobile_hexy/core/networks/api_endpoints.dart';
 import 'package:mobile_hexy/data/datasources/support_content_remote_data_source.dart';
@@ -6,6 +10,8 @@ import 'package:mobile_hexy/presentation/widgets/clean_app_bar.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 enum SupportContentType { contact, faq, document }
+
+const _phoneChannel = MethodChannel('mobile_hexy/phone');
 
 Future<void> _openContactLink(Uri uri, {required String label}) async {
   try {
@@ -18,6 +24,35 @@ Future<void> _openContactLink(Uri uri, {required String label}) async {
   Get.snackbar(
     'Unable to open $label',
     'Please make sure $label is installed and try again.',
+    snackPosition: SnackPosition.BOTTOM,
+  );
+}
+
+Future<void> _openPhoneDialer(String phone) async {
+  final number = phone.replaceAll(RegExp(r'[^0-9+]'), '');
+  var opened = false;
+  try {
+    if (Platform.isAndroid) {
+      opened =
+          await _phoneChannel.invokeMethod<bool>('openDialer', {
+            'number': number,
+          }) ??
+          false;
+    } else {
+      opened = await launchUrl(
+        Uri(scheme: 'tel', path: number),
+        mode: LaunchMode.externalApplication,
+      );
+    }
+  } catch (_) {
+    opened = false;
+  }
+
+  if (opened) return;
+
+  Get.snackbar(
+    'Unable to open phone app',
+    'Please call $phone.',
     snackPosition: SnackPosition.BOTTOM,
   );
 }
@@ -116,8 +151,29 @@ class _ContactContent extends StatelessWidget {
       map['emails'] ?? [map['email'], map['support_email']],
     );
     final address = _contactValues(map['address'] ?? map['full_address']);
+    final location = map['map'];
+    final latitude = _coordinate(
+      location is Map ? location['latitude'] : map['latitude'],
+    );
+    final longitude = _coordinate(
+      location is Map ? location['longitude'] : map['longitude'],
+    );
+    final directionsUrl = map['address'] is Map
+        ? (map['address'] as Map)['directions_url']?.toString()
+        : null;
+    final mapLabel = location is Map
+        ? (location['label']?.toString() ?? 'Open in Maps')
+        : 'Open in Maps';
+    final storeName = (map['store_name'] ?? 'HEXY STATIONERY').toString();
+    final mapUri = _mapUri(
+      latitude: latitude,
+      longitude: longitude,
+      directionsUrl: directionsUrl,
+      address: address.join(', '),
+    );
     final heroUrl =
         (map['image_url'] ??
+                map['store_image_url'] ??
                 map['store_image'] ??
                 map['banner_image'] ??
                 map['hero_image'])
@@ -167,6 +223,7 @@ class _ContactContent extends StatelessWidget {
                         iconColor: const Color(0xFF24205F),
                         iconBackground: const Color(0xFFF0F1FF),
                         values: phones,
+                        onValueTap: _openPhoneDialer,
                       ),
                     if (phones.isNotEmpty && emails.isNotEmpty)
                       const Divider(height: 1),
@@ -176,6 +233,10 @@ class _ContactContent extends StatelessWidget {
                         iconColor: const Color(0xFFE91E75),
                         iconBackground: const Color(0xFFFFEDF5),
                         values: emails,
+                        onValueTap: (email) => _openContactLink(
+                          Uri(scheme: 'mailto', path: email.trim()),
+                          label: 'Email',
+                        ),
                       ),
                     if ((phones.isNotEmpty || emails.isNotEmpty) &&
                         address.isNotEmpty)
@@ -186,12 +247,23 @@ class _ContactContent extends StatelessWidget {
                         iconColor: const Color(0xFF10B968),
                         iconBackground: const Color(0xFFEAFFF3),
                         values: [...address, 'Get Directions →'],
+                        onTap: mapUri == null
+                            ? null
+                            : () => _openContactLink(mapUri, label: 'Maps'),
                       ),
                   ],
                 ),
               ),
               const SizedBox(height: 14),
-              const _ContactMapCard(),
+              _ContactMapCard(
+                latitude: latitude,
+                longitude: longitude,
+                storeName: storeName,
+                mapLabel: mapLabel,
+                onOpenMap: mapUri == null
+                    ? null
+                    : () => _openContactLink(mapUri, label: 'Maps'),
+              ),
               const SizedBox(height: 12),
               Row(
                 children: [
@@ -252,52 +324,77 @@ class _ContactDetailRow extends StatelessWidget {
     required this.iconColor,
     required this.iconBackground,
     required this.values,
+    this.onTap,
+    this.onValueTap,
   });
 
   final IconData icon;
   final Color iconColor;
   final Color iconBackground;
   final List<String> values;
+  final VoidCallback? onTap;
+  final ValueChanged<String>? onValueTap;
 
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 18),
-    child: Row(
-      children: [
-        CircleAvatar(
-          radius: 22,
-          backgroundColor: iconBackground,
-          child: Icon(icon, color: iconColor),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: values.indexed.map((entry) {
-              final (index, value) = entry;
-              return Padding(
-                padding: EdgeInsets.only(top: index == 0 ? 0 : 3),
-                child: Text(
-                  _plain(value),
-                  style: TextStyle(
-                    color: index == 0
-                        ? const Color(0xFF171725)
-                        : const Color(0xFF7D8597),
-                    fontSize: index == 0 ? 15 : 13,
-                    fontWeight: index == 0 ? FontWeight.w800 : FontWeight.w400,
-                  ),
-                ),
-              );
-            }).toList(),
+  Widget build(BuildContext context) => InkWell(
+    onTap: onTap,
+    child: Padding(
+      padding: const EdgeInsets.symmetric(vertical: 18),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 22,
+            backgroundColor: iconBackground,
+            child: Icon(icon, color: iconColor),
           ),
-        ),
-      ],
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: values.indexed.map((entry) {
+                final (index, value) = entry;
+                return InkWell(
+                  onTap: onValueTap == null ? null : () => onValueTap!(value),
+                  borderRadius: BorderRadius.circular(4),
+                  child: Padding(
+                    padding: EdgeInsets.only(top: index == 0 ? 0 : 3),
+                    child: Text(
+                      _plain(value),
+                      style: TextStyle(
+                        color: index == 0
+                            ? const Color(0xFF171725)
+                            : const Color(0xFF7D8597),
+                        fontSize: index == 0 ? 15 : 13,
+                        fontWeight: index == 0
+                            ? FontWeight.w800
+                            : FontWeight.w400,
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+        ],
+      ),
     ),
   );
 }
 
 class _ContactMapCard extends StatelessWidget {
-  const _ContactMapCard();
+  const _ContactMapCard({
+    required this.latitude,
+    required this.longitude,
+    required this.storeName,
+    required this.mapLabel,
+    required this.onOpenMap,
+  });
+
+  final double? latitude;
+  final double? longitude;
+  final String storeName;
+  final String mapLabel;
+  final VoidCallback? onOpenMap;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -307,9 +404,15 @@ class _ContactMapCard extends StatelessWidget {
       border: Border.all(color: const Color(0xFFDDE3EC)),
       borderRadius: BorderRadius.circular(18),
     ),
+    clipBehavior: Clip.antiAlias,
     child: Stack(
       children: [
-        CustomPaint(painter: _ContactGridPainter(), size: Size.infinite),
+        if (latitude != null && longitude != null)
+          Positioned.fill(
+            child: _OpenStreetMap(latitude: latitude!, longitude: longitude!),
+          )
+        else
+          CustomPaint(painter: _ContactGridPainter(), size: Size.infinite),
         const Center(
           child: CircleAvatar(
             radius: 24,
@@ -317,36 +420,133 @@ class _ContactMapCard extends StatelessWidget {
             child: CircleAvatar(radius: 6, backgroundColor: Color(0xFF242060)),
           ),
         ),
-        const Positioned(
-          left: 12,
-          bottom: 12,
-          child: _ContactPill(label: 'HEXY STATIONERY'),
-        ),
-        const Positioned(
+        Positioned(left: 12, bottom: 12, child: _ContactPill(label: storeName)),
+        Positioned(
           right: 12,
           bottom: 12,
-          child: _ContactPill(label: '➤ Open in Maps'),
+          child: _ContactPill(label: '➤ $mapLabel', onTap: onOpenMap),
         ),
+        if (latitude != null && longitude != null)
+          const Positioned(
+            right: 6,
+            top: 4,
+            child: Text(
+              '© OpenStreetMap',
+              style: TextStyle(
+                color: Color(0xFF505866),
+                fontSize: 8,
+                backgroundColor: Color(0xCCFFFFFF),
+              ),
+            ),
+          ),
       ],
     ),
   );
 }
 
-class _ContactPill extends StatelessWidget {
-  const _ContactPill({required this.label});
-  final String label;
+class _OpenStreetMap extends StatelessWidget {
+  const _OpenStreetMap({required this.latitude, required this.longitude});
+
+  final double latitude;
+  final double longitude;
+
+  static const int _zoom = 15;
+  static const double _tileSize = 256;
 
   @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-    decoration: BoxDecoration(
-      color: Colors.white,
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) {
+      final scale = math.pow(2, _zoom).toDouble();
+      final safeLatitude = latitude.clamp(-85.0511, 85.0511);
+      final latitudeRadians = safeLatitude * math.pi / 180;
+      final centerX = (longitude + 180) / 360 * scale * _tileSize;
+      final centerY =
+          (1 -
+              math.log(
+                    math.tan(latitudeRadians) + (1 / math.cos(latitudeRadians)),
+                  ) /
+                  math.pi) /
+          2 *
+          scale *
+          _tileSize;
+      final left = centerX - constraints.maxWidth / 2;
+      final top = centerY - constraints.maxHeight / 2;
+      final firstX = (left / _tileSize).floor();
+      final lastX = ((left + constraints.maxWidth) / _tileSize).floor();
+      final firstY = (top / _tileSize).floor();
+      final lastY = ((top + constraints.maxHeight) / _tileSize).floor();
+
+      return Stack(
+        children: [
+          for (var x = firstX; x <= lastX; x++)
+            for (var y = firstY; y <= lastY; y++)
+              Positioned(
+                left: x * _tileSize - left,
+                top: y * _tileSize - top,
+                width: _tileSize,
+                height: _tileSize,
+                child: Image.network(
+                  'https://tile.openstreetmap.org/$_zoom/$x/$y.png',
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, _, _) =>
+                      const ColoredBox(color: Color(0xFFF1F4F8)),
+                ),
+              ),
+        ],
+      );
+    },
+  );
+}
+
+double? _coordinate(Object? value) {
+  if (value is num) return value.toDouble();
+  return double.tryParse(value?.toString() ?? '');
+}
+
+Uri? _mapUri({
+  required double? latitude,
+  required double? longitude,
+  required String? directionsUrl,
+  required String address,
+}) {
+  if (directionsUrl != null &&
+      directionsUrl.isNotEmpty &&
+      directionsUrl != 'false') {
+    return Uri.tryParse(directionsUrl);
+  }
+  final query = latitude != null && longitude != null
+      ? '$latitude,$longitude'
+      : address.trim();
+  if (query.isEmpty) return null;
+  return Uri.https('www.google.com', '/maps/search/', {
+    'api': '1',
+    'query': query,
+  });
+}
+
+class _ContactPill extends StatelessWidget {
+  const _ContactPill({required this.label, this.onTap});
+  final String label;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) => Material(
+    color: Colors.transparent,
+    child: InkWell(
+      onTap: onTap,
       borderRadius: BorderRadius.circular(18),
-      boxShadow: const [BoxShadow(color: Color(0x0D000000), blurRadius: 6)],
-    ),
-    child: Text(
-      label,
-      style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: const [BoxShadow(color: Color(0x0D000000), blurRadius: 6)],
+        ),
+        child: Text(
+          label,
+          style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800),
+        ),
+      ),
     ),
   );
 }
@@ -403,6 +603,18 @@ class _ContactGridPainter extends CustomPainter {
 
 List<String> _contactValues(Object? value) {
   if (value == null || value == false) return const [];
+  if (value is Map) {
+    return [
+          value['title'],
+          value['text'],
+          value['full_address'],
+          value['address'],
+        ]
+        .where((item) => item != null && item != false)
+        .map((item) => item.toString().trim())
+        .where((item) => item.isNotEmpty)
+        .toList(growable: false);
+  }
   if (value is List) {
     return value
         .where((item) => item != null && item != false)

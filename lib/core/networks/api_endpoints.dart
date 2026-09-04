@@ -23,6 +23,8 @@ abstract final class ApiEndpoints {
   static const flashSale = 'api/v1/flash-sale';
   static const recommendedProducts = 'api/v1/recommended-products';
   static const discountProducts = 'api/v1/discount-products';
+  static const collections = 'api/v1/collections';
+  static String collection(Object id) => 'api/v1/collections/$id';
   static const productSearch = 'api/v1/product/search';
   static const allProducts = 'api/v1/products';
   static const cart = 'api/v1/cart';

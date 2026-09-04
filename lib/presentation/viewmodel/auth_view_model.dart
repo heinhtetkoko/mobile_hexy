@@ -276,14 +276,17 @@ class AuthViewModel extends BaseViewModel {
     }
     isResettingPassword.value = true;
     try {
-      final accessToken = await _authRemoteDataSource.resetForgottenPassword(
+      await _authRemoteDataSource.resetForgottenPassword(
         resetToken: resetToken,
         newPassword: password.text,
       );
-      if (accessToken != null) {
-        await _secureStorage.write(AppConstants.accessTokenKey, accessToken);
-      }
-      Get.offNamed<void>(AppRoutes.passwordUpdated);
+      await Future.wait([
+        _secureStorage.remove(AppConstants.accessTokenKey),
+        _secureStorage.remove(AppConstants.rememberedLoginKey),
+        _secureStorage.remove(AppConstants.rememberedPasswordKey),
+      ]);
+      rememberLogin.value = false;
+      Get.offAllNamed<void>(AppRoutes.passwordUpdated);
     } on ServerException catch (error) {
       _message(error.message);
     } catch (error) {

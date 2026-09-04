@@ -9,6 +9,7 @@ import 'package:mobile_hexy/data/datasources/new_arrivals_remote_data_source.dar
 import 'package:mobile_hexy/data/datasources/brands_remote_data_source.dart';
 import 'package:mobile_hexy/data/datasources/categories_remote_data_source.dart';
 import 'package:mobile_hexy/data/datasources/cart_remote_data_source.dart';
+import 'package:mobile_hexy/data/datasources/collections_remote_data_source.dart';
 import 'package:mobile_hexy/data/datasources/wishlist_remote_data_source.dart';
 import 'package:mobile_hexy/core/networks/api_endpoints.dart';
 import 'package:mobile_hexy/core/services/app_constants.dart';
@@ -27,6 +28,7 @@ class ProductListViewModel extends BaseViewModel {
     this._homeProductsDataSource,
     this._cartRemoteDataSource,
     this._wishlistRemoteDataSource,
+    this._collectionsRemoteDataSource,
   );
 
   final CategoryProductsRemoteDataSource _remoteDataSource;
@@ -35,6 +37,7 @@ class ProductListViewModel extends BaseViewModel {
   final HomeProductsRemoteDataSource _homeProductsDataSource;
   final CartRemoteDataSource _cartRemoteDataSource;
   final WishlistRemoteDataSource _wishlistRemoteDataSource;
+  final CollectionsRemoteDataSource _collectionsRemoteDataSource;
   static const pageLimit = 10;
 
   final query = ''.obs;
@@ -61,6 +64,7 @@ class ProductListViewModel extends BaseViewModel {
   final hasNextPage = false.obs;
   final categoryName = 'Products'.obs;
   int _categoryId = 0;
+  int? _collectionId;
   int _page = 1;
   ProductListMode? _mode;
   Worker? _searchWorker;
@@ -85,8 +89,10 @@ class ProductListViewModel extends BaseViewModel {
         ProductListMode.flashSale => 'Flash Sale',
         ProductListMode.recommended => 'Recommended For You',
         ProductListMode.discountProducts => 'Promo Products',
+        ProductListMode.collection => category.collectionName ?? 'Collection',
         ProductListMode.search => 'All Products',
       };
+      _collectionId = category.collectionId;
       activeFilters.value = 0;
       if (_mode == ProductListMode.search) {
         query.value = category.query;
@@ -453,6 +459,16 @@ class ProductListViewModel extends BaseViewModel {
           page: result.page,
           hasNext: result.hasNext,
         );
+      case ProductListMode.collection:
+        final collectionId = _collectionId;
+        if (collectionId == null || collectionId <= 0) {
+          throw const FormatException('Collection information is incomplete.');
+        }
+        final result = await _collectionsRemoteDataSource.fetchCollection(
+          collectionId,
+        );
+        if (result.name.isNotEmpty) categoryName.value = result.name;
+        return (products: result.products, page: 1, hasNext: false);
       case ProductListMode.search:
         final selectedCategoryId = filterCategories
             .firstWhereOrNull((item) => item.name == selectedCategory.value)
