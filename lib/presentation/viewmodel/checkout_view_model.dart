@@ -22,6 +22,7 @@ class CheckoutViewModel extends BaseViewModel {
   final itemsExpanded = false.obs;
   final notesController = TextEditingController();
   final notesHint = 'Add delivery instructions...'.obs;
+  final hasDeliveryNotes = false.obs;
   final addresses = <ShippingAddress>[].obs;
   final deliveryMethods = <CheckoutDeliveryMethod>[].obs;
   final selectedAddress = Rxn<ShippingAddress>();
@@ -178,7 +179,8 @@ class CheckoutViewModel extends BaseViewModel {
       (method) => method.selected,
     );
 
-    final notesSource = data['delivery_notes'] ?? data['notes'];
+    final notesSource = data['delivery_notes'];
+    hasDeliveryNotes.value = data.containsKey('delivery_notes');
     final notes = notesSource is Map
         ? (notesSource['value'] ??
                   notesSource['text'] ??

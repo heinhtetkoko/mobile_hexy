@@ -9,6 +9,7 @@ import 'package:mobile_hexy/data/datasources/product_detail_remote_data_source.d
 import 'package:mobile_hexy/data/datasources/cart_remote_data_source.dart';
 import 'package:mobile_hexy/data/datasources/wishlist_remote_data_source.dart';
 import 'package:mobile_hexy/data/models/product_detail.dart';
+import 'package:mobile_hexy/presentation/viewmodel/main_view_model.dart';
 import 'package:share_plus/share_plus.dart';
 
 class ProductDetailViewModel extends BaseViewModel {
@@ -181,9 +182,30 @@ class ProductDetailViewModel extends BaseViewModel {
   }
 
   Future<void> addToCart() async {
+    await _addCurrentProductToCart(pendingAction: 'add_to_cart');
+  }
+
+  Future<void> buyNow() async {
+    final added = await _addCurrentProductToCart(pendingAction: 'buy_now');
+    if (!added) return;
+
+    Get.until(
+      (route) => route.settings.name == AppRoutes.home || route.isFirst,
+    );
+    if (Get.isRegistered<MainViewModel>()) {
+      await Get.find<MainViewModel>().changePage(3);
+    } else {
+      await Get.offAllNamed<void>(
+        AppRoutes.home,
+        arguments: const {'tabIndex': 3},
+      );
+    }
+  }
+
+  Future<bool> _addCurrentProductToCart({required String pendingAction}) async {
     final detail = product.value;
-    if (detail == null || isAddingToCart.value) return;
-    if (!await _ensureAuthenticated('add_to_cart')) return;
+    if (detail == null || isAddingToCart.value) return false;
+    if (!await _ensureAuthenticated(pendingAction)) return false;
     isAddingToCart.value = true;
     try {
       await _cartRemoteDataSource.addProduct(
@@ -195,6 +217,7 @@ class ProductDetailViewModel extends BaseViewModel {
         '${detail.name} × ${quantity.value}',
         snackPosition: SnackPosition.BOTTOM,
       );
+      return true;
     } catch (error) {
       if (Get.currentRoute != '/login') {
         Get.snackbar(
@@ -203,6 +226,7 @@ class ProductDetailViewModel extends BaseViewModel {
           snackPosition: SnackPosition.BOTTOM,
         );
       }
+      return false;
     } finally {
       isAddingToCart.value = false;
     }
@@ -292,6 +316,8 @@ class ProductDetailViewModel extends BaseViewModel {
     switch (arguments['pendingAction']) {
       case 'add_to_cart':
         await addToCart();
+      case 'buy_now':
+        await buyNow();
       case 'wishlist':
         await toggleWishlist();
     }

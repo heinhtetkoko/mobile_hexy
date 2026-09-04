@@ -42,6 +42,8 @@ class HomeProduct {
     this.imageUrl,
     this.hot = false,
     this.wishlist = false,
+    this.availableQty = 0,
+    this.discountPercent,
   });
 
   final String id;
@@ -51,6 +53,8 @@ class HomeProduct {
   final String? imageUrl;
   final bool hot;
   final bool wishlist;
+  final double? availableQty;
+  final double? discountPercent;
 }
 
 class HomeCatalog {

@@ -154,6 +154,7 @@ class CategoryProductsRemoteDataSource {
 
   CatalogProduct _parseProduct(Map<dynamic, dynamic> json) {
     final currency = json['currency'];
+    final discountData = json['discount'];
     final symbol = currency is Map ? currency['symbol']?.toString() ?? '' : '';
     final price =
         double.tryParse(
@@ -167,13 +168,22 @@ class CategoryProductsRemoteDataSource {
               ?.toString() ??
           '',
     );
-    final discount =
-        int.tryParse(
-          (json['discount_percentage'] ?? json['discount_percent'])
-                  ?.toString() ??
-              '',
-        ) ??
-        0;
+    final explicitDiscount = _parsePercent(
+      json['discount_percentage'] ??
+          json['discount_percent'] ??
+          json['discount_value'] ??
+          (discountData is Map
+              ? discountData['percentage'] ??
+                    discountData['percent'] ??
+                    discountData['value']
+              : discountData),
+    );
+    final calculatedDiscount = compareAt != null && compareAt > price
+        ? ((compareAt - price) / compareAt) * 100
+        : 0.0;
+    final discount = explicitDiscount > 0
+        ? explicitDiscount
+        : calculatedDiscount;
     return CatalogProduct(
       id: json['id']?.toString() ?? '',
       name: json['name']?.toString() ?? '',
@@ -181,9 +191,22 @@ class CategoryProductsRemoteDataSource {
       originalPrice: compareAt == null
           ? null
           : '$symbol${compareAt.toStringAsFixed(2)}',
-      discount: discount > 0 ? '-$discount%' : null,
+      discount: discount > 0 ? '-${_formatPercent(discount)}%' : null,
       imageAsset: '',
       imageUrl: json['image_url']?.toString(),
     );
   }
+
+  double _parsePercent(Object? value) =>
+      double.tryParse(
+        value?.toString().replaceAll('%', '').replaceAll('-', '').trim() ?? '',
+      ) ??
+      0;
+
+  String _formatPercent(double value) => value == value.truncateToDouble()
+      ? value.toInt().toString()
+      : value
+            .toStringAsFixed(2)
+            .replaceFirst(RegExp(r'0+$'), '')
+            .replaceFirst(RegExp(r'\.$'), '');
 }

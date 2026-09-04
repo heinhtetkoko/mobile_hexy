@@ -59,6 +59,22 @@ class NewArrivalsRemoteDataSource {
       imageAsset: '',
       imageUrl: json['image_url']?.toString(),
       hot: json['in_stock'] == true,
+      discountPercent: _discountPercent(json),
     );
+  }
+
+  double? _discountPercent(Map<dynamic, dynamic> json) {
+    final discount = json['discount'];
+    final value =
+        json['discount_percentage'] ??
+        json['discount_percent'] ??
+        json['discount_value'] ??
+        (discount is Map
+            ? discount['percentage'] ?? discount['percent'] ?? discount['value']
+            : discount);
+    final parsed = double.tryParse(
+      value?.toString().replaceAll('%', '').replaceAll('-', '').trim() ?? '',
+    );
+    return parsed == null || parsed <= 0 ? null : parsed;
   }
 }

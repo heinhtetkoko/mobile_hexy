@@ -146,6 +146,7 @@ class StationeryHomePage extends GetView<StationeryHomeViewModel> {
                           hasMore: controller.hasMoreFlashSale.value,
                           onRetry: controller.loadFlashSale,
                           onLoadMore: controller.loadMoreFlashSale,
+                          onAddToCart: controller.addToCart,
                           onViewAll: () => Get.toNamed<void>(
                             AppRoutes.productList,
                             arguments: const ProductListRequest.flashSale(),
@@ -799,8 +800,11 @@ class _ProductCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
-              child: useReferenceCard
-                  ? ClipRRect(
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  if (useReferenceCard)
+                    ClipRRect(
                       borderRadius: const BorderRadius.vertical(
                         top: Radius.circular(17),
                       ),
@@ -821,7 +825,8 @@ class _ProductCard extends StatelessWidget {
                               ),
                       ),
                     )
-                  : Center(
+                  else
+                    Center(
                       child: product.imageUrl?.isNotEmpty == true
                           ? Image.network(
                               product.imageUrl!,
@@ -836,6 +841,16 @@ class _ProductCard extends StatelessWidget {
                               fit: BoxFit.contain,
                             ),
                     ),
+                  if ((product.discountPercent ?? 0) > 0)
+                    Positioned(
+                      left: 7,
+                      top: 7,
+                      child: _HomeDiscountFlag(
+                        percent: product.discountPercent!,
+                      ),
+                    ),
+                ],
+              ),
             ),
             const SizedBox(height: 5),
             Padding(
@@ -1095,11 +1110,13 @@ class _FlashSaleSection extends StatelessWidget {
     required this.items,
     this.onLoadMore,
     this.loadingMore = false,
+    required this.onAddToCart,
     required this.onViewAll,
   });
   final List<HomeProduct> items;
   final VoidCallback? onLoadMore;
   final bool loadingMore;
+  final ValueChanged<HomeProduct> onAddToCart;
   final VoidCallback onViewAll;
 
   @override
@@ -1162,7 +1179,7 @@ class _FlashSaleSection extends StatelessWidget {
               return false;
             },
             child: ListView.separated(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               scrollDirection: Axis.horizontal,
               itemCount: items.length + (loadingMore ? 1 : 0),
               separatorBuilder: (_, _) => const SizedBox(width: 12),
@@ -1170,12 +1187,12 @@ class _FlashSaleSection extends StatelessWidget {
                   ? const _HorizontalLoadingIndicator()
                   : _FlashSaleCard(
                       product: items[index],
-                      stockLeft: const [2, 6, 1][index % 3],
                       progress: const [.8, .4, .9][index % 3],
                       onTap: () => Get.toNamed<void>(
                         AppRoutes.productDetail,
                         arguments: items[index].id,
                       ),
+                      onAddToCart: () => onAddToCart(items[index]),
                     ),
             ),
           ),
@@ -1194,6 +1211,7 @@ class _FlashSaleContent extends StatelessWidget {
     required this.hasMore,
     required this.onRetry,
     required this.onLoadMore,
+    required this.onAddToCart,
     required this.onViewAll,
   });
 
@@ -1204,6 +1222,7 @@ class _FlashSaleContent extends StatelessWidget {
   final bool hasMore;
   final VoidCallback onRetry;
   final VoidCallback onLoadMore;
+  final ValueChanged<HomeProduct> onAddToCart;
   final VoidCallback onViewAll;
 
   @override
@@ -1233,6 +1252,7 @@ class _FlashSaleContent extends StatelessWidget {
       items: items,
       onLoadMore: hasMore ? onLoadMore : null,
       loadingMore: loadingMore,
+      onAddToCart: onAddToCart,
       onViewAll: onViewAll,
     );
   }
@@ -1265,14 +1285,14 @@ class _TimerBox extends StatelessWidget {
 class _FlashSaleCard extends StatelessWidget {
   const _FlashSaleCard({
     required this.product,
-    required this.stockLeft,
     required this.progress,
     required this.onTap,
+    required this.onAddToCart,
   });
   final HomeProduct product;
-  final int stockLeft;
   final double progress;
   final VoidCallback onTap;
+  final VoidCallback onAddToCart;
 
   @override
   Widget build(BuildContext context) => GestureDetector(
@@ -1295,21 +1315,6 @@ class _FlashSaleCard extends StatelessWidget {
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          Positioned(
-            left: -3,
-            top: -3,
-            child: Container(
-              width: 66,
-              height: 22,
-              decoration: const BoxDecoration(
-                color: StationeryHomePage._pink,
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(18),
-                  topRight: Radius.circular(14),
-                ),
-              ),
-            ),
-          ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1317,10 +1322,12 @@ class _FlashSaleCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(14),
                 child: Container(
                   width: double.infinity,
-                  height: 136,
-                  padding: const EdgeInsets.all(12),
+                  height: 116,
                   color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                  child: _RemoteOrAssetImage(product: product),
+                  child: _RemoteOrAssetImage(
+                    product: product,
+                    fit: BoxFit.cover,
+                  ),
                 ),
               ),
               const SizedBox(height: 11),
@@ -1355,7 +1362,7 @@ class _FlashSaleCard extends StatelessWidget {
               ),
               const SizedBox(height: 5),
               Text(
-                '$stockLeft left!'.tr,
+                '${_quantityText(product.availableQty ?? 0)} left!'.tr,
                 style: TextStyle(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                   fontSize: 11,
@@ -1366,7 +1373,7 @@ class _FlashSaleCard extends StatelessWidget {
                 width: double.infinity,
                 height: 36,
                 child: FilledButton(
-                  onPressed: () {},
+                  onPressed: onAddToCart,
                   style: FilledButton.styleFrom(
                     backgroundColor: StationeryHomePage._pink,
                     foregroundColor: Colors.white,
@@ -1383,7 +1390,59 @@ class _FlashSaleCard extends StatelessWidget {
               ),
             ],
           ),
+          if ((product.discountPercent ?? 0) > 0)
+            Positioned(
+              left: -3,
+              top: -3,
+              child: Container(
+                width: 66,
+                height: 22,
+                alignment: Alignment.center,
+                decoration: const BoxDecoration(
+                  color: StationeryHomePage._pink,
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(18),
+                    topRight: Radius.circular(14),
+                  ),
+                ),
+                child: Text(
+                  '-${_quantityText(product.discountPercent!)}%',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ),
         ],
+      ),
+    ),
+  );
+}
+
+String _quantityText(double quantity) => quantity == quantity.truncateToDouble()
+    ? quantity.toInt().toString()
+    : quantity.toStringAsFixed(2).replaceFirst(RegExp(r'0+$'), '');
+
+class _HomeDiscountFlag extends StatelessWidget {
+  const _HomeDiscountFlag({required this.percent});
+
+  final double percent;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+    decoration: BoxDecoration(
+      color: StationeryHomePage._pink,
+      borderRadius: BorderRadius.circular(8),
+    ),
+    child: Text(
+      '-${_quantityText(percent)}%',
+      style: const TextStyle(
+        color: Colors.white,
+        fontSize: 10,
+        fontWeight: FontWeight.w800,
       ),
     ),
   );
@@ -1551,6 +1610,12 @@ class _RecommendedCard extends StatelessWidget {
                   ),
                 ),
               ),
+              if ((product.discountPercent ?? 0) > 0)
+                Positioned(
+                  left: 8,
+                  top: 8,
+                  child: _HomeDiscountFlag(percent: product.discountPercent!),
+                ),
               Positioned(
                 right: 8,
                 top: 8,

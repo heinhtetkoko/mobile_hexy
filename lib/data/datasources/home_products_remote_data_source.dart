@@ -55,6 +55,7 @@ class HomeProductsRemoteDataSource {
 
   HomeProduct _parseProduct(Map<dynamic, dynamic> json) {
     final currency = json['currency'];
+    final discount = json['discount'];
     final symbol = currency is Map ? currency['symbol']?.toString() ?? '' : '';
     final price = double.tryParse(json['price']?.toString() ?? '') ?? 0;
     return HomeProduct(
@@ -65,6 +66,25 @@ class HomeProductsRemoteDataSource {
       imageUrl: json['image_url']?.toString(),
       hot: json['in_stock'] == true,
       wishlist: json['wishlist'] == true,
+      availableQty:
+          double.tryParse(json['available_qty']?.toString() ?? '') ?? 0,
+      discountPercent: _parsePercent(
+        json['discount_percentage'] ??
+            json['discount_percent'] ??
+            json['discount_value'] ??
+            (discount is Map
+                ? discount['percentage'] ??
+                      discount['percent'] ??
+                      discount['value']
+                : discount),
+      ),
     );
+  }
+
+  double? _parsePercent(Object? value) {
+    final parsed = double.tryParse(
+      value?.toString().replaceAll('%', '').replaceAll('-', '').trim() ?? '',
+    );
+    return parsed == null || parsed <= 0 ? null : parsed;
   }
 }

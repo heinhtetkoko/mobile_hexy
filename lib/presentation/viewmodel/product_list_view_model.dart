@@ -519,6 +519,11 @@ class ProductListViewModel extends BaseViewModel {
               price: product.price,
               imageAsset: product.imageAsset,
               imageUrl: product.imageUrl,
+              discount:
+                  product.discountPercent != null &&
+                      product.discountPercent! > 0
+                  ? '-${_formatDiscount(product.discountPercent!)}%'
+                  : null,
             ),
           )
           .toList(growable: false),
@@ -526,4 +531,11 @@ class ProductListViewModel extends BaseViewModel {
       hasNext: hasNext,
     );
   }
+
+  String _formatDiscount(double value) => value == value.truncateToDouble()
+      ? value.toInt().toString()
+      : value
+            .toStringAsFixed(2)
+            .replaceFirst(RegExp(r'0+$'), '')
+            .replaceFirst(RegExp(r'\.$'), '');
 }

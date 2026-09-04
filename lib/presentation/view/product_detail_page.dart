@@ -1107,19 +1107,32 @@ class _BottomActions extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           Expanded(
-            child: FilledButton(
-              onPressed: () {},
-              style: FilledButton.styleFrom(
-                backgroundColor: ProductDetailPage._pink,
-                padding: const EdgeInsets.symmetric(horizontal: 10),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+            child: Obx(
+              () => FilledButton(
+                onPressed: controller.isAddingToCart.value
+                    ? null
+                    : controller.buyNow,
+                style: FilledButton.styleFrom(
+                  backgroundColor: ProductDetailPage._pink,
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
-              ),
-              child: Text(
-                'Buy Now'.tr,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+                child: controller.isAddingToCart.value
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : Text(
+                        'Buy Now'.tr,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
               ),
             ),
           ),

@@ -4,6 +4,9 @@ import 'package:mobile_hexy/core/theme/app_colors.dart';
 import 'package:mobile_hexy/data/models/shipping_address.dart';
 import 'package:mobile_hexy/presentation/view/cart_page.dart';
 import 'package:mobile_hexy/presentation/viewmodel/checkout_view_model.dart';
+import 'package:mobile_hexy/app.dart';
+
+const _addShippingAddressAction = 'add_shipping_address';
 
 class CheckoutPage extends GetView<CheckoutViewModel> {
   const CheckoutPage({super.key});
@@ -75,8 +78,10 @@ class CheckoutPage extends GetView<CheckoutViewModel> {
         _ItemsSummary(controller: controller),
         const SizedBox(height: 10),
         _PriceBreakdown(controller: controller),
-        const SizedBox(height: 10),
-        _DeliveryNotes(controller: controller),
+        if (controller.hasDeliveryNotes.value) ...[
+          const SizedBox(height: 10),
+          _DeliveryNotes(controller: controller),
+        ],
         const SizedBox(height: 12),
         _TermsRow(controller: controller),
       ],
@@ -84,13 +89,21 @@ class CheckoutPage extends GetView<CheckoutViewModel> {
   }
 
   Future<void> _showAddressDialog(BuildContext context) async {
-    final address = await showDialog<ShippingAddress>(
+    final result = await showDialog<Object>(
       context: context,
       builder: (_) => _AddressSelectDialog(controller: controller),
     );
-    if (address == null) return;
-    final updated = await controller.selectAddress(address);
-    if (updated && context.mounted) await _showDeliveryMethodDialog(context);
+    if (result == _addShippingAddressAction) {
+      final saved = await Get.toNamed<dynamic>(
+        '${AppRoutes.addressForm}?mode=new',
+      );
+      if (saved == true) {
+        await controller.loadCheckout();
+        if (context.mounted) await _showAddressDialog(context);
+      }
+      return;
+    }
+    if (result is ShippingAddress) await controller.selectAddress(result);
   }
 
   Future<void> _showDeliveryMethodDialog(BuildContext context) async {
@@ -443,7 +456,15 @@ class _AddressSelectDialog extends StatelessWidget {
               },
             ),
     ),
-    actions: [TextButton(onPressed: Get.back, child: Text('Cancel'.tr))],
+    actions: [
+      TextButton(onPressed: Get.back, child: Text('Cancel'.tr)),
+      FilledButton.icon(
+        key: const Key('checkout-add-shipping-address'),
+        onPressed: () => Navigator.of(context).pop(_addShippingAddressAction),
+        icon: const Icon(Icons.add_rounded, size: 18),
+        label: Text('Add Address'.tr),
+      ),
+    ],
   );
 }
 
