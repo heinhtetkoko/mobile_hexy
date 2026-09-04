@@ -141,15 +141,6 @@ class RegisterPage extends GetView<AuthViewModel> {
             ),
           ),
           const SizedBox(height: 24),
-          const _DividerLabel('Or login with'),
-          const SizedBox(height: 24),
-          Obx(
-            () => _SocialButton(
-              onPressed: controller.loginWithGoogle,
-              loading: controller.isGoogleLoggingIn.value,
-            ),
-          ),
-          const SizedBox(height: 24),
           _BottomLink(
             prefix: 'Already have an account?',
             label: 'Sign In',
@@ -304,11 +295,12 @@ class ResetPasswordPage extends GetView<AuthViewModel> {
                 icon: Icons.lock_outline_rounded,
                 obscureText: controller.passwordHidden.value,
                 onVisibility: controller.togglePassword,
+                onChanged: controller.onPasswordChanged,
                 tall: true,
               ),
             ),
             const SizedBox(height: 7),
-            const _PasswordStrength(),
+            Obx(() => _PasswordStrength(score: controller.passwordStrength)),
             const SizedBox(height: 16),
             Obx(
               () => _AuthField(
@@ -317,16 +309,19 @@ class ResetPasswordPage extends GetView<AuthViewModel> {
                 icon: Icons.lock_outline_rounded,
                 obscureText: controller.confirmPasswordHidden.value,
                 onVisibility: controller.toggleConfirmPassword,
+                onChanged: controller.onConfirmPasswordChanged,
                 tall: true,
               ),
             ),
             const SizedBox(height: 24),
-            const _PasswordRules(),
+            Obx(() => _PasswordRules(validity: controller.passwordRules)),
             const SizedBox(height: 24),
             Obx(
               () => _PrimaryButton(
                 label: 'Reset Password',
-                onPressed: controller.resetPassword,
+                onPressed: controller.canResetPassword
+                    ? controller.resetPassword
+                    : null,
                 loading: controller.isResettingPassword.value,
                 tall: true,
               ),
@@ -448,6 +443,7 @@ class _AuthField extends StatelessWidget {
     this.keyboardType,
     this.obscureText = false,
     this.onVisibility,
+    this.onChanged,
     this.tall = false,
   });
   final TextEditingController controller;
@@ -456,6 +452,7 @@ class _AuthField extends StatelessWidget {
   final TextInputType? keyboardType;
   final bool obscureText;
   final VoidCallback? onVisibility;
+  final ValueChanged<String>? onChanged;
   final bool tall;
   @override
   Widget build(BuildContext context) => SizedBox(
@@ -464,6 +461,7 @@ class _AuthField extends StatelessWidget {
       controller: controller,
       keyboardType: keyboardType,
       obscureText: obscureText,
+      onChanged: onChanged,
       textInputAction: TextInputAction.next,
       decoration: InputDecoration(
         hintText: hint.tr,
@@ -496,7 +494,7 @@ class _PrimaryButton extends StatelessWidget {
     this.loading = false,
   });
   final String label;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
   final bool tall;
   final bool loading;
   @override
@@ -741,37 +739,59 @@ class _CenteredHeading extends StatelessWidget {
 }
 
 class _PasswordStrength extends StatelessWidget {
-  const _PasswordStrength();
+  const _PasswordStrength({required this.score});
+  final int score;
   @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Row(
-        children: [
-          Expanded(child: Container(height: 4, color: _authPink)),
-          const SizedBox(width: 4),
-          Expanded(child: Container(height: 4, color: _authPink)),
-          const SizedBox(width: 4),
-          Expanded(
-            child: Container(height: 4, color: Theme.of(context).dividerColor),
+  Widget build(BuildContext context) {
+    final level = score == 0
+        ? 0
+        : score <= 2
+        ? 1
+        : score <= 4
+        ? 2
+        : 3;
+    final label = level == 0
+        ? ''
+        : level == 1
+        ? 'Weak'
+        : level == 2
+        ? 'Medium'
+        : 'Strong';
+    final color = level == 3 ? const Color(0xFF22C55E) : _authPink;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: List.generate(
+            3,
+            (index) => Expanded(
+              child: Container(
+                height: 4,
+                margin: EdgeInsets.only(right: index == 2 ? 0 : 4),
+                color: index < level ? color : Theme.of(context).dividerColor,
+              ),
+            ),
+          ),
+        ),
+        if (label.isNotEmpty) ...[
+          const SizedBox(height: 6),
+          Text(
+            label.tr,
+            style: TextStyle(
+              color: color,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ],
-      ),
-      const SizedBox(height: 6),
-      Text(
-        'Medium'.tr,
-        style: TextStyle(
-          color: _authPink,
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-    ],
-  );
+      ],
+    );
+  }
 }
 
 class _PasswordRules extends StatelessWidget {
-  const _PasswordRules();
+  const _PasswordRules({required this.validity});
+  final List<bool> validity;
   static const rules = [
     'At least 8 characters',
     'One uppercase letter',
@@ -799,7 +819,7 @@ class _PasswordRules extends StatelessWidget {
               Icon(
                 Icons.check_circle_outline_rounded,
                 size: 17,
-                color: index < 2
+                color: validity[index]
                     ? const Color(0xFF22C55E)
                     : Theme.of(context).colorScheme.outline,
               ),
@@ -807,7 +827,7 @@ class _PasswordRules extends StatelessWidget {
               Text(
                 rules[index].tr,
                 style: TextStyle(
-                  color: index < 2
+                  color: validity[index]
                       ? Theme.of(context).colorScheme.onSurface
                       : Theme.of(context).colorScheme.onSurfaceVariant,
                   fontSize: 13,

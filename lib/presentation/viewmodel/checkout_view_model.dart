@@ -21,8 +21,6 @@ class CheckoutViewModel extends BaseViewModel {
   final termsAccepted = false.obs;
   final itemsExpanded = false.obs;
   final notesController = TextEditingController();
-  final notesHint = 'Add delivery instructions...'.obs;
-  final hasDeliveryNotes = false.obs;
   final addresses = <ShippingAddress>[].obs;
   final deliveryMethods = <CheckoutDeliveryMethod>[].obs;
   final selectedAddress = Rxn<ShippingAddress>();
@@ -111,11 +109,8 @@ class CheckoutViewModel extends BaseViewModel {
     if (isUpdatingNotes.value || notes == _savedNotes) return;
     isUpdatingNotes.value = true;
     try {
-      final data = await _checkoutRemoteDataSource.updateCheckout(
-        deliveryNotes: notes,
-      );
+      await _checkoutRemoteDataSource.updateCheckout(deliveryNotes: notes);
       _savedNotes = notes;
-      _applyCheckout(data);
     } catch (error) {
       _showError('Could not update delivery notes', error);
     } finally {
@@ -179,26 +174,6 @@ class CheckoutViewModel extends BaseViewModel {
       (method) => method.selected,
     );
 
-    final notesSource = data['delivery_notes'];
-    hasDeliveryNotes.value = data.containsKey('delivery_notes');
-    final notes = notesSource is Map
-        ? (notesSource['value'] ??
-                  notesSource['text'] ??
-                  notesSource['notes'] ??
-                  notesSource['delivery_notes'])
-              ?.toString()
-        : notesSource?.toString();
-    if (notesSource is Map) {
-      final placeholder = (notesSource['placeholder'] ?? notesSource['hint'])
-          ?.toString();
-      if (placeholder?.isNotEmpty == true) {
-        notesHint.value = placeholder!;
-      }
-    }
-    if (notes != null && notesController.text != notes) {
-      notesController.text = notes;
-    }
-    if (notes != null) _savedNotes = notes.trim();
     final payment = data['payment_method'] ?? data['selected_payment_method'];
     _setPayment(payment is Map ? payment['code'] ?? payment['name'] : payment);
   }

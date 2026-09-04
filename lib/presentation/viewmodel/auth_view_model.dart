@@ -30,6 +30,8 @@ class AuthViewModel extends BaseViewModel {
   final username = TextEditingController();
   final password = TextEditingController();
   final confirmPassword = TextEditingController();
+  final passwordValue = ''.obs;
+  final confirmPasswordValue = ''.obs;
   final passwordHidden = true.obs;
   final confirmPasswordHidden = true.obs;
   final isLoggingIn = false.obs;
@@ -44,6 +46,28 @@ class AuthViewModel extends BaseViewModel {
 
   void togglePassword() => passwordHidden.toggle();
   void toggleConfirmPassword() => confirmPasswordHidden.toggle();
+  void onPasswordChanged(String value) => passwordValue.value = value;
+  void onConfirmPasswordChanged(String value) =>
+      confirmPasswordValue.value = value;
+
+  bool get hasMinimumLength => passwordValue.value.length >= 8;
+  bool get hasUppercase => RegExp(r'[A-Z]').hasMatch(passwordValue.value);
+  bool get hasLowercase => RegExp(r'[a-z]').hasMatch(passwordValue.value);
+  bool get hasNumber => RegExp(r'[0-9]').hasMatch(passwordValue.value);
+  bool get hasSpecialCharacter =>
+      RegExp(r'[^A-Za-z0-9]').hasMatch(passwordValue.value);
+  List<bool> get passwordRules => [
+    hasMinimumLength,
+    hasUppercase,
+    hasLowercase,
+    hasNumber,
+    hasSpecialCharacter,
+  ];
+  int get passwordStrength => passwordRules.where((rule) => rule).length;
+  bool get canResetPassword =>
+      passwordStrength == passwordRules.length &&
+      confirmPasswordValue.value.isNotEmpty &&
+      passwordValue.value == confirmPasswordValue.value;
 
   @override
   void onInit() {
@@ -244,6 +268,10 @@ class AuthViewModel extends BaseViewModel {
         email: resetEmail,
         otp: code,
       );
+      password.clear();
+      confirmPassword.clear();
+      passwordValue.value = '';
+      confirmPasswordValue.value = '';
       Get.toNamed<void>(
         AppRoutes.resetPassword,
         arguments: {'email': resetEmail, 'resetToken': resetToken},
@@ -258,8 +286,8 @@ class AuthViewModel extends BaseViewModel {
   }
 
   Future<void> resetPassword() async {
-    if (password.text.length < 8) {
-      return _message('Password must contain at least 8 characters.');
+    if (passwordStrength != passwordRules.length) {
+      return _message('Password does not meet all required rules.');
     }
     if (password.text != confirmPassword.text) {
       return _message('Passwords do not match.');

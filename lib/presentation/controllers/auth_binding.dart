@@ -9,14 +9,17 @@ import 'package:mobile_hexy/data/datasources/auth_remote_data_source.dart';
 class AuthBinding extends Bindings {
   @override
   void dependencies() {
-    Get.lazyPut(
-      () => AuthViewModel(
-        Get.find<LoginUser>(),
-        Get.find<LoginWithGoogle>(),
-        Get.find<RegisterUser>(),
-        Get.find<SecureStorage>(),
-        Get.find<AuthRemoteDataSource>(),
-      ),
-    );
+    if (!Get.isRegistered<AuthViewModel>()) {
+      Get.put(
+        AuthViewModel(
+          Get.find<LoginUser>(),
+          Get.find<LoginWithGoogle>(),
+          Get.find<RegisterUser>(),
+          Get.find<SecureStorage>(),
+          Get.find<AuthRemoteDataSource>(),
+        ),
+        permanent: true,
+      );
+    }
   }
 }

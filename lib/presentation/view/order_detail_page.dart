@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:mobile_hexy/core/theme/app_colors.dart';
 import 'package:mobile_hexy/presentation/viewmodel/order_detail_view_model.dart';
 
 class OrderDetailPage extends GetView<OrderDetailViewModel> {
@@ -352,13 +351,13 @@ class _StatusBadge extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
     decoration: BoxDecoration(
-      color: AppColors.primary.withValues(alpha: .1),
+      color: Theme.of(context).colorScheme.primaryContainer,
       borderRadius: BorderRadius.circular(30),
     ),
     child: Text(
       label.tr,
-      style: const TextStyle(
-        color: AppColors.primary,
+      style: TextStyle(
+        color: Theme.of(context).colorScheme.onPrimaryContainer,
         fontWeight: FontWeight.w700,
         fontSize: 12,
       ),

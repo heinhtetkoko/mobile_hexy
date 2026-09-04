@@ -8,6 +8,34 @@ import 'package:mobile_hexy/presentation/viewmodel/checkout_view_model.dart';
 class PaymentSuccessPage extends GetView<CheckoutViewModel> {
   const PaymentSuccessPage({super.key});
 
+  void _trackOrder() {
+    final orderId = _orderId(Get.arguments);
+    if (orderId == null || orderId.isEmpty) {
+      Get.snackbar(
+        'Order unavailable',
+        'The order number was not returned. Please open it from My Orders.',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      return;
+    }
+    Get.toNamed<void>(AppRoutes.orderDetail, arguments: {'id': orderId});
+  }
+
+  String? _orderId(Object? source) {
+    if (source is! Map) return null;
+    for (final key in const ['order_id', 'sale_order_id', 'id']) {
+      final value = source[key];
+      if (value != null && value != false && value.toString().isNotEmpty) {
+        return value.toString();
+      }
+    }
+    for (final key in const ['order', 'sale_order', 'data', 'result']) {
+      final value = _orderId(source[key]);
+      if (value != null) return value;
+    }
+    return null;
+  }
+
   void _showAction(String title) => Get.snackbar(
     title,
     '$title is coming soon.',
@@ -18,67 +46,204 @@ class PaymentSuccessPage extends GetView<CheckoutViewModel> {
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: Theme.of(context).scaffoldBackgroundColor,
     body: SafeArea(
-      child: Stack(
+      child: Column(
         children: [
-          const Positioned.fill(child: _CelebrationBackground()),
-          ListView(
-            padding: const EdgeInsets.fromLTRB(16, 44, 16, 24),
-            children: [
-              const _SuccessHeader(),
-              const SizedBox(height: 24),
-              _OrderReceipt(controller: controller),
-              const SizedBox(height: 24),
-              const _DeliveryDestination(),
-              const SizedBox(height: 24),
-              _ItemPreview(onViewOrder: () => _showAction('View Order')),
-              const SizedBox(height: 24),
-              SizedBox(
-                height: 52,
-                child: FilledButton.icon(
-                  key: const Key('track-order'),
-                  onPressed: () => _showAction('Track My Order'),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    shape: const StadiumBorder(),
-                    textStyle: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
+          const _SuccessCheckoutHeader(),
+          const _ConfirmationProgressSteps(),
+          Expanded(
+            child: Stack(
+              children: [
+                const Positioned.fill(child: _CelebrationBackground()),
+                ListView(
+                  padding: const EdgeInsets.fromLTRB(16, 24, 16, 24),
+                  children: [
+                    const _SuccessHeader(),
+                    const SizedBox(height: 24),
+                    _OrderReceipt(controller: controller),
+                    const SizedBox(height: 24),
+                    const _DeliveryDestination(),
+                    const SizedBox(height: 24),
+                    _ItemPreview(onViewOrder: () => _showAction('View Order')),
+                    const SizedBox(height: 24),
+                    SizedBox(
+                      height: 52,
+                      child: FilledButton.icon(
+                        key: const Key('track-order'),
+                        onPressed: _trackOrder,
+                        style: FilledButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          shape: const StadiumBorder(),
+                          textStyle: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        icon: Icon(Icons.inventory_2_outlined, size: 20),
+                        label: Text('Track My Order'.tr),
+                      ),
                     ),
-                  ),
-                  icon: Icon(Icons.inventory_2_outlined, size: 20),
-                  label: Text('Track My Order'.tr),
-                ),
-              ),
-              const SizedBox(height: 12),
-              SizedBox(
-                height: 48,
-                child: OutlinedButton.icon(
-                  key: const Key('continue-shopping'),
-                  onPressed: () => Get.offAllNamed<void>(AppRoutes.home),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.primary,
-                    backgroundColor: AppColors.surface,
-                    side: const BorderSide(color: Color(0xFFE5E7EB)),
-                    shape: const StadiumBorder(),
-                    textStyle: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      height: 48,
+                      child: OutlinedButton.icon(
+                        key: const Key('continue-shopping'),
+                        onPressed: () => Get.offAllNamed<void>(AppRoutes.home),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Theme.of(
+                            context,
+                          ).colorScheme.primary,
+                          backgroundColor: Theme.of(
+                            context,
+                          ).colorScheme.surface,
+                          side: BorderSide(
+                            color: Theme.of(context).dividerColor,
+                          ),
+                          shape: const StadiumBorder(),
+                          textStyle: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        iconAlignment: IconAlignment.end,
+                        icon: Icon(Icons.arrow_forward_rounded, size: 18),
+                        label: Text('Continue Shopping'.tr),
+                      ),
                     ),
-                  ),
-                  iconAlignment: IconAlignment.end,
-                  icon: Icon(Icons.arrow_forward_rounded, size: 18),
-                  label: Text('Continue Shopping'.tr),
+                    const SizedBox(height: 20),
+                    _SecondaryActions(onTap: _showAction),
+                  ],
                 ),
-              ),
-              const SizedBox(height: 20),
-              _SecondaryActions(onTap: _showAction),
-            ],
+              ],
+            ),
           ),
         ],
       ),
     ),
   );
+}
+
+class _SuccessCheckoutHeader extends StatelessWidget {
+  const _SuccessCheckoutHeader();
+
+  @override
+  Widget build(BuildContext context) => Container(
+    height: 56,
+    padding: const EdgeInsets.symmetric(horizontal: 16),
+    decoration: BoxDecoration(
+      color: Theme.of(context).colorScheme.surface,
+      border: Border(bottom: BorderSide(color: Theme.of(context).dividerColor)),
+    ),
+    child: Row(
+      children: [
+        SizedBox(
+          width: 70,
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Material(
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+              shape: const CircleBorder(),
+              child: IconButton(
+                key: const Key('payment-success-back'),
+                onPressed: () => Get.offAllNamed<void>(AppRoutes.home),
+                icon: const Icon(Icons.arrow_back_rounded),
+              ),
+            ),
+          ),
+        ),
+        Expanded(
+          child: Text(
+            'Checkout'.tr,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+          ),
+        ),
+        SizedBox(
+          width: 70,
+          child: Text(
+            'Step 3/3'.tr,
+            textAlign: TextAlign.end,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+              fontSize: 13,
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+class _ConfirmationProgressSteps extends StatelessWidget {
+  const _ConfirmationProgressSteps();
+
+  @override
+  Widget build(BuildContext context) => Container(
+    color: Theme.of(context).colorScheme.surface,
+    padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 18),
+    child: Row(
+      children: [
+        const _ConfirmationStep(label: 'Cart', completed: true),
+        const Expanded(child: Divider(color: AppColors.success, thickness: 2)),
+        const _ConfirmationStep(label: 'Checkout', completed: true),
+        Expanded(
+          child: Divider(
+            color: Theme.of(context).colorScheme.primary,
+            thickness: 2,
+          ),
+        ),
+        const _ConfirmationStep(label: 'Confirm', number: '3'),
+      ],
+    ),
+  );
+}
+
+class _ConfirmationStep extends StatelessWidget {
+  const _ConfirmationStep({
+    required this.label,
+    this.completed = false,
+    this.number,
+  });
+
+  final String label;
+  final bool completed;
+  final String? number;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = completed
+        ? AppColors.success
+        : Theme.of(context).colorScheme.primary;
+    return Column(
+      children: [
+        Container(
+          width: 24,
+          height: 24,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          child: completed
+              ? const Icon(Icons.check_rounded, color: Colors.white, size: 14)
+              : Text(
+                  number!,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+        ),
+        const SizedBox(height: 7),
+        Text(
+          label.tr,
+          style: TextStyle(
+            color: color,
+            fontSize: 10,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 class _CelebrationBackground extends StatelessWidget {
@@ -87,11 +252,14 @@ class _CelebrationBackground extends StatelessWidget {
   @override
   Widget build(BuildContext context) => IgnorePointer(
     child: DecoratedBox(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         gradient: RadialGradient(
           center: Alignment.topCenter,
           radius: .65,
-          colors: [Color(0x1422C55E), Colors.white],
+          colors: [
+            AppColors.success.withValues(alpha: .08),
+            Theme.of(context).scaffoldBackgroundColor,
+          ],
         ),
       ),
       child: Stack(
@@ -182,7 +350,10 @@ class _SuccessHeader extends StatelessWidget {
       Text(
         'Your order has been placed successfully.'.tr,
         textAlign: TextAlign.center,
-        style: TextStyle(color: AppColors.textSecondary, fontSize: 15),
+        style: TextStyle(
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+          fontSize: 15,
+        ),
       ),
     ],
   );
@@ -221,7 +392,7 @@ class _OrderReceipt extends StatelessWidget {
           green: true,
           bold: true,
         ),
-        const Divider(height: 22, color: Color(0xFFE5E7EB)),
+        Divider(height: 22, color: Theme.of(context).dividerColor),
         Row(
           children: [
             Text(
@@ -236,7 +407,7 @@ class _OrderReceipt extends StatelessWidget {
             Text(
               CartPage.money(controller.cart.grandTotal),
               style: TextStyle(
-                color: AppColors.primary,
+                color: Theme.of(context).colorScheme.primary,
                 fontSize: 16,
                 fontWeight: FontWeight.w800,
               ),
@@ -269,7 +440,10 @@ class _ReceiptRow extends StatelessWidget {
       children: [
         Text(
           label.tr,
-          style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+            fontSize: 12,
+          ),
         ),
         const Spacer(),
         if (icon != null) ...[
@@ -282,7 +456,7 @@ class _ReceiptRow extends StatelessWidget {
             color: green
                 ? AppColors.success
                 : (bold
-                      ? AppColors.primary
+                      ? Theme.of(context).colorScheme.primary
                       : Theme.of(context).colorScheme.onSurface),
             fontSize: 13,
             fontWeight: bold ? FontWeight.w600 : FontWeight.w400,
@@ -301,8 +475,9 @@ class _DeliveryDestination extends StatelessWidget {
     width: double.infinity,
     padding: const EdgeInsets.all(12),
     decoration: BoxDecoration(
-      color: AppColors.surface,
+      color: Theme.of(context).colorScheme.surface,
       borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: Theme.of(context).dividerColor),
     ),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -310,7 +485,7 @@ class _DeliveryDestination extends StatelessWidget {
         Text(
           '📍 Delivering to'.tr,
           style: TextStyle(
-            color: AppColors.textSecondary,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
             fontSize: 12,
             fontWeight: FontWeight.w500,
           ),
@@ -340,7 +515,10 @@ class _ItemPreview extends StatelessWidget {
         children: [
           Text(
             '2 of 4 items'.tr,
-            style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+              fontSize: 12,
+            ),
           ),
           const Spacer(),
           InkWell(
@@ -350,7 +528,7 @@ class _ItemPreview extends StatelessWidget {
                 Text(
                   'View Order'.tr,
                   style: TextStyle(
-                    color: AppColors.primary,
+                    color: Theme.of(context).colorScheme.primary,
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                   ),
@@ -358,7 +536,7 @@ class _ItemPreview extends StatelessWidget {
                 SizedBox(width: 4),
                 Icon(
                   Icons.arrow_forward_rounded,
-                  color: AppColors.primary,
+                  color: Theme.of(context).colorScheme.primary,
                   size: 14,
                 ),
               ],
@@ -386,14 +564,14 @@ class _ItemPreview extends StatelessWidget {
             height: 52,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: AppColors.surface,
+              color: Theme.of(context).colorScheme.surface,
               shape: BoxShape.circle,
-              border: Border.all(color: const Color(0xFFE5E7EB)),
+              border: Border.all(color: Theme.of(context).dividerColor),
             ),
             child: Text(
               '+1'.tr,
               style: TextStyle(
-                color: AppColors.textSecondary,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
               ),
@@ -458,16 +636,22 @@ class _SmallAction extends StatelessWidget {
           height: 40,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: color,
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Theme.of(context).colorScheme.surfaceContainerHighest
+                : color,
             borderRadius: BorderRadius.circular(12),
           ),
-          child: Icon(icon, color: AppColors.primary, size: 20),
+          child: Icon(
+            icon,
+            color: Theme.of(context).colorScheme.primary,
+            size: 20,
+          ),
         ),
         const SizedBox(height: 8),
         Text(
           label.tr,
           style: TextStyle(
-            color: AppColors.textSecondary,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
             fontSize: 10,
             fontWeight: FontWeight.w500,
           ),

@@ -78,10 +78,8 @@ class CheckoutPage extends GetView<CheckoutViewModel> {
         _ItemsSummary(controller: controller),
         const SizedBox(height: 10),
         _PriceBreakdown(controller: controller),
-        if (controller.hasDeliveryNotes.value) ...[
-          const SizedBox(height: 10),
-          _DeliveryNotes(controller: controller),
-        ],
+        const SizedBox(height: 10),
+        _DeliveryNotes(controller: controller),
         const SizedBox(height: 12),
         _TermsRow(controller: controller),
       ],
@@ -805,7 +803,7 @@ class _DeliveryNotes extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const _SectionTitle(emoji: '📝', title: 'Delivery Notes'),
-        SizedBox(height: 14),
+        const SizedBox(height: 14),
         TextField(
           controller: controller.notesController,
           minLines: 3,
@@ -816,7 +814,7 @@ class _DeliveryNotes extends StatelessWidget {
             controller.updateDeliveryNotes();
           },
           decoration: InputDecoration(
-            hintText: controller.notesHint.value.tr,
+            hintText: 'Add delivery instructions...'.tr,
             hintStyle: TextStyle(
               color: Theme.of(context).colorScheme.onSurfaceVariant,
               fontSize: 14,
