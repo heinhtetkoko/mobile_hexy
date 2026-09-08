@@ -120,56 +120,54 @@ class _BrandCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Material(
     color: Theme.of(context).colorScheme.surface,
-    borderRadius: BorderRadius.circular(18),
+    clipBehavior: Clip.antiAlias,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(18),
+      side: BorderSide(
+        color: Theme.of(context).colorScheme.primary.withValues(alpha: .32),
+        width: 1.5,
+      ),
+    ),
     child: InkWell(
       key: Key('brand-${brand.id}'),
       onTap: onTap,
       borderRadius: BorderRadius.circular(18),
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: Theme.of(context).dividerColor),
-        ),
-        child: Column(
-          children: [
-            Expanded(
-              child: brand.imageUrl.isEmpty
-                  ? const Icon(Icons.sell_outlined, size: 64)
-                  : Image.network(
-                      brand.imageUrl,
-                      width: double.infinity,
-                      height: double.infinity,
-                      fit: BoxFit.contain,
-                      errorBuilder: (_, _, _) =>
-                          const Icon(Icons.sell_outlined, size: 64),
-                    ),
+      child: Column(
+        children: [
+          Expanded(
+            child: brand.imageUrl.isEmpty
+                ? const Icon(Icons.sell_outlined, size: 64)
+                : Image.network(
+                    brand.imageUrl,
+                    width: double.infinity,
+                    height: double.infinity,
+                    fit: BoxFit.contain,
+                    errorBuilder: (_, _, _) =>
+                        const Icon(Icons.sell_outlined, size: 64),
+                  ),
+          ),
+          const SizedBox(height: 10),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Text(
+              brand.name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
             ),
-            const SizedBox(height: 10),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              child: Text(
-                brand.name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 14,
-                ),
+          ),
+          if (brand.productCount > 0) ...[
+            const SizedBox(height: 3),
+            Text(
+              '${brand.productCount} products',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                fontSize: 11,
               ),
             ),
-            if (brand.productCount > 0) ...[
-              const SizedBox(height: 3),
-              Text(
-                '${brand.productCount} products',
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  fontSize: 11,
-                ),
-              ),
-            ],
-            const SizedBox(height: 8),
           ],
-        ),
+          const SizedBox(height: 8),
+        ],
       ),
     ),
   );

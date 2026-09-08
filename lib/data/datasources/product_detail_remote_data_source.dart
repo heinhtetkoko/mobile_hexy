@@ -88,6 +88,7 @@ class ProductDetailRemoteDataSource {
           data['description_plain']?.toString() ??
           data['description']?.toString() ??
           '',
+      descriptionHtml: data['description_html']?.toString() ?? '',
       brand: data['brand']?.toString() ?? '',
       categories: categoryName.isEmpty ? const [] : [categoryName],
       variantSections: _parseVariantSections(variantSections, data['variants']),

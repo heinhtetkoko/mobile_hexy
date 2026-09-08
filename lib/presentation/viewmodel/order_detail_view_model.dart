@@ -63,8 +63,102 @@ class OrderDetailViewModel extends BaseViewModel {
   }
 
   Map<dynamic, dynamic> get address {
-    final value = detail['shipping_address'] ?? detail['delivery_information'];
+    final value =
+        detail['shipping_address'] ??
+        detail['delivery_address'] ??
+        _nestedValue(const ['delivery_information', 'address']) ??
+        _nestedValue(const ['delivery', 'address']);
     return value is Map ? value : const {};
+  }
+
+  String get deliveryMethod => _detailText(
+    const [
+      'delivery_method',
+      'delivery_method_name',
+      'shipping_method',
+      'shipping_method_name',
+      'carrier',
+      'carrier_name',
+      'method',
+      'method_name',
+    ],
+    containers: const ['delivery_information', 'delivery', 'shipping'],
+  );
+
+  String get paymentMethod => _detailText(
+    const [
+      'payment_method',
+      'payment_method_name',
+      'payment_provider',
+      'payment_provider_name',
+      'provider',
+      'method',
+      'method_name',
+    ],
+    containers: const ['payment_information', 'payment', 'transaction'],
+  );
+
+  String get deliveryNotes => _detailText(
+    const [
+      'delivery_notes',
+      'delivery_note',
+      'shipping_notes',
+      'shipping_note',
+      'customer_note',
+      'note',
+      'notes',
+    ],
+    containers: const ['delivery_information', 'delivery', 'shipping'],
+  );
+
+  String _detailText(List<String> keys, {List<String> containers = const []}) {
+    for (final key in keys) {
+      final result = _displayText(detail[key]);
+      if (result.isNotEmpty) return result;
+    }
+    for (final containerKey in containers) {
+      final container = detail[containerKey];
+      if (container is! Map) continue;
+      for (final key in keys) {
+        final result = _displayText(container[key]);
+        if (result.isNotEmpty) return result;
+      }
+    }
+    return '';
+  }
+
+  Object? _nestedValue(List<String> path) {
+    Object? value = detail;
+    for (final key in path) {
+      if (value is! Map) return null;
+      value = value[key];
+    }
+    return value;
+  }
+
+  String _displayText(Object? value) {
+    if (value is Map) {
+      for (final key in const [
+        'display_name',
+        'label',
+        'name',
+        'title',
+        'value',
+        'code',
+      ]) {
+        final result = _displayText(value[key]);
+        if (result.isNotEmpty) return result;
+      }
+      return '';
+    }
+    if (value is List) {
+      return value
+          .map(_displayText)
+          .where((text) => text.isNotEmpty)
+          .join(', ');
+    }
+    final result = value?.toString().trim() ?? '';
+    return result == 'false' || result == 'null' ? '' : result;
   }
 
   List<Map<String, dynamic>> get summaryRows {

@@ -79,6 +79,7 @@ class ProductDetail {
     required this.inStock,
     required this.availableQuantity,
     required this.description,
+    required this.descriptionHtml,
     required this.brand,
     required this.categories,
     required this.variantSections,
@@ -107,6 +108,7 @@ class ProductDetail {
   final bool inStock;
   final double availableQuantity;
   final String description;
+  final String descriptionHtml;
   final String brand;
   final List<String> categories;
   final List<ProductVariantSection> variantSections;

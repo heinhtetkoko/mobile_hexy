@@ -48,7 +48,10 @@ class OrdersRemoteDataSource {
     );
     final data = _payload(response.data, 'Order detail is unavailable.');
     final nested = data['order'] ?? data['order_detail'];
-    return Map<String, dynamic>.from(nested is Map ? nested : data);
+    if (nested is Map) {
+      return <String, dynamic>{...data, ...Map<String, dynamic>.from(nested)};
+    }
+    return data;
   }
 
   Map<String, dynamic> _payload(Object? body, String fallback) {

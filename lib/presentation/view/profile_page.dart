@@ -258,7 +258,8 @@ class _ProfileHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    height: 164,
+    constraints: const BoxConstraints(minHeight: 164),
+    padding: const EdgeInsets.symmetric(vertical: 12),
     decoration: const BoxDecoration(
       gradient: LinearGradient(
         begin: Alignment.topCenter,

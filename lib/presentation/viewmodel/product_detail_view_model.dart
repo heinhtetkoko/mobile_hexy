@@ -30,6 +30,7 @@ class ProductDetailViewModel extends BaseViewModel {
   final product = Rxn<ProductDetail>();
   final isLoading = false.obs;
   final isAddingToCart = false.obs;
+  final isBuyingNow = false.obs;
   final isUpdatingWishlist = false.obs;
   final recommendationFavoriteIds = <int>{}.obs;
   final updatingRecommendationIds = <int>{}.obs;
@@ -182,11 +183,17 @@ class ProductDetailViewModel extends BaseViewModel {
   }
 
   Future<void> addToCart() async {
-    await _addCurrentProductToCart(pendingAction: 'add_to_cart');
+    await _addCurrentProductToCart(
+      pendingAction: 'add_to_cart',
+      isBuyNowAction: false,
+    );
   }
 
   Future<void> buyNow() async {
-    final added = await _addCurrentProductToCart(pendingAction: 'buy_now');
+    final added = await _addCurrentProductToCart(
+      pendingAction: 'buy_now',
+      isBuyNowAction: true,
+    );
     if (!added) return;
 
     Get.until(
@@ -202,11 +209,17 @@ class ProductDetailViewModel extends BaseViewModel {
     }
   }
 
-  Future<bool> _addCurrentProductToCart({required String pendingAction}) async {
+  Future<bool> _addCurrentProductToCart({
+    required String pendingAction,
+    required bool isBuyNowAction,
+  }) async {
     final detail = product.value;
-    if (detail == null || isAddingToCart.value) return false;
+    if (detail == null || isAddingToCart.value || isBuyingNow.value) {
+      return false;
+    }
     if (!await _ensureAuthenticated(pendingAction)) return false;
-    isAddingToCart.value = true;
+    final loadingState = isBuyNowAction ? isBuyingNow : isAddingToCart;
+    loadingState.value = true;
     try {
       await _cartRemoteDataSource.addProduct(
         productId: detail.id,
@@ -228,7 +241,7 @@ class ProductDetailViewModel extends BaseViewModel {
       }
       return false;
     } finally {
-      isAddingToCart.value = false;
+      loadingState.value = false;
     }
   }
 

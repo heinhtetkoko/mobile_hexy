@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_widget_from_html_core/flutter_widget_from_html_core.dart';
 import 'package:get/get.dart';
 import 'package:mobile_hexy/app.dart';
 import 'package:mobile_hexy/data/models/product_detail.dart';
@@ -714,36 +715,119 @@ class _Variants extends StatelessWidget {
   }
 }
 
-class _Description extends StatelessWidget {
+class _Description extends StatefulWidget {
   const _Description({required this.controller});
   final ProductDetailViewModel controller;
+
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.all(16),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Product Description'.tr,
-          style: TextStyle(
-            color: Theme.of(context).colorScheme.onSurface,
-            fontSize: 16,
-            fontWeight: FontWeight.w800,
+  State<_Description> createState() => _DescriptionState();
+}
+
+class _DescriptionState extends State<_Description> {
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final product = widget.controller.product.value!;
+    final preview = product.description.isNotEmpty
+        ? product.description
+        : _plainText(product.descriptionHtml);
+    final hasDescription =
+        product.descriptionHtml.isNotEmpty || preview.isNotEmpty;
+    final canToggle = preview.length > 180;
+
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Product Description'.tr,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface,
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
+            ),
           ),
-        ),
-        SizedBox(height: 8),
-        Text(
-          controller.product.value!.description.isEmpty
-              ? 'No description available.'.tr
-              : controller.product.value!.description,
-          style: TextStyle(
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-            height: 1.5,
-          ),
-        ),
-      ],
-    ),
-  );
+          const SizedBox(height: 8),
+          if (!hasDescription)
+            Text(
+              'No description available.'.tr,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                height: 1.5,
+              ),
+            )
+          else if (product.descriptionHtml.isNotEmpty)
+            if (_expanded)
+              HtmlWidget(
+                product.descriptionHtml,
+                textStyle: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  height: 1.5,
+                ),
+              )
+            else
+              ClipRect(
+                child: SizedBox(
+                  height: 88,
+                  child: SingleChildScrollView(
+                    physics: const NeverScrollableScrollPhysics(),
+                    child: HtmlWidget(
+                      product.descriptionHtml,
+                      textStyle: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        height: 1.5,
+                      ),
+                    ),
+                  ),
+                ),
+              )
+          else
+            Text(
+              preview,
+              maxLines: _expanded ? null : 4,
+              overflow: _expanded ? null : TextOverflow.ellipsis,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                height: 1.5,
+              ),
+            ),
+          if (canToggle)
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                key: const Key('product-description-toggle'),
+                onPressed: () => setState(() => _expanded = !_expanded),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.only(top: 4),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                iconAlignment: IconAlignment.end,
+                icon: Icon(
+                  _expanded
+                      ? Icons.keyboard_arrow_up_rounded
+                      : Icons.keyboard_arrow_down_rounded,
+                  size: 18,
+                ),
+                label: Text((_expanded ? 'See Less' : 'See More').tr),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  String _plainText(String html) => html
+      .replaceAll(RegExp(r'<br\s*/?>', caseSensitive: false), '\n')
+      .replaceAll(RegExp(r'</(p|div|li|h[1-6])>', caseSensitive: false), '\n')
+      .replaceAll(RegExp(r'<[^>]*>'), '')
+      .replaceAll('&nbsp;', ' ')
+      .replaceAll('&amp;', '&')
+      .replaceAll('&lt;', '<')
+      .replaceAll('&gt;', '>')
+      .replaceAll(RegExp(r'\n\s*\n+'), '\n')
+      .trim();
 }
 
 class _ProductRecommendations extends StatelessWidget {
@@ -1070,7 +1154,9 @@ class _BottomActions extends StatelessWidget {
           Expanded(
             child: Obx(
               () => FilledButton(
-                onPressed: controller.isAddingToCart.value
+                onPressed:
+                    controller.isAddingToCart.value ||
+                        controller.isBuyingNow.value
                     ? null
                     : controller.addToCart,
                 style: FilledButton.styleFrom(
@@ -1109,7 +1195,9 @@ class _BottomActions extends StatelessWidget {
           Expanded(
             child: Obx(
               () => FilledButton(
-                onPressed: controller.isAddingToCart.value
+                onPressed:
+                    controller.isAddingToCart.value ||
+                        controller.isBuyingNow.value
                     ? null
                     : controller.buyNow,
                 style: FilledButton.styleFrom(
@@ -1119,7 +1207,7 @@ class _BottomActions extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                child: controller.isAddingToCart.value
+                child: controller.isBuyingNow.value
                     ? const SizedBox(
                         width: 16,
                         height: 16,

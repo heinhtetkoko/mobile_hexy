@@ -105,15 +105,15 @@ class OrderDetailPage extends GetView<OrderDetailViewModel> {
                 children: [
                   _DetailRow(
                     label: 'Delivery Method',
-                    value: _nestedText(controller.detail['delivery_method']),
+                    value: controller.deliveryMethod,
                   ),
                   _DetailRow(
                     label: 'Payment Method',
-                    value: _nestedText(controller.detail['payment_method']),
+                    value: controller.paymentMethod,
                   ),
                   _DetailRow(
                     label: 'Delivery Notes',
-                    value: _nestedText(controller.detail['delivery_notes']),
+                    value: controller.deliveryNotes,
                   ),
                 ],
               ),
@@ -154,19 +154,6 @@ class OrderDetailPage extends GetView<OrderDetailViewModel> {
       }),
     ),
   );
-
-  static String _nestedText(Object? value) {
-    if (value is Map) {
-      return (value['label'] ??
-                  value['name'] ??
-                  value['value'] ??
-                  value['text'] ??
-                  value['delivery_notes'])
-              ?.toString() ??
-          '';
-    }
-    return value?.toString() ?? '';
-  }
 
   static String _amountText(Map<String, dynamic> row) =>
       (row['formatted_value'] ??

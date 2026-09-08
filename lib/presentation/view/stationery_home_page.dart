@@ -686,9 +686,22 @@ class _BrandList extends StatelessWidget {
           key: Key('home-brand-${items[index].id}'),
           onTap: () => onTap(items[index]),
           borderRadius: BorderRadius.circular(14),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(14),
-            child: _BrandImage(item: items[index]),
+          child: Container(
+            padding: const EdgeInsets.all(1.5),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: Theme.of(
+                  context,
+                ).colorScheme.primary.withValues(alpha: .32),
+                width: 1.5,
+              ),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12.5),
+              clipBehavior: Clip.antiAlias,
+              child: _BrandImage(item: items[index]),
+            ),
           ),
         ),
       ),
@@ -1925,7 +1938,7 @@ class _ChatFooter extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
             _SupportChannel(
-              icon: Icons.smart_display_rounded,
+              customIcon: const _YouTubeIcon(),
               label: 'YouTube',
               color: Color(0xFFFF0000),
               onTap: () => _openExternalUrl(
@@ -1934,31 +1947,32 @@ class _ChatFooter extends StatelessWidget {
               ),
             ),
             _SupportChannel(
-              icon: Icons.message_rounded,
+              customIcon: const _MessengerIcon(),
               label: 'Messenger',
-              color: Color(0xFF7C3AED),
+              color: Color(0xFF168AFF),
               onTap: () => _openExternalUrl(
                 url: 'https://m.me/hexcystationery',
                 channelName: 'Messenger',
               ),
             ),
             _SupportChannel(
-              icon: Icons.send_rounded,
-              label: 'Telegram',
-              color: Color(0xFF38BDF8),
+              customIcon: const _TikTokIcon(),
+              label: 'TikTok',
+              color: Colors.black,
               onTap: () => _openExternalUrl(
-                url: 'https://www.hexcymegastore.com/',
-                channelName: 'browser',
+                url:
+                    'https://www.tiktok.com/@hexcy.stationery?_r=1&_t=ZS-99Q8z9h6u2O',
+                channelName: 'TikTok',
               ),
             ),
             _SupportChannel(
-              icon: Icons.phone_in_talk_rounded,
+              customIcon: const _ViberIcon(),
               label: 'Viber',
               color: Color(0xFF8B5CF6),
               onTap: _openViberChat,
             ),
             _SupportChannel(
-              icon: Icons.camera_alt_rounded,
+              customIcon: const _InstagramIcon(),
               label: 'Instagram',
               color: Color(0xFFEC4899),
               onTap: () => _openExternalUrl(
@@ -2025,12 +2039,14 @@ class _ChatFooter extends StatelessWidget {
 
 class _SupportChannel extends StatelessWidget {
   const _SupportChannel({
-    required this.icon,
+    this.icon,
+    this.customIcon,
     required this.label,
     required this.color,
     this.onTap,
-  });
-  final IconData icon;
+  }) : assert(icon != null || customIcon != null);
+  final IconData? icon;
+  final Widget? customIcon;
   final String label;
   final Color color;
   final VoidCallback? onTap;
@@ -2048,9 +2064,17 @@ class _SupportChannel extends StatelessWidget {
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: .12),
               shape: BoxShape.circle,
-              border: Border.all(color: Colors.white.withValues(alpha: .2)),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: .5),
+                width: 1.2,
+              ),
             ),
-            child: Icon(icon, color: color, size: 24),
+            child: Padding(
+              padding: const EdgeInsets.all(8),
+              child: Center(
+                child: customIcon ?? Icon(icon, color: color, size: 24),
+              ),
+            ),
           ),
           const SizedBox(height: 5),
           Text(
@@ -2065,6 +2089,245 @@ class _SupportChannel extends StatelessWidget {
       ),
     ),
   );
+}
+
+class _TikTokIcon extends StatelessWidget {
+  const _TikTokIcon();
+
+  @override
+  Widget build(BuildContext context) => Stack(
+    alignment: Alignment.center,
+    children: [
+      Transform.translate(
+        offset: const Offset(-1.8, 0),
+        child: const Icon(
+          Icons.music_note_rounded,
+          color: Color(0xFF25F4EE),
+          size: 22,
+        ),
+      ),
+      Transform.translate(
+        offset: const Offset(1.8, 0),
+        child: const Icon(
+          Icons.music_note_rounded,
+          color: Color(0xFFFE2C55),
+          size: 22,
+        ),
+      ),
+      const Icon(Icons.music_note_rounded, color: Colors.white, size: 20),
+    ],
+  );
+}
+
+class _MessengerIcon extends StatelessWidget {
+  const _MessengerIcon();
+
+  @override
+  Widget build(BuildContext context) => const SizedBox.square(
+    dimension: 23,
+    child: CustomPaint(painter: _MessengerIconPainter()),
+  );
+}
+
+class _YouTubeIcon extends StatelessWidget {
+  const _YouTubeIcon();
+
+  @override
+  Widget build(BuildContext context) => const SizedBox(
+    width: 24,
+    height: 18,
+    child: CustomPaint(painter: _YouTubeIconPainter()),
+  );
+}
+
+class _YouTubeIconPainter extends CustomPainter {
+  const _YouTubeIconPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Offset.zero & size,
+        Radius.circular(size.height * .27),
+      ),
+      Paint()..color = const Color(0xFFFF0000),
+    );
+    final play = Path()
+      ..moveTo(size.width * .43, size.height * .28)
+      ..lineTo(size.width * .72, size.height * .50)
+      ..lineTo(size.width * .43, size.height * .72)
+      ..close();
+    canvas.drawPath(play, Paint()..color = Colors.white);
+  }
+
+  @override
+  bool shouldRepaint(covariant _YouTubeIconPainter oldDelegate) => false;
+}
+
+class _ViberIcon extends StatelessWidget {
+  const _ViberIcon();
+
+  @override
+  Widget build(BuildContext context) => const SizedBox.square(
+    dimension: 23,
+    child: CustomPaint(painter: _ViberIconPainter()),
+  );
+}
+
+class _ViberIconPainter extends CustomPainter {
+  const _ViberIconPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final purple = Paint()..color = const Color(0xFF7360F2);
+    final bubble = RRect.fromRectAndRadius(
+      Rect.fromLTWH(1, 1, size.width - 2, size.height - 5),
+      Radius.circular(size.width * .32),
+    );
+    canvas.drawRRect(bubble, purple);
+    final tail = Path()
+      ..moveTo(size.width * .26, size.height * .77)
+      ..lineTo(size.width * .20, size.height)
+      ..lineTo(size.width * .43, size.height * .82)
+      ..close();
+    canvas.drawPath(tail, purple);
+
+    final phone = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.8
+      ..strokeCap = StrokeCap.round;
+    final handset = Path()
+      ..moveTo(size.width * .31, size.height * .36)
+      ..cubicTo(
+        size.width * .34,
+        size.height * .62,
+        size.width * .53,
+        size.height * .71,
+        size.width * .68,
+        size.height * .67,
+      );
+    canvas.drawPath(handset, phone);
+    canvas.drawLine(
+      Offset(size.width * .28, size.height * .31),
+      Offset(size.width * .36, size.height * .40),
+      phone,
+    );
+    canvas.drawLine(
+      Offset(size.width * .63, size.height * .62),
+      Offset(size.width * .72, size.height * .67),
+      phone,
+    );
+
+    final signal = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.4
+      ..strokeCap = StrokeCap.round;
+    canvas.drawArc(
+      Rect.fromLTWH(
+        size.width * .46,
+        size.height * .22,
+        size.width * .25,
+        size.height * .25,
+      ),
+      -1.45,
+      1.15,
+      false,
+      signal,
+    );
+    canvas.drawArc(
+      Rect.fromLTWH(
+        size.width * .42,
+        size.height * .16,
+        size.width * .39,
+        size.height * .39,
+      ),
+      -1.45,
+      1.15,
+      false,
+      signal,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _ViberIconPainter oldDelegate) => false;
+}
+
+class _MessengerIconPainter extends CustomPainter {
+  const _MessengerIconPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final blue = Paint()..color = const Color(0xFF168AFF);
+    canvas.drawCircle(size.center(Offset.zero), size.width / 2, blue);
+    final bolt = Path()
+      ..moveTo(size.width * .20, size.height * .60)
+      ..lineTo(size.width * .43, size.height * .36)
+      ..lineTo(size.width * .55, size.height * .47)
+      ..lineTo(size.width * .80, size.height * .34)
+      ..lineTo(size.width * .57, size.height * .63)
+      ..lineTo(size.width * .44, size.height * .52)
+      ..close();
+    canvas.drawPath(bolt, Paint()..color = Colors.white);
+  }
+
+  @override
+  bool shouldRepaint(covariant _MessengerIconPainter oldDelegate) => false;
+}
+
+class _InstagramIcon extends StatelessWidget {
+  const _InstagramIcon();
+
+  @override
+  Widget build(BuildContext context) => const SizedBox.square(
+    dimension: 23,
+    child: CustomPaint(painter: _InstagramIconPainter()),
+  );
+}
+
+class _InstagramIconPainter extends CustomPainter {
+  const _InstagramIconPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final bounds = Offset.zero & size;
+    final background = Paint()
+      ..shader = const LinearGradient(
+        begin: Alignment.bottomLeft,
+        end: Alignment.topRight,
+        colors: [Color(0xFFFFC107), Color(0xFFF72585), Color(0xFF833AB4)],
+      ).createShader(bounds);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(bounds, Radius.circular(size.width * .28)),
+      background,
+    );
+    final line = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.1;
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(
+          size.width * .20,
+          size.height * .20,
+          size.width * .60,
+          size.height * .60,
+        ),
+        Radius.circular(size.width * .18),
+      ),
+      line,
+    );
+    canvas.drawCircle(size.center(Offset.zero), size.width * .14, line);
+    canvas.drawCircle(
+      Offset(size.width * .68, size.height * .32),
+      size.width * .045,
+      Paint()..color = Colors.white,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _InstagramIconPainter oldDelegate) => false;
 }
 
 class _PaymentMethods extends StatelessWidget {
