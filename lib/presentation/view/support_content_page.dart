@@ -172,6 +172,20 @@ class _ContactContent extends StatelessWidget {
     final root = data is Map ? data as Map : const {};
     final nested = root['contact'];
     final map = nested is Map ? {...root, ...nested} : root;
+    final rawStores =
+        map['stores'] ??
+        map['branches'] ??
+        map['locations'] ??
+        map['shops'] ??
+        map['outlets'];
+    if (rawStores is List) {
+      final stores = rawStores
+          .whereType<Map>()
+          .map((store) => <dynamic, dynamic>{...map, ...store})
+          .take(3)
+          .toList(growable: false);
+      if (stores.isNotEmpty) return _ContactStoreList(stores: stores);
+    }
     final phones = _contactValues(
       map['phones'] ?? map['phone_numbers'] ?? [map['phone'], map['hotline']],
     );
@@ -343,6 +357,134 @@ class _ContactContent extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _ContactStoreList extends StatelessWidget {
+  const _ContactStoreList({required this.stores});
+
+  final List<Map<dynamic, dynamic>> stores;
+
+  @override
+  Widget build(BuildContext context) => ListView.separated(
+    physics: const AlwaysScrollableScrollPhysics(),
+    padding: const EdgeInsets.all(16),
+    itemCount: stores.length,
+    separatorBuilder: (_, _) => const SizedBox(height: 16),
+    itemBuilder: (context, index) =>
+        _ContactStoreCard(store: stores[index], index: index),
+  );
+}
+
+class _ContactStoreCard extends StatelessWidget {
+  const _ContactStoreCard({required this.store, required this.index});
+
+  final Map<dynamic, dynamic> store;
+  final int index;
+
+  @override
+  Widget build(BuildContext context) {
+    final location = store['map'] ?? store['location'] ?? store['coordinates'];
+    final latitude = _coordinate(
+      location is Map
+          ? location['latitude'] ?? location['lat']
+          : store['latitude'],
+    );
+    final longitude = _coordinate(
+      location is Map
+          ? location['longitude'] ?? location['lng'] ?? location['lon']
+          : store['longitude'],
+    );
+    final address = _contactValues(
+      store['address'] ?? store['full_address'] ?? store['address_text'],
+    );
+    final directionsUrl =
+        store['directions_url']?.toString() ??
+        (store['address'] is Map
+            ? (store['address'] as Map)['directions_url']?.toString()
+            : null);
+    final mapUri = _mapUri(
+      latitude: latitude,
+      longitude: longitude,
+      directionsUrl: directionsUrl,
+      address: address.join(', '),
+    );
+    final name =
+        (store['store_name'] ??
+                store['branch_name'] ??
+                store['name'] ??
+                store['title'])
+            ?.toString() ??
+        'Store ${index + 1}';
+    final phones = _contactValues(
+      store['phones'] ?? store['phone_numbers'] ?? store['phone'],
+    );
+    final emails = _contactValues(store['emails'] ?? store['email']);
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Theme.of(context).dividerColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            name,
+            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
+          ),
+          if (phones.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            _ContactDetailRow(
+              icon: Icons.phone_outlined,
+              iconColor: const Color(0xFF24205F),
+              iconBackground: const Color(0xFFF0F1FF),
+              values: phones,
+              onValueTap: _openPhoneDialer,
+            ),
+          ],
+          if (emails.isNotEmpty) ...[
+            const Divider(height: 1),
+            _ContactDetailRow(
+              icon: Icons.mail_outline_rounded,
+              iconColor: const Color(0xFFE91E75),
+              iconBackground: const Color(0xFFFFEDF5),
+              values: emails,
+              onValueTap: (email) => _openContactLink(
+                Uri(scheme: 'mailto', path: email.trim()),
+                label: 'Email',
+              ),
+            ),
+          ],
+          if (address.isNotEmpty) ...[
+            const Divider(height: 1),
+            _ContactDetailRow(
+              icon: Icons.location_on_outlined,
+              iconColor: const Color(0xFF10B968),
+              iconBackground: const Color(0xFFEAFFF3),
+              values: [...address, if (mapUri != null) 'Get Directions →'],
+              onTap: mapUri == null
+                  ? null
+                  : () => _openContactLink(mapUri, label: 'Maps'),
+            ),
+          ],
+          const SizedBox(height: 12),
+          _ContactMapCard(
+            latitude: latitude,
+            longitude: longitude,
+            storeName: name,
+            mapLabel: location is Map
+                ? location['label']?.toString() ?? 'Open in Maps'
+                : 'Open in Maps',
+            onOpenMap: mapUri == null
+                ? null
+                : () => _openContactLink(mapUri, label: 'Maps'),
+          ),
+        ],
+      ),
     );
   }
 }
