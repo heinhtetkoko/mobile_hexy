@@ -7,6 +7,7 @@ class CatalogProduct {
     this.imageUrl,
     this.originalPrice,
     this.discount,
+    this.variantId,
   });
 
   final String id;
@@ -16,4 +17,5 @@ class CatalogProduct {
   final String? imageUrl;
   final String? originalPrice;
   final String? discount;
+  final int? variantId;
 }

@@ -127,7 +127,7 @@ class CategoryProductsRemoteDataSource {
     final response = await _apiService.get<dynamic>(
       ApiEndpoints.discountProducts,
       queryParameters: {
-        'source': 'all',
+        'source': 'pricelist',
         'sort': 'highest_discount',
         'page': page,
         'limit': limit,
@@ -192,6 +192,7 @@ class CategoryProductsRemoteDataSource {
           ? null
           : '${compareAt.toStringAsFixed(2)} $symbol'.trim(),
       discount: discount > 0 ? '${_formatPercent(discount)}%' : null,
+      variantId: _positiveInt(json['product_variant_id'] ?? json['variant_id']),
       imageAsset: '',
       imageUrl: json['image_url']?.toString(),
     );
@@ -209,4 +210,9 @@ class CategoryProductsRemoteDataSource {
             .toStringAsFixed(2)
             .replaceFirst(RegExp(r'0+$'), '')
             .replaceFirst(RegExp(r'\.$'), '');
+
+  int? _positiveInt(Object? value) {
+    final parsed = int.tryParse(value?.toString() ?? '');
+    return parsed != null && parsed > 0 ? parsed : null;
+  }
 }

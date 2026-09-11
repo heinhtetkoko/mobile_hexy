@@ -60,7 +60,13 @@ class BestSellersRemoteDataSource {
       imageUrl: json['image_url']?.toString(),
       hot: json['in_stock'] == true,
       discountPercent: _discountPercent(json),
+      variantId: _positiveInt(json['product_variant_id'] ?? json['variant_id']),
     );
+  }
+
+  int? _positiveInt(Object? value) {
+    final parsed = int.tryParse(value?.toString() ?? '');
+    return parsed != null && parsed > 0 ? parsed : null;
   }
 
   double? _discountPercent(Map<dynamic, dynamic> json) {

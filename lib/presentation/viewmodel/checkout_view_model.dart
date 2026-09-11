@@ -238,6 +238,23 @@ class CheckoutViewModel extends BaseViewModel {
     }
     isPlacingOrder.value = true;
     try {
+      final purchasedItems = cart.items
+          .map(
+            (item) => <String, dynamic>{
+              'id': item.id,
+              'product_id': item.productId,
+              'name': item.name,
+              'quantity': item.quantity,
+              'image_url': item.imageUrl,
+              'image_asset': item.imageAsset,
+            },
+          )
+          .toList(growable: false);
+      final purchasedItemCount = cart.items.fold<int>(
+        0,
+        (total, item) => total + item.quantity,
+      );
+      final deliveryAddress = selectedAddress.value!;
       final result = await _checkoutRemoteDataSource.placeOrder(
         shippingAddressId: selectedAddress.value!.id,
         deliveryMethodId: selectedDeliveryMethod.value!.id,
@@ -245,7 +262,29 @@ class CheckoutViewModel extends BaseViewModel {
         termsAccepted: termsAccepted.value,
         deliveryNotes: notesController.text.trim(),
       );
-      Get.offNamed<dynamic>(AppRoutes.paymentSuccess, arguments: result);
+      Get.offNamed<dynamic>(
+        AppRoutes.paymentSuccess,
+        arguments: <String, dynamic>{
+          ...result,
+          '_checkout_items': purchasedItems,
+          '_checkout_item_count': purchasedItemCount,
+          '_checkout_grand_total': cart.grandTotal,
+          '_checkout_currency_symbol': cart.currencySymbol.value,
+          '_checkout_payment_method': selectedPayment.value,
+          '_checkout_delivery_method': selectedDeliveryMethod.value!.name,
+          '_checkout_delivery_notes': notesController.text.trim(),
+          '_checkout_address': <String, dynamic>{
+            'id': deliveryAddress.id,
+            'name': deliveryAddress.name,
+            'phone': deliveryAddress.phone,
+            'address_type': deliveryAddress.addressType,
+            'building': deliveryAddress.building,
+            'street_address': deliveryAddress.streetAddress,
+            'city_township': deliveryAddress.cityTownship,
+            'state_region': deliveryAddress.stateRegion,
+          },
+        },
+      );
     } catch (error) {
       _showError('Could not place order', error);
     } finally {

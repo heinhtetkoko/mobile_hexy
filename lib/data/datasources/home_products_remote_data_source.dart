@@ -24,15 +24,10 @@ class HomeProductsRemoteDataSource {
     required String path,
     required int page,
     required int limit,
-    String? programType,
   }) async {
     final response = await _apiService.get<dynamic>(
       path,
-      queryParameters: {
-        'program_type': ?programType,
-        'page': page,
-        'limit': limit,
-      },
+      queryParameters: {'page': page, 'limit': limit},
       options: Options(extra: const {ApiEndpoints.requiresAuthKey: false}),
     );
     final body = response.data;
@@ -57,7 +52,31 @@ class HomeProductsRemoteDataSource {
     final currency = json['currency'];
     final discount = json['discount'];
     final symbol = currency is Map ? currency['symbol']?.toString() ?? '' : '';
-    final price = double.tryParse(json['price']?.toString() ?? '') ?? 0;
+    final price =
+        double.tryParse(
+          (json['current_price'] ?? json['sale_price'] ?? json['price'])
+                  ?.toString() ??
+              '',
+        ) ??
+        0;
+    final originalPrice = double.tryParse(
+      (json['original_price'] ?? json['compare_at_price'] ?? json['list_price'])
+              ?.toString() ??
+          '',
+    );
+    final explicitDiscount = _parsePercent(
+      json['discount_percentage'] ??
+          json['discount_percent'] ??
+          json['discount_value'] ??
+          (discount is Map
+              ? discount['percentage'] ??
+                    discount['percent'] ??
+                    discount['value']
+              : discount),
+    );
+    final calculatedDiscount = originalPrice != null && originalPrice > price
+        ? ((originalPrice - price) / originalPrice) * 100
+        : null;
     return HomeProduct(
       id: json['id']?.toString() ?? '',
       name: json['name']?.toString() ?? '',
@@ -68,17 +87,46 @@ class HomeProductsRemoteDataSource {
       wishlist: json['wishlist'] == true,
       availableQty:
           double.tryParse(json['available_qty']?.toString() ?? '') ?? 0,
-      discountPercent: _parsePercent(
-        json['discount_percentage'] ??
-            json['discount_percent'] ??
-            json['discount_value'] ??
-            (discount is Map
-                ? discount['percentage'] ??
-                      discount['percent'] ??
-                      discount['value']
-                : discount),
+      discountPercent: explicitDiscount ?? calculatedDiscount,
+      variantId: _parsePositiveInt(
+        json['product_variant_id'] ?? json['variant_id'],
       ),
+      countdownSeconds: _countdownSeconds(json),
     );
+  }
+
+  int? _countdownSeconds(Map<dynamic, dynamic> json) {
+    final timer = json['flash_sale_timer'];
+    final direct = _parseNonNegativeInt(
+      json['countdown_seconds'] ??
+          json['time_limit_count'] ??
+          (timer is Map
+              ? timer['countdown_seconds'] ??
+                    timer['remaining_seconds'] ??
+                    timer['seconds_remaining']
+              : null),
+    );
+    if (direct != null) return direct;
+
+    final rawEnd =
+        json['sale_ends_at'] ??
+        (timer is Map ? timer['sale_ends_at'] ?? timer['ends_at'] : null);
+    final end = DateTime.tryParse(rawEnd?.toString() ?? '');
+    if (end == null) return null;
+    final remaining = end.difference(DateTime.now()).inSeconds;
+    return remaining < 0 ? 0 : remaining;
+  }
+
+  int? _parseNonNegativeInt(Object? value) {
+    final parsed = value is num
+        ? value.toInt()
+        : int.tryParse(value?.toString() ?? '');
+    return parsed != null && parsed >= 0 ? parsed : null;
+  }
+
+  int? _parsePositiveInt(Object? value) {
+    final parsed = int.tryParse(value?.toString() ?? '');
+    return parsed != null && parsed > 0 ? parsed : null;
   }
 
   double? _parsePercent(Object? value) {

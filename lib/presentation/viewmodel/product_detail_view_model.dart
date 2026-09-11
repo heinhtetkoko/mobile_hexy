@@ -223,6 +223,7 @@ class ProductDetailViewModel extends BaseViewModel {
     try {
       await _cartRemoteDataSource.addProduct(
         productId: detail.id,
+        productVariantId: selectedVariantId.value,
         quantity: quantity.value,
       );
       Get.snackbar(

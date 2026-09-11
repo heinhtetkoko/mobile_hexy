@@ -17,10 +17,17 @@ class CartRemoteDataSource {
   Future<Map<String, dynamic>> addProduct({
     required int productId,
     required int quantity,
+    int? productVariantId,
   }) async {
     final response = await _apiService.post<dynamic>(
       ApiEndpoints.cart,
-      data: {'action': 'add', 'product_id': productId, 'quantity': quantity},
+      data: {
+        'action': 'add',
+        'product_id': productId,
+        if (productVariantId != null && productVariantId > 0)
+          'product_variant_id': productVariantId,
+        'quantity': quantity,
+      },
       options: Options(
         extra: const {ApiEndpoints.redirectOnUnauthorizedKey: true},
       ),

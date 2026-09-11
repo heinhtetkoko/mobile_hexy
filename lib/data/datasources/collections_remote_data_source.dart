@@ -90,6 +90,9 @@ class CollectionsRemoteDataSource {
       discount: discount == null || discount <= 0
           ? null
           : '${_format(discount)}%',
+      variantId: _positiveInt(
+        source['product_variant_id'] ?? source['variant_id'],
+      ),
       imageAsset: '',
       imageUrl:
           (source['image_url'] ?? source['image'] ?? source['thumbnail_url'])
@@ -98,6 +101,11 @@ class CollectionsRemoteDataSource {
   }
 
   double _number(Object? value) => _nullableNumber(value) ?? 0;
+  int? _positiveInt(Object? value) {
+    final parsed = int.tryParse(value?.toString() ?? '');
+    return parsed != null && parsed > 0 ? parsed : null;
+  }
+
   double? _nullableNumber(Object? value) => value is num
       ? value.toDouble()
       : double.tryParse(value?.toString() ?? '');

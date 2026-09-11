@@ -81,6 +81,8 @@ class OrderDetailViewModel extends BaseViewModel {
       'carrier_name',
       'method',
       'method_name',
+      'delivery_method_id',
+      'carrier_id',
     ],
     containers: const ['delivery_information', 'delivery', 'shipping'],
   );
@@ -94,6 +96,9 @@ class OrderDetailViewModel extends BaseViewModel {
       'provider',
       'method',
       'method_name',
+      'payment_method_code',
+      'payment_code',
+      'payment_method_id',
     ],
     containers: const ['payment_information', 'payment', 'transaction'],
   );
@@ -164,12 +169,154 @@ class OrderDetailViewModel extends BaseViewModel {
   List<Map<String, dynamic>> get summaryRows {
     final source =
         detail['order_summary'] ?? detail['summary'] ?? detail['totals'];
-    final raw = source is Map ? source['rows'] ?? source['data'] : source;
-    return raw is List
-        ? raw
-              .whereType<Map>()
-              .map((row) => Map<String, dynamic>.from(row))
-              .toList()
-        : const [];
+    final raw = source is Map
+        ? source['rows'] ?? source['items'] ?? source['lines'] ?? source['data']
+        : source;
+    if (raw is List) {
+      return raw
+          .whereType<Map>()
+          .map(_normalizeSummaryRow)
+          .where((row) => row['value']?.toString().isNotEmpty == true)
+          .toList(growable: false);
+    }
+    final flatSource = raw is Map ? raw : source;
+    if (flatSource is Map) {
+      return flatSource.entries
+          .where(
+            (entry) => !const {
+              'currency',
+              'currency_symbol',
+              'rows',
+              'items',
+              'lines',
+              'data',
+            }.contains(entry.key.toString()),
+          )
+          .map(
+            (entry) =>
+                _normalizeSummaryRow({'key': entry.key, 'value': entry.value}),
+          )
+          .where((row) => row['value']?.toString().isNotEmpty == true)
+          .toList(growable: false);
+    }
+
+    final rows = <Map<String, dynamic>>[];
+    _addSummaryRow(rows, 'Subtotal', const [
+      'formatted_subtotal',
+      'subtotal',
+      'amount_untaxed',
+    ]);
+    _addSummaryRow(rows, 'Discount', const [
+      'formatted_discount',
+      'discount',
+      'discount_amount',
+      'coupon_discount',
+    ]);
+    _addSummaryRow(rows, 'Delivery Fee', const [
+      'formatted_shipping',
+      'shipping',
+      'shipping_fee',
+      'delivery_fee',
+      'delivery_amount',
+    ]);
+    _addSummaryRow(rows, 'Tax', const [
+      'formatted_tax',
+      'tax',
+      'tax_amount',
+      'amount_tax',
+    ]);
+    _addSummaryRow(rows, 'Grand Total', const [
+      'formatted_total',
+      'grand_total',
+      'amount_total',
+      'total',
+    ], isTotal: true);
+    return rows;
   }
+
+  void _addSummaryRow(
+    List<Map<String, dynamic>> rows,
+    String label,
+    List<String> keys, {
+    bool isTotal = false,
+  }) {
+    for (final key in keys) {
+      final value = detail[key];
+      if (_displayText(value).isEmpty) continue;
+      rows.add({
+        'key': key,
+        'label': label,
+        'value': _summaryValue(value),
+        'is_total': isTotal,
+      });
+      return;
+    }
+  }
+
+  Map<String, dynamic> _normalizeSummaryRow(Map<dynamic, dynamic> row) {
+    final key =
+        (row['key'] ?? row['code'] ?? row['name'] ?? row['label'])
+            ?.toString() ??
+        '';
+    final rawValue =
+        row['formatted_value'] ??
+        row['formatted_amount'] ??
+        row['display_value'] ??
+        row['amount'] ??
+        row['value'] ??
+        row['price'];
+    return {
+      'key': key,
+      'label': (row['label'] ?? row['title'])?.toString() ?? _summaryLabel(key),
+      'value': _summaryValue(rawValue),
+      'is_total':
+          row['is_total'] == true ||
+          row['total'] == true ||
+          const {'grand_total', 'amount_total', 'total'}.contains(key),
+    };
+  }
+
+  String _summaryValue(Object? value) {
+    if (value is Map) {
+      return _summaryValue(
+        value['formatted_value'] ??
+            value['formatted_amount'] ??
+            value['display_value'] ??
+            value['amount'] ??
+            value['value'] ??
+            value['price'],
+      );
+    }
+    final text = _displayText(value);
+    if (text.isEmpty) return '';
+    final amount = double.tryParse(text.replaceAll(',', ''));
+    if (amount == null || currencySymbol.isEmpty) return text;
+    final formatted = amount == amount.roundToDouble()
+        ? amount.toInt().toString()
+        : amount.toStringAsFixed(2);
+    return '$formatted $currencySymbol';
+  }
+
+  String get currencySymbol {
+    final currency =
+        detail['currency'] ??
+        (detail['order_summary'] is Map
+            ? (detail['order_summary'] as Map)['currency']
+            : null) ??
+        (detail['totals'] is Map
+            ? (detail['totals'] as Map)['currency']
+            : null);
+    if (currency is Map) {
+      return (currency['symbol'] ?? currency['currency_symbol'])?.toString() ??
+          '';
+    }
+    return (detail['currency_symbol'] ?? currency)?.toString() ?? '';
+  }
+
+  String _summaryLabel(String key) => key
+      .replaceAll('_', ' ')
+      .split(' ')
+      .where((word) => word.isNotEmpty)
+      .map((word) => '${word[0].toUpperCase()}${word.substring(1)}')
+      .join(' ');
 }

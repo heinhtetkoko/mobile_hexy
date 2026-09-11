@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:mobile_hexy/app.dart';
 import 'package:mobile_hexy/core/theme/app_colors.dart';
-import 'package:mobile_hexy/presentation/view/cart_page.dart';
 import 'package:mobile_hexy/presentation/viewmodel/checkout_view_model.dart';
 
 class PaymentSuccessPage extends GetView<CheckoutViewModel> {
@@ -36,6 +35,85 @@ class PaymentSuccessPage extends GetView<CheckoutViewModel> {
     return null;
   }
 
+  List<Map<String, dynamic>> _purchasedItems(Object? source) {
+    if (source is! Map) return const [];
+    for (final key in const [
+      '_checkout_items',
+      'order_items',
+      'items',
+      'lines',
+    ]) {
+      final value = source[key];
+      final raw = value is Map
+          ? value['data'] ?? value['items'] ?? value['lines']
+          : value;
+      if (raw is List) {
+        final items = raw
+            .whereType<Map>()
+            .map((item) => Map<String, dynamic>.from(item))
+            .toList(growable: false);
+        if (items.isNotEmpty) return items;
+      }
+    }
+    for (final key in const ['order', 'sale_order', 'data', 'result']) {
+      final items = _purchasedItems(source[key]);
+      if (items.isNotEmpty) return items;
+    }
+    return const [];
+  }
+
+  int _purchasedItemCount(Object? source, List<Map<String, dynamic>> items) {
+    if (source is Map) {
+      for (final key in const [
+        '_checkout_item_count',
+        'item_count',
+        'total_quantity',
+        'total_qty',
+      ]) {
+        final parsed = _positiveInt(source[key]);
+        if (parsed != null) return parsed;
+      }
+    }
+    return items.fold<int>(
+      0,
+      (total, item) =>
+          total +
+          (_positiveInt(
+                item['quantity'] ??
+                    item['qty'] ??
+                    item['product_uom_qty'] ??
+                    item['ordered_qty'],
+              ) ??
+              1),
+    );
+  }
+
+  int? _positiveInt(Object? value) {
+    final parsed = value is num
+        ? value.toInt()
+        : int.tryParse(value?.toString() ?? '');
+    return parsed != null && parsed > 0 ? parsed : null;
+  }
+
+  Map<String, dynamic> _deliveryAddress(Object? source) {
+    if (source is! Map) return const {};
+    for (final key in const [
+      '_checkout_address',
+      'shipping_address',
+      'delivery_address',
+      'delivery_information',
+      'address',
+    ]) {
+      final value = source[key];
+      if (value is Map) return Map<String, dynamic>.from(value);
+    }
+    for (final key in const ['order', 'sale_order', 'data', 'result']) {
+      final address = _deliveryAddress(source[key]);
+      if (address.isNotEmpty) return address;
+    }
+    return const {};
+  }
+
   void _showAction(String title) => Get.snackbar(
     title,
     '$title is coming soon.',
@@ -43,84 +121,97 @@ class PaymentSuccessPage extends GetView<CheckoutViewModel> {
   );
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-    body: SafeArea(
-      child: Column(
-        children: [
-          const _SuccessCheckoutHeader(),
-          const _ConfirmationProgressSteps(),
-          Expanded(
-            child: Stack(
-              children: [
-                const Positioned.fill(child: _CelebrationBackground()),
-                ListView(
-                  padding: const EdgeInsets.fromLTRB(16, 24, 16, 24),
-                  children: [
-                    const _SuccessHeader(),
-                    const SizedBox(height: 24),
-                    _OrderReceipt(controller: controller),
-                    const SizedBox(height: 24),
-                    const _DeliveryDestination(),
-                    const SizedBox(height: 24),
-                    _ItemPreview(onViewOrder: () => _showAction('View Order')),
-                    const SizedBox(height: 24),
-                    SizedBox(
-                      height: 52,
-                      child: FilledButton.icon(
-                        key: const Key('track-order'),
-                        onPressed: _trackOrder,
-                        style: FilledButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: Colors.white,
-                          shape: const StadiumBorder(),
-                          textStyle: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        icon: Icon(Icons.inventory_2_outlined, size: 20),
-                        label: Text('Track My Order'.tr),
+  Widget build(BuildContext context) {
+    final purchasedItems = _purchasedItems(Get.arguments);
+    final purchasedItemCount = _purchasedItemCount(
+      Get.arguments,
+      purchasedItems,
+    );
+    final deliveryAddress = _deliveryAddress(Get.arguments);
+    return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      body: SafeArea(
+        child: Column(
+          children: [
+            const _SuccessCheckoutHeader(),
+            const _ConfirmationProgressSteps(),
+            Expanded(
+              child: Stack(
+                children: [
+                  const Positioned.fill(child: _CelebrationBackground()),
+                  ListView(
+                    padding: const EdgeInsets.fromLTRB(16, 24, 16, 24),
+                    children: [
+                      const _SuccessHeader(),
+                      const SizedBox(height: 24),
+                      _OrderReceipt(data: Get.arguments),
+                      const SizedBox(height: 24),
+                      _DeliveryDestination(address: deliveryAddress),
+                      const SizedBox(height: 24),
+                      _ItemPreview(
+                        items: purchasedItems,
+                        itemCount: purchasedItemCount,
+                        onViewOrder: _trackOrder,
                       ),
-                    ),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      height: 48,
-                      child: OutlinedButton.icon(
-                        key: const Key('continue-shopping'),
-                        onPressed: () => Get.offAllNamed<void>(AppRoutes.home),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: Theme.of(
-                            context,
-                          ).colorScheme.primary,
-                          backgroundColor: Theme.of(
-                            context,
-                          ).colorScheme.surface,
-                          side: BorderSide(
-                            color: Theme.of(context).dividerColor,
+                      const SizedBox(height: 24),
+                      SizedBox(
+                        height: 52,
+                        child: FilledButton.icon(
+                          key: const Key('track-order'),
+                          onPressed: _trackOrder,
+                          style: FilledButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            shape: const StadiumBorder(),
+                            textStyle: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
-                          shape: const StadiumBorder(),
-                          textStyle: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                          ),
+                          icon: Icon(Icons.inventory_2_outlined, size: 20),
+                          label: Text('Track My Order'.tr),
                         ),
-                        iconAlignment: IconAlignment.end,
-                        icon: Icon(Icons.arrow_forward_rounded, size: 18),
-                        label: Text('Continue Shopping'.tr),
                       ),
-                    ),
-                    const SizedBox(height: 20),
-                    _SecondaryActions(onTap: _showAction),
-                  ],
-                ),
-              ],
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        height: 48,
+                        child: OutlinedButton.icon(
+                          key: const Key('continue-shopping'),
+                          onPressed: () =>
+                              Get.offAllNamed<void>(AppRoutes.home),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Theme.of(
+                              context,
+                            ).colorScheme.primary,
+                            backgroundColor: Theme.of(
+                              context,
+                            ).colorScheme.surface,
+                            side: BorderSide(
+                              color: Theme.of(context).dividerColor,
+                            ),
+                            shape: const StadiumBorder(),
+                            textStyle: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          iconAlignment: IconAlignment.end,
+                          icon: Icon(Icons.arrow_forward_rounded, size: 18),
+                          label: Text('Continue Shopping'.tr),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      _SecondaryActions(onTap: _showAction),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 class _SuccessCheckoutHeader extends StatelessWidget {
@@ -338,7 +429,7 @@ class _SuccessHeader extends StatelessWidget {
       ),
       const SizedBox(height: 24),
       Text(
-        'Payment Successful!'.tr,
+        'Order Placed Successfully!'.tr,
         textAlign: TextAlign.center,
         style: TextStyle(
           color: Theme.of(context).colorScheme.onSurface,
@@ -360,63 +451,175 @@ class _SuccessHeader extends StatelessWidget {
 }
 
 class _OrderReceipt extends StatelessWidget {
-  const _OrderReceipt({required this.controller});
-  final CheckoutViewModel controller;
+  const _OrderReceipt({required this.data});
+  final Object? data;
 
   @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(16),
-    decoration: BoxDecoration(
-      color: Theme.of(context).colorScheme.surface,
-      borderRadius: BorderRadius.circular(16),
-      boxShadow: const [
-        BoxShadow(
-          color: Color(0x1422C55E),
-          blurRadius: 12,
-          offset: Offset(0, 8),
-        ),
-      ],
-    ),
-    child: Column(
-      children: [
-        const _ReceiptRow('Order Number', '#STA-2025-08742', bold: true),
-        const _ReceiptRow('Order Date', '02 Jul 2025, 14:32'),
-        _ReceiptRow(
-          'Payment Method',
-          controller.selectedPayment.value,
-          icon: Icons.account_balance_wallet_outlined,
-        ),
-        const _ReceiptRow(
-          'Estimated Delivery',
-          '4–5 Jul 2025',
-          green: true,
-          bold: true,
-        ),
-        Divider(height: 22, color: Theme.of(context).dividerColor),
-        Row(
-          children: [
-            Text(
-              'Grand Total'.tr,
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurface,
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-              ),
+  Widget build(BuildContext context) {
+    final orderNumber = _text(const [
+      'order_number',
+      'number',
+      'name',
+      'reference',
+      'sale_order_id',
+      'order_id',
+      'id',
+    ]);
+    final orderDate = _text(const [
+      'formatted_order_date',
+      'order_date',
+      'date_order',
+      'created_at',
+      'date',
+    ]);
+    final paymentMethod = _text(const [
+      'payment_method',
+      'payment_method_name',
+      'payment_method_code',
+      '_checkout_payment_method',
+    ]);
+    final deliveryMethod = _text(const [
+      'delivery_method',
+      'delivery_method_name',
+      'shipping_method',
+      'carrier_name',
+      '_checkout_delivery_method',
+    ]);
+    final deliveryNotes = _text(const [
+      'delivery_notes',
+      'delivery_note',
+      '_checkout_delivery_notes',
+    ]);
+    final estimatedDelivery = _text(const [
+      'formatted_estimated_delivery',
+      'estimated_delivery',
+      'delivery_estimate',
+      'expected_delivery_date',
+      'commitment_date',
+    ]);
+    final grandTotal = _moneyText();
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x1422C55E),
+            blurRadius: 12,
+            offset: Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          if (orderNumber.isNotEmpty)
+            _ReceiptRow('Order Number', orderNumber, bold: true),
+          if (orderDate.isNotEmpty) _ReceiptRow('Order Date', orderDate),
+          if (paymentMethod.isNotEmpty)
+            _ReceiptRow(
+              'Payment Method',
+              paymentMethod,
+              icon: Icons.account_balance_wallet_outlined,
             ),
-            const Spacer(),
-            Text(
-              CartPage.money(controller.cart.grandTotal),
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.primary,
-                fontSize: 16,
-                fontWeight: FontWeight.w800,
-              ),
+          if (deliveryMethod.isNotEmpty)
+            _ReceiptRow('Delivery Method', deliveryMethod),
+          if (deliveryNotes.isNotEmpty)
+            _ReceiptRow('Delivery Notes', deliveryNotes),
+          if (estimatedDelivery.isNotEmpty)
+            _ReceiptRow(
+              'Estimated Delivery',
+              estimatedDelivery,
+              green: true,
+              bold: true,
+            ),
+          if (grandTotal.isNotEmpty) ...[
+            Divider(height: 22, color: Theme.of(context).dividerColor),
+            Row(
+              children: [
+                Text(
+                  'Grand Total'.tr,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  grandTotal,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.primary,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
             ),
           ],
-        ),
-      ],
-    ),
-  );
+        ],
+      ),
+    );
+  }
+
+  String _text(List<String> keys) {
+    final value = _find(data, keys);
+    if (value is Map) {
+      return (value['display_name'] ??
+                  value['label'] ??
+                  value['name'] ??
+                  value['value'] ??
+                  value['code'])
+              ?.toString()
+              .trim() ??
+          '';
+    }
+    return value == null || value == false ? '' : value.toString().trim();
+  }
+
+  Object? _find(Object? source, List<String> keys) {
+    if (source is! Map) return null;
+    for (final key in keys) {
+      final value = source[key];
+      if (value != null && value != false && value.toString().isNotEmpty) {
+        return value;
+      }
+    }
+    for (final key in const ['order', 'sale_order', 'data', 'result']) {
+      final value = _find(source[key], keys);
+      if (value != null) return value;
+    }
+    return null;
+  }
+
+  String _moneyText() {
+    final formatted = _text(const [
+      'formatted_total',
+      'formatted_grand_total',
+      'amount_total_formatted',
+    ]);
+    if (formatted.isNotEmpty) return formatted;
+    final raw = _find(data, const [
+      'grand_total',
+      'amount_total',
+      'total',
+      '_checkout_grand_total',
+    ]);
+    if (raw == null) return '';
+    final currency = _text(const [
+      'currency_symbol',
+      '_checkout_currency_symbol',
+    ]);
+    final amount = raw is num
+        ? raw.toDouble()
+        : double.tryParse(raw.toString().replaceAll(',', ''));
+    if (amount == null) return raw.toString();
+    final amountText = amount == amount.roundToDouble()
+        ? amount.toInt().toString()
+        : amount.toStringAsFixed(2);
+    return '$amountText $currency'.trim();
+  }
 }
 
 class _ReceiptRow extends StatelessWidget {
@@ -468,119 +671,204 @@ class _ReceiptRow extends StatelessWidget {
 }
 
 class _DeliveryDestination extends StatelessWidget {
-  const _DeliveryDestination();
+  const _DeliveryDestination({required this.address});
+
+  final Map<String, dynamic> address;
 
   @override
-  Widget build(BuildContext context) => Container(
-    width: double.infinity,
-    padding: const EdgeInsets.all(12),
-    decoration: BoxDecoration(
-      color: Theme.of(context).colorScheme.surface,
-      borderRadius: BorderRadius.circular(12),
-      border: Border.all(color: Theme.of(context).dividerColor),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          '📍 Delivering to'.tr,
-          style: TextStyle(
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        SizedBox(height: 4),
-        Text(
-          'John Smith · No.25, Main Street, Sanchaung, Yangon'.tr,
-          style: TextStyle(
-            color: Theme.of(context).colorScheme.onSurface,
-            fontSize: 13,
-            height: 1.4,
-          ),
-        ),
-      ],
-    ),
-  );
-}
+  Widget build(BuildContext context) {
+    final name = _text(const ['name', 'recipient_name', 'contact_name']);
+    final phone = _text(const ['phone', 'mobile']);
+    final addressLine = [
+      _text(const ['building', 'building_name', 'apartment']),
+      _text(const ['street_address', 'street', 'address_line_1']),
+      _text(const ['street2', 'address_line_2']),
+      _text(const ['city_township', 'city', 'township']),
+      _text(const ['state_region', 'state', 'region']),
+      _text(const ['country_name', 'country']),
+    ].where((value) => value.isNotEmpty).join(', ');
+    final lines = [
+      if (name.isNotEmpty) name,
+      if (addressLine.isNotEmpty) addressLine,
+      if (phone.isNotEmpty) phone,
+    ];
 
-class _ItemPreview extends StatelessWidget {
-  const _ItemPreview({required this.onViewOrder});
-  final VoidCallback onViewOrder;
-
-  @override
-  Widget build(BuildContext context) => Column(
-    children: [
-      Row(
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Theme.of(context).dividerColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '2 of 4 items'.tr,
+            '📍 Delivering to'.tr,
             style: TextStyle(
               color: Theme.of(context).colorScheme.onSurfaceVariant,
               fontSize: 12,
+              fontWeight: FontWeight.w500,
             ),
           ),
-          const Spacer(),
-          InkWell(
-            onTap: onViewOrder,
-            child: Row(
-              children: [
-                Text(
-                  'View Order'.tr,
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.primary,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                SizedBox(width: 4),
-                Icon(
-                  Icons.arrow_forward_rounded,
-                  color: Theme.of(context).colorScheme.primary,
-                  size: 14,
-                ),
-              ],
+          SizedBox(height: 4),
+          Text(
+            lines.isEmpty ? 'No delivery address found.'.tr : lines.join('\n'),
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface,
+              fontSize: 13,
+              height: 1.4,
             ),
           ),
         ],
       ),
-      const SizedBox(height: 12),
-      Row(
-        children: [
-          for (var index = 1; index <= 3; index++) ...[
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: Image.asset(
-                'assets/images/payment_success/item_$index.png',
-                width: 52,
-                height: 52,
-                fit: BoxFit.cover,
-              ),
-            ),
-            const SizedBox(width: 12),
-          ],
-          Container(
-            width: 52,
-            height: 52,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
-              shape: BoxShape.circle,
-              border: Border.all(color: Theme.of(context).dividerColor),
-            ),
-            child: Text(
-              '+1'.tr,
+    );
+  }
+
+  String _text(List<String> keys) {
+    for (final key in keys) {
+      final value = address[key];
+      if (value is Map) {
+        final nested = value['name'] ?? value['display_name'] ?? value['label'];
+        if (nested != null && nested != false) return nested.toString().trim();
+      } else if (value != null && value != false) {
+        final text = value.toString().trim();
+        if (text.isNotEmpty) return text;
+      }
+    }
+    return '';
+  }
+}
+
+class _ItemPreview extends StatelessWidget {
+  const _ItemPreview({
+    required this.items,
+    required this.itemCount,
+    required this.onViewOrder,
+  });
+  final List<Map<String, dynamic>> items;
+  final int itemCount;
+  final VoidCallback onViewOrder;
+
+  @override
+  Widget build(BuildContext context) {
+    final previewItems = items.take(3).toList(growable: false);
+    final remaining = itemCount > previewItems.length
+        ? itemCount - previewItems.length
+        : 0;
+    return Column(
+      children: [
+        Row(
+          children: [
+            Text(
+              '$itemCount ${itemCount == 1 ? 'item' : 'items'}'.tr,
               style: TextStyle(
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
                 fontSize: 12,
-                fontWeight: FontWeight.w600,
               ),
             ),
+            const Spacer(),
+            InkWell(
+              onTap: onViewOrder,
+              child: Row(
+                children: [
+                  Text(
+                    'View Order'.tr,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.primary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  SizedBox(width: 4),
+                  Icon(
+                    Icons.arrow_forward_rounded,
+                    color: Theme.of(context).colorScheme.primary,
+                    size: 14,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        if (previewItems.isNotEmpty)
+          Row(
+            children: [
+              for (final item in previewItems) ...[
+                _PurchasedItemImage(item: item),
+                const SizedBox(width: 12),
+              ],
+              if (remaining > 0)
+                Container(
+                  width: 52,
+                  height: 52,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surface,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Theme.of(context).dividerColor),
+                  ),
+                  child: Text(
+                    '+$remaining',
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+            ],
           ),
-        ],
-      ),
-    ],
-  );
+      ],
+    );
+  }
+}
+
+class _PurchasedItemImage extends StatelessWidget {
+  const _PurchasedItemImage({required this.item});
+
+  final Map<String, dynamic> item;
+
+  @override
+  Widget build(BuildContext context) {
+    final rawImage =
+        item['image_url'] ?? item['image'] ?? item['thumbnail_url'];
+    final imageUrl = rawImage is Map
+        ? (rawImage['url'] ?? rawImage['src'] ?? rawImage['image_url'])
+                  ?.toString() ??
+              ''
+        : rawImage?.toString() ?? '';
+    final imageAsset = item['image_asset']?.toString() ?? '';
+    final fallback = Container(
+      width: 52,
+      height: 52,
+      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+      child: const Icon(Icons.image_outlined),
+    );
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(8),
+      child: imageUrl.isNotEmpty
+          ? Image.network(
+              imageUrl,
+              width: 52,
+              height: 52,
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => fallback,
+            )
+          : imageAsset.isNotEmpty
+          ? Image.asset(
+              imageAsset,
+              width: 52,
+              height: 52,
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => fallback,
+            )
+          : fallback,
+    );
+  }
 }
 
 class _SecondaryActions extends StatelessWidget {

@@ -150,6 +150,8 @@ class StationeryHomePage extends GetView<StationeryHomeViewModel> {
                           loadingMore: controller.isFlashSaleLoadingMore.value,
                           error: controller.flashSaleError.value,
                           hasMore: controller.hasMoreFlashSale.value,
+                          countdownSeconds:
+                              controller.flashSaleCountdownSeconds.value,
                           onRetry: controller.loadFlashSale,
                           onLoadMore: controller.loadMoreFlashSale,
                           onAddToCart: controller.addToCart,
@@ -1112,12 +1114,14 @@ class _FlashSaleSection extends StatelessWidget {
     this.loadingMore = false,
     required this.onAddToCart,
     required this.onViewAll,
+    required this.countdownSeconds,
   });
   final List<HomeProduct> items;
   final VoidCallback? onLoadMore;
   final bool loadingMore;
   final ValueChanged<HomeProduct> onAddToCart;
   final VoidCallback onViewAll;
+  final int countdownSeconds;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -1158,11 +1162,11 @@ class _FlashSaleSection extends StatelessWidget {
                 ),
               ),
               Spacer(),
-              _TimerBox(value: '02'),
+              _TimerBox(value: _hours),
               SizedBox(width: 5),
-              _TimerBox(value: '18'),
+              _TimerBox(value: _minutes),
               SizedBox(width: 5),
-              _TimerBox(value: '45'),
+              _TimerBox(value: _seconds),
             ],
           ),
         ),
@@ -1200,6 +1204,11 @@ class _FlashSaleSection extends StatelessWidget {
       ],
     ),
   );
+
+  String get _hours => (countdownSeconds ~/ 3600).toString().padLeft(2, '0');
+  String get _minutes =>
+      ((countdownSeconds % 3600) ~/ 60).toString().padLeft(2, '0');
+  String get _seconds => (countdownSeconds % 60).toString().padLeft(2, '0');
 }
 
 class _FlashSaleContent extends StatelessWidget {
@@ -1209,6 +1218,7 @@ class _FlashSaleContent extends StatelessWidget {
     required this.loadingMore,
     required this.error,
     required this.hasMore,
+    required this.countdownSeconds,
     required this.onRetry,
     required this.onLoadMore,
     required this.onAddToCart,
@@ -1220,6 +1230,7 @@ class _FlashSaleContent extends StatelessWidget {
   final bool loadingMore;
   final String? error;
   final bool hasMore;
+  final int countdownSeconds;
   final VoidCallback onRetry;
   final VoidCallback onLoadMore;
   final ValueChanged<HomeProduct> onAddToCart;
@@ -1254,6 +1265,7 @@ class _FlashSaleContent extends StatelessWidget {
       loadingMore: loadingMore,
       onAddToCart: onAddToCart,
       onViewAll: onViewAll,
+      countdownSeconds: countdownSeconds,
     );
   }
 }

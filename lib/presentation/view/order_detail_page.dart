@@ -105,15 +105,21 @@ class OrderDetailPage extends GetView<OrderDetailViewModel> {
                 children: [
                   _DetailRow(
                     label: 'Delivery Method',
-                    value: controller.deliveryMethod,
+                    value: controller.deliveryMethod.isEmpty
+                        ? '—'
+                        : controller.deliveryMethod,
                   ),
                   _DetailRow(
                     label: 'Payment Method',
-                    value: controller.paymentMethod,
+                    value: controller.paymentMethod.isEmpty
+                        ? '—'
+                        : controller.paymentMethod,
                   ),
                   _DetailRow(
                     label: 'Delivery Notes',
-                    value: controller.deliveryNotes,
+                    value: controller.deliveryNotes.isEmpty
+                        ? '—'
+                        : controller.deliveryNotes,
                   ),
                 ],
               ),
@@ -141,9 +147,7 @@ class OrderDetailPage extends GetView<OrderDetailViewModel> {
                                       ?.toString() ??
                                   '',
                               value: _amountText(row),
-                              bold:
-                                  row['is_total'] == true ||
-                                  row['key']?.toString() == 'grand_total',
+                              bold: row['is_total'] == true,
                             ),
                           )
                           .toList(),

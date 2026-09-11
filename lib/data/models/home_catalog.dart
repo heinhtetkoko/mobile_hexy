@@ -44,6 +44,8 @@ class HomeProduct {
     this.wishlist = false,
     this.availableQty = 0,
     this.discountPercent,
+    this.variantId,
+    this.countdownSeconds,
   });
 
   final String id;
@@ -55,6 +57,8 @@ class HomeProduct {
   final bool wishlist;
   final double? availableQty;
   final double? discountPercent;
+  final int? variantId;
+  final int? countdownSeconds;
 }
 
 class HomeCatalog {

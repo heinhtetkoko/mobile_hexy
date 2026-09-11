@@ -193,7 +193,10 @@ class ProductDetailRemoteDataSource {
                   (raw['name'] ?? raw['value'] ?? raw['label'])?.toString() ??
                   '',
               available: raw['available'] != false,
-              variantId: int.tryParse(raw['variant_id']?.toString() ?? ''),
+              variantId: int.tryParse(
+                (raw['product_variant_id'] ?? raw['variant_id'])?.toString() ??
+                    '',
+              ),
               selected: raw['selected'] == true,
             );
           }

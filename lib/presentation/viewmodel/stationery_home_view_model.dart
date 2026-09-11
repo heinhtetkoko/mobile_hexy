@@ -53,6 +53,7 @@ class StationeryHomeViewModel extends BaseViewModel {
   final searchQuery = ''.obs;
   final bannerController = PageController();
   Timer? _bannerTimer;
+  Timer? _flashSaleTimer;
   bool _isDisposed = false;
   late final HomeCatalog catalog;
   final banners = <HomeBanner>[].obs;
@@ -86,6 +87,7 @@ class StationeryHomeViewModel extends BaseViewModel {
   final isFlashSaleLoadingMore = false.obs;
   final flashSaleError = RxnString();
   final hasMoreFlashSale = false.obs;
+  final flashSaleCountdownSeconds = 0.obs;
   int _flashSalePage = 1;
   final recommendedProducts = <HomeProduct>[].obs;
   final isRecommendedLoading = false.obs;
@@ -104,7 +106,11 @@ class StationeryHomeViewModel extends BaseViewModel {
     }
     addingToCartIds.add(product.id);
     try {
-      await _cartRemoteDataSource.addProduct(productId: productId, quantity: 1);
+      await _cartRemoteDataSource.addProduct(
+        productId: productId,
+        productVariantId: product.variantId,
+        quantity: 1,
+      );
       Get.snackbar(
         'Added to cart',
         product.name,
@@ -288,11 +294,11 @@ class StationeryHomeViewModel extends BaseViewModel {
     try {
       final result = await _homeProductsDataSource.fetch(
         path: ApiEndpoints.flashSale,
-        programType: '',
         page: 1,
         limit: remoteProductPageLimit,
       );
       flashSaleProducts.assignAll(result.products);
+      _startFlashSaleCountdown();
       _flashSalePage = result.page;
       hasMoreFlashSale.value = result.hasNext;
     } catch (_) {
@@ -308,7 +314,6 @@ class StationeryHomeViewModel extends BaseViewModel {
     try {
       final result = await _homeProductsDataSource.fetch(
         path: ApiEndpoints.flashSale,
-        programType: '',
         page: _flashSalePage + 1,
         limit: remoteProductPageLimit,
       );
@@ -320,6 +325,27 @@ class StationeryHomeViewModel extends BaseViewModel {
     } finally {
       isFlashSaleLoadingMore.value = false;
     }
+  }
+
+  void _startFlashSaleCountdown() {
+    _flashSaleTimer?.cancel();
+    final countdowns = flashSaleProducts
+        .map((product) => product.countdownSeconds)
+        .whereType<int>()
+        .where((seconds) => seconds > 0)
+        .toList(growable: false);
+    flashSaleCountdownSeconds.value = countdowns.isEmpty
+        ? 0
+        : countdowns.reduce((first, second) => first < second ? first : second);
+    if (_isDisposed || flashSaleCountdownSeconds.value <= 0) return;
+    _flashSaleTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_isDisposed || flashSaleCountdownSeconds.value <= 1) {
+        flashSaleCountdownSeconds.value = 0;
+        timer.cancel();
+        return;
+      }
+      flashSaleCountdownSeconds.value--;
+    });
   }
 
   Future<void> loadRecommendedProducts() async {
@@ -469,6 +495,7 @@ class StationeryHomeViewModel extends BaseViewModel {
   void onClose() {
     _isDisposed = true;
     _bannerTimer?.cancel();
+    _flashSaleTimer?.cancel();
     bannerController.dispose();
     super.onClose();
   }

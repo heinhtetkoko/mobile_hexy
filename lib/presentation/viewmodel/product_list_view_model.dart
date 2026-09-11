@@ -318,7 +318,11 @@ class ProductListViewModel extends BaseViewModel {
     }
     addingToCartIds.add(product.id);
     try {
-      await _cartRemoteDataSource.addProduct(productId: productId, quantity: 1);
+      await _cartRemoteDataSource.addProduct(
+        productId: productId,
+        productVariantId: product.variantId,
+        quantity: 1,
+      );
       Get.snackbar(
         'Added to cart',
         product.name,
@@ -440,7 +444,6 @@ class ProductListViewModel extends BaseViewModel {
       case ProductListMode.flashSale:
         final result = await _homeProductsDataSource.fetch(
           path: ApiEndpoints.flashSale,
-          programType: '',
           page: page,
           limit: pageLimit,
         );
@@ -543,6 +546,7 @@ class ProductListViewModel extends BaseViewModel {
               price: product.price,
               imageAsset: product.imageAsset,
               imageUrl: product.imageUrl,
+              variantId: product.variantId,
               discount:
                   product.discountPercent != null &&
                       product.discountPercent! > 0
