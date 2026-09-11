@@ -8,6 +8,8 @@ class CatalogProduct {
     this.originalPrice,
     this.discount,
     this.variantId,
+    this.inStock,
+    this.availableQty,
   });
 
   final String id;
@@ -18,4 +20,6 @@ class CatalogProduct {
   final String? originalPrice;
   final String? discount;
   final int? variantId;
+  final bool? inStock;
+  final double? availableQty;
 }

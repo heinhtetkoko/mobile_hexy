@@ -10,6 +10,9 @@ import 'package:mobile_hexy/data/datasources/cart_remote_data_source.dart';
 import 'package:mobile_hexy/data/datasources/wishlist_remote_data_source.dart';
 import 'package:mobile_hexy/data/models/product_detail.dart';
 import 'package:mobile_hexy/presentation/viewmodel/main_view_model.dart';
+import 'package:mobile_hexy/presentation/widgets/add_to_cart_success_dialog.dart';
+import 'package:mobile_hexy/presentation/widgets/wishlist_success_dialog.dart';
+import 'package:mobile_hexy/presentation/widgets/out_of_stock_dialog.dart';
 import 'package:share_plus/share_plus.dart';
 
 class ProductDetailViewModel extends BaseViewModel {
@@ -73,10 +76,8 @@ class ProductDetailViewModel extends BaseViewModel {
       );
       final selectedValues = variantValues.where((value) => value.selected);
       selectedVariantId.value = selectedValues.isNotEmpty
-          ? selectedValues.first.variantId
-          : variantValues.isEmpty
-          ? null
-          : variantValues.first.variantId;
+          ? _firstVariantId(selectedValues) ?? _firstVariantId(variantValues)
+          : _firstVariantId(variantValues);
       selectedVariantValues.assignAll({
         for (final section in result.variantSections)
           if (section.values.any((value) => value.available))
@@ -217,6 +218,10 @@ class ProductDetailViewModel extends BaseViewModel {
     if (detail == null || isAddingToCart.value || isBuyingNow.value) {
       return false;
     }
+    if (!detail.inStock || detail.availableQuantity <= 0) {
+      await showOutOfStockDialog(productName: detail.name);
+      return false;
+    }
     if (!await _ensureAuthenticated(pendingAction)) return false;
     final loadingState = isBuyNowAction ? isBuyingNow : isAddingToCart;
     loadingState.value = true;
@@ -226,13 +231,18 @@ class ProductDetailViewModel extends BaseViewModel {
         productVariantId: selectedVariantId.value,
         quantity: quantity.value,
       );
-      Get.snackbar(
-        'Added to cart',
-        '${detail.name} × ${quantity.value}',
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      if (!isBuyNowAction) {
+        await showAddToCartSuccessDialog(
+          productName: detail.name,
+          quantity: quantity.value,
+        );
+      }
       return true;
     } catch (error) {
+      if (isOutOfStockError(error)) {
+        await showOutOfStockDialog(productName: detail.name);
+        return false;
+      }
       if (Get.currentRoute != '/login') {
         Get.snackbar(
           'Could not add to cart',
@@ -250,12 +260,22 @@ class ProductDetailViewModel extends BaseViewModel {
     final detail = product.value;
     if (detail == null || isUpdatingWishlist.value) return;
     if (!await _ensureAuthenticated('wishlist')) return;
+    final wasFavorite = isFavorite.value;
     isUpdatingWishlist.value = true;
     try {
-      final result = await _wishlistRemoteDataSource.toggle(detail.id);
+      final firstVariantId = _firstVariantId(
+        detail.variantSections.expand((section) => section.values),
+      );
+      final result = await _wishlistRemoteDataSource.toggle(
+        detail.id,
+        variantId: selectedVariantId.value ?? firstVariantId,
+      );
       isFavorite.value = result.items.any(
         (item) => item.productId == detail.id,
       );
+      if (!wasFavorite && isFavorite.value) {
+        await showWishlistSuccessDialog(productName: detail.name);
+      }
     } catch (error) {
       if (Get.currentRoute != '/login') {
         Get.snackbar(
@@ -267,6 +287,15 @@ class ProductDetailViewModel extends BaseViewModel {
     } finally {
       isUpdatingWishlist.value = false;
     }
+  }
+
+  int? _firstVariantId(Iterable<ProductVariantValue> values) {
+    for (final value in values) {
+      if (value.variantId != null && value.variantId! > 0) {
+        return value.variantId;
+      }
+    }
+    return null;
   }
 
   Future<void> toggleRecommendationWishlist(ProductDetailCard item) async {
@@ -282,6 +311,7 @@ class ProductDetailViewModel extends BaseViewModel {
       return;
     }
 
+    final wasFavorite = recommendationFavoriteIds.contains(item.id);
     updatingRecommendationIds.add(item.id);
     try {
       final result = await _wishlistRemoteDataSource.toggle(item.id);
@@ -290,6 +320,9 @@ class ProductDetailViewModel extends BaseViewModel {
       );
       if (isFavorite) {
         recommendationFavoriteIds.add(item.id);
+        if (!wasFavorite) {
+          await showWishlistSuccessDialog(productName: item.name);
+        }
       } else {
         recommendationFavoriteIds.remove(item.id);
       }

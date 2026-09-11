@@ -72,11 +72,6 @@ class ProductListPage extends GetView<ProductListViewModel> {
                                 ),
                             itemBuilder: (_, index) => _ProductCard(
                               product: products[index],
-                              favorite: controller.favorites.contains(
-                                products[index].id,
-                              ),
-                              onFavorite: () =>
-                                  controller.toggleFavorite(products[index].id),
                               onCart: () =>
                                   controller.addToCart(products[index]),
                               onOpen: () => Get.toNamed<void>(
@@ -694,14 +689,10 @@ class _Badge extends StatelessWidget {
 class _ProductCard extends StatelessWidget {
   const _ProductCard({
     required this.product,
-    required this.favorite,
-    required this.onFavorite,
     required this.onCart,
     required this.onOpen,
   });
   final CatalogProduct product;
-  final bool favorite;
-  final VoidCallback onFavorite;
   final VoidCallback onCart;
   final VoidCallback onOpen;
 
@@ -739,33 +730,6 @@ class _ProductCard extends StatelessWidget {
                   Image.asset(product.imageAsset, fit: BoxFit.cover),
                 if (product.discount != null)
                   Positioned(left: 8, top: 8, child: _Badge(product.discount!)),
-                Positioned(
-                  right: 8,
-                  top: 8,
-                  child: Material(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.surface.withValues(alpha: .92),
-                    shape: const CircleBorder(),
-                    child: InkWell(
-                      onTap: onFavorite,
-                      customBorder: const CircleBorder(),
-                      child: SizedBox(
-                        width: 28,
-                        height: 28,
-                        child: Icon(
-                          favorite
-                              ? Icons.favorite_rounded
-                              : Icons.favorite_border_rounded,
-                          color: favorite
-                              ? AppColors.accent
-                              : Theme.of(context).colorScheme.onSurface,
-                          size: 16,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
               ],
             ),
           ),

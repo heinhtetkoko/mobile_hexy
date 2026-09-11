@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:mobile_hexy/app.dart';
 import 'package:mobile_hexy/core/theme/app_colors.dart';
 import 'package:mobile_hexy/data/models/wishlist_item.dart';
 import 'package:mobile_hexy/presentation/viewmodel/wishlist_view_model.dart';
@@ -39,6 +40,12 @@ class WishlistPage extends GetView<WishlistViewModel> {
                           return _WishlistCard(
                             key: ValueKey(item.id),
                             item: item,
+                            onOpen: item.productId > 0
+                                ? () => Get.toNamed<void>(
+                                    AppRoutes.productDetail,
+                                    arguments: item.productId,
+                                  )
+                                : null,
                             onAddToCart: () => controller.addToCart(item),
                             onRemove: () => controller.removeItem(item),
                           );
@@ -127,113 +134,120 @@ class _WishlistCard extends StatelessWidget {
   const _WishlistCard({
     super.key,
     required this.item,
+    required this.onOpen,
     required this.onAddToCart,
     required this.onRemove,
   });
 
   final WishlistItem item;
+  final VoidCallback? onOpen;
   final VoidCallback onAddToCart;
   final VoidCallback onRemove;
 
   @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-    decoration: BoxDecoration(
-      color: Theme.of(context).colorScheme.surface,
-      border: Border(bottom: BorderSide(color: Theme.of(context).dividerColor)),
-    ),
-    child: Row(
-      children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(12),
-          child: item.imageUrl?.isNotEmpty == true
-              ? Image.network(
-                  item.imageUrl!,
-                  width: 84,
-                  height: 84,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, _, _) => const SizedBox(
+  Widget build(BuildContext context) => InkWell(
+    onTap: onOpen,
+    child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        border: Border(
+          bottom: BorderSide(color: Theme.of(context).dividerColor),
+        ),
+      ),
+      child: Row(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: item.imageUrl?.isNotEmpty == true
+                ? Image.network(
+                    item.imageUrl!,
+                    width: 84,
+                    height: 84,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, _, _) => const SizedBox(
+                      width: 84,
+                      height: 84,
+                      child: Icon(Icons.image_not_supported_outlined),
+                    ),
+                  )
+                : item.imageAsset.isNotEmpty
+                ? Image.asset(
+                    item.imageAsset,
+                    width: 84,
+                    height: 84,
+                    fit: BoxFit.cover,
+                  )
+                : const SizedBox(
                     width: 84,
                     height: 84,
                     child: Icon(Icons.image_not_supported_outlined),
                   ),
-                )
-              : item.imageAsset.isNotEmpty
-              ? Image.asset(
-                  item.imageAsset,
-                  width: 84,
-                  height: 84,
-                  fit: BoxFit.cover,
-                )
-              : const SizedBox(
-                  width: 84,
-                  height: 84,
-                  child: Icon(Icons.image_not_supported_outlined),
-                ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                item.name.tr,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurface,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                item.price,
-                style: const TextStyle(
-                  color: AppColors.accent,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(height: 8),
-              SizedBox(
-                height: 27,
-                child: FilledButton(
-                  key: Key('add-to-cart-${item.id}'),
-                  onPressed: onAddToCart,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    minimumSize: Size.zero,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    textStyle: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  child: Text('Add to Cart'.tr),
-                ),
-              ),
-            ],
           ),
-        ),
-        Align(
-          alignment: Alignment.topCenter,
-          child: IconButton(
-            key: Key('remove-wishlist-${item.id}'),
-            onPressed: onRemove,
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints.tightFor(width: 28, height: 28),
-            icon: Icon(
-              Icons.delete_outline_rounded,
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-              size: 23,
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item.name.tr,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  item.price,
+                  style: const TextStyle(
+                    color: AppColors.accent,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  height: 27,
+                  child: FilledButton(
+                    key: Key('add-to-cart-${item.id}'),
+                    onPressed: onAddToCart,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      textStyle: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    child: Text('Add to Cart'.tr),
+                  ),
+                ),
+              ],
             ),
           ),
-        ),
-      ],
+          Align(
+            alignment: Alignment.topCenter,
+            child: IconButton(
+              key: Key('remove-wishlist-${item.id}'),
+              onPressed: onRemove,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints.tightFor(width: 28, height: 28),
+              icon: Icon(
+                Icons.delete_outline_rounded,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                size: 23,
+              ),
+            ),
+          ),
+        ],
+      ),
     ),
   );
 }

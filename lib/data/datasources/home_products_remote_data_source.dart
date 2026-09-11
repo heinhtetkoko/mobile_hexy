@@ -89,7 +89,9 @@ class HomeProductsRemoteDataSource {
           double.tryParse(json['available_qty']?.toString() ?? '') ?? 0,
       discountPercent: explicitDiscount ?? calculatedDiscount,
       variantId: _parsePositiveInt(
-        json['product_variant_id'] ?? json['variant_id'],
+        json['product_variant_id'] ??
+            json['variant_id'] ??
+            _firstVariantId(json['variants']),
       ),
       countdownSeconds: _countdownSeconds(json),
     );
@@ -127,6 +129,15 @@ class HomeProductsRemoteDataSource {
   int? _parsePositiveInt(Object? value) {
     final parsed = int.tryParse(value?.toString() ?? '');
     return parsed != null && parsed > 0 ? parsed : null;
+  }
+
+  Object? _firstVariantId(Object? variants) {
+    if (variants is! List || variants.isEmpty) return null;
+    final first = variants.first;
+    if (first is Map) {
+      return first['product_variant_id'] ?? first['variant_id'] ?? first['id'];
+    }
+    return first;
   }
 
   double? _parsePercent(Object? value) {

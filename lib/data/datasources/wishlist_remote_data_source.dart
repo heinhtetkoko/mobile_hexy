@@ -31,8 +31,12 @@ class WishlistRemoteDataSource {
     if (int.tryParse(wishlistId) == null) 'product_id': productId,
   });
 
-  Future<WishlistResult> toggle(int productId) =>
-      _performAction({'action': 'toggle', 'product_id': productId});
+  Future<WishlistResult> toggle(int productId, {int? variantId}) =>
+      _performAction({
+        'action': 'toggle',
+        'product_id': productId,
+        if (variantId != null && variantId > 0) 'variant_id': variantId,
+      });
 
   Future<WishlistResult> moveToCart(int productId) => _performAction({
     'action': 'move_to_cart',

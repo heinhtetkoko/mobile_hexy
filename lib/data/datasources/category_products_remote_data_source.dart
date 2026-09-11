@@ -192,7 +192,13 @@ class CategoryProductsRemoteDataSource {
           ? null
           : '${compareAt.toStringAsFixed(2)} $symbol'.trim(),
       discount: discount > 0 ? '${_formatPercent(discount)}%' : null,
-      variantId: _positiveInt(json['product_variant_id'] ?? json['variant_id']),
+      variantId: _positiveInt(
+        json['product_variant_id'] ??
+            json['variant_id'] ??
+            _firstVariantId(json['variants']),
+      ),
+      inStock: json['in_stock'] is bool ? json['in_stock'] as bool : null,
+      availableQty: double.tryParse(json['available_qty']?.toString() ?? ''),
       imageAsset: '',
       imageUrl: json['image_url']?.toString(),
     );
@@ -214,5 +220,14 @@ class CategoryProductsRemoteDataSource {
   int? _positiveInt(Object? value) {
     final parsed = int.tryParse(value?.toString() ?? '');
     return parsed != null && parsed > 0 ? parsed : null;
+  }
+
+  Object? _firstVariantId(Object? variants) {
+    if (variants is! List || variants.isEmpty) return null;
+    final first = variants.first;
+    if (first is Map) {
+      return first['product_variant_id'] ?? first['variant_id'] ?? first['id'];
+    }
+    return first;
   }
 }

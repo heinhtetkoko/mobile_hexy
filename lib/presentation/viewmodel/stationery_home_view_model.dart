@@ -21,6 +21,9 @@ import 'package:mobile_hexy/data/models/catalog_brand.dart';
 import 'package:mobile_hexy/data/models/catalog_category.dart';
 import 'package:mobile_hexy/data/models/product_collection.dart';
 import 'package:mobile_hexy/domain/usecases/get_home_catalog.dart';
+import 'package:mobile_hexy/presentation/widgets/add_to_cart_success_dialog.dart';
+import 'package:mobile_hexy/presentation/widgets/wishlist_success_dialog.dart';
+import 'package:mobile_hexy/presentation/widgets/out_of_stock_dialog.dart';
 
 class StationeryHomeViewModel extends BaseViewModel {
   StationeryHomeViewModel(
@@ -98,6 +101,10 @@ class StationeryHomeViewModel extends BaseViewModel {
   static const remoteProductPageLimit = 10;
 
   Future<void> addToCart(HomeProduct product) async {
+    if (!product.hot && (product.availableQty ?? 0) <= 0) {
+      await showOutOfStockDialog(productName: product.name);
+      return;
+    }
     final productId = int.tryParse(product.id);
     if (productId == null ||
         productId <= 0 ||
@@ -111,12 +118,12 @@ class StationeryHomeViewModel extends BaseViewModel {
         productVariantId: product.variantId,
         quantity: 1,
       );
-      Get.snackbar(
-        'Added to cart',
-        product.name,
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      await showAddToCartSuccessDialog(productName: product.name);
     } catch (error) {
+      if (isOutOfStockError(error)) {
+        await showOutOfStockDialog(productName: product.name);
+        return;
+      }
       if (Get.currentRoute != '/login') {
         Get.snackbar(
           'Could not add to cart',
@@ -144,14 +151,21 @@ class StationeryHomeViewModel extends BaseViewModel {
       return;
     }
 
+    final wasFavorite = recommendedFavoriteIds.contains(product.id);
     updatingRecommendedWishlistIds.add(product.id);
     try {
-      final result = await _wishlistRemoteDataSource.toggle(productId);
+      final result = await _wishlistRemoteDataSource.toggle(
+        productId,
+        variantId: product.variantId,
+      );
       final isFavorite = result.items.any(
         (item) => item.productId == productId,
       );
       if (isFavorite) {
         recommendedFavoriteIds.add(product.id);
+        if (!wasFavorite) {
+          await showWishlistSuccessDialog(productName: product.name);
+        }
       } else {
         recommendedFavoriteIds.remove(product.id);
       }

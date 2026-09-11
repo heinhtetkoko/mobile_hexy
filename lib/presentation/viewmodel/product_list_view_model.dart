@@ -17,6 +17,9 @@ import 'package:mobile_hexy/core/services/secure_storage.dart';
 import 'package:mobile_hexy/data/models/catalog_category.dart';
 import 'package:mobile_hexy/data/models/catalog_product.dart';
 import 'package:mobile_hexy/data/models/product_list_request.dart';
+import 'package:mobile_hexy/presentation/widgets/add_to_cart_success_dialog.dart';
+import 'package:mobile_hexy/presentation/widgets/wishlist_success_dialog.dart';
+import 'package:mobile_hexy/presentation/widgets/out_of_stock_dialog.dart';
 import 'package:mobile_hexy/data/models/home_catalog.dart';
 import 'package:mobile_hexy/data/models/catalog_brand.dart';
 
@@ -69,6 +72,7 @@ class ProductListViewModel extends BaseViewModel {
   int _page = 1;
   ProductListMode? _mode;
   Worker? _searchWorker;
+  int _wishlistMutationRevision = 0;
 
   @override
   void onInit() {
@@ -113,12 +117,14 @@ class ProductListViewModel extends BaseViewModel {
   }
 
   Future<void> _loadWishlistState() async {
+    final revision = _wishlistMutationRevision;
     final token = await Get.find<SecureStorage>().read(
       AppConstants.accessTokenKey,
     );
     if (token == null || token.trim().isEmpty) return;
     try {
       final result = await _wishlistRemoteDataSource.fetchWishlist();
+      if (revision != _wishlistMutationRevision) return;
       favorites.assignAll(
         result.items
             .where((item) => item.productId > 0)
@@ -284,12 +290,30 @@ class ProductListViewModel extends BaseViewModel {
     }
 
     final wasFavorite = favorites.contains(id);
+    final product = products.firstWhereOrNull((product) => product.id == id);
+    _wishlistMutationRevision++;
     updatingFavoriteIds.add(id);
-    _setFavorite(id, !wasFavorite);
     try {
-      await _wishlistRemoteDataSource.toggle(productId);
+      final result = await _wishlistRemoteDataSource.toggle(
+        productId,
+        variantId: product?.variantId,
+      );
+      final isNowFavorite = result.items.any(
+        (item) => item.productId == productId,
+      );
+      if (isNowFavorite) {
+        _setFavorite(id, true);
+        if (!wasFavorite) {
+          await showWishlistSuccessDialog(
+            productName: product?.name.isNotEmpty == true
+                ? product!.name
+                : 'Product',
+          );
+        }
+      } else {
+        _setFavorite(id, false);
+      }
     } catch (error) {
-      _setFavorite(id, wasFavorite);
       if (Get.currentRoute != '/login') {
         Get.snackbar(
           'Could not update wishlist',
@@ -310,6 +334,11 @@ class ProductListViewModel extends BaseViewModel {
   }
 
   Future<void> addToCart(CatalogProduct product) async {
+    if (product.inStock == false ||
+        (product.availableQty != null && product.availableQty! <= 0)) {
+      await showOutOfStockDialog(productName: product.name);
+      return;
+    }
     final productId = int.tryParse(product.id);
     if (productId == null ||
         productId <= 0 ||
@@ -323,12 +352,12 @@ class ProductListViewModel extends BaseViewModel {
         productVariantId: product.variantId,
         quantity: 1,
       );
-      Get.snackbar(
-        'Added to cart',
-        product.name,
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      await showAddToCartSuccessDialog(productName: product.name);
     } catch (error) {
+      if (isOutOfStockError(error)) {
+        await showOutOfStockDialog(productName: product.name);
+        return;
+      }
       if (Get.currentRoute != '/login') {
         Get.snackbar(
           'Could not add to cart',
@@ -547,6 +576,8 @@ class ProductListViewModel extends BaseViewModel {
               imageAsset: product.imageAsset,
               imageUrl: product.imageUrl,
               variantId: product.variantId,
+              inStock: product.hot,
+              availableQty: product.availableQty,
               discount:
                   product.discountPercent != null &&
                       product.discountPercent! > 0

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:mobile_hexy/app.dart';
 import 'package:mobile_hexy/core/theme/app_colors.dart';
 import 'package:mobile_hexy/data/models/cart_item.dart';
 import 'package:mobile_hexy/presentation/viewmodel/cart_view_model.dart';
@@ -51,6 +52,12 @@ class CartPage extends GetView<CartViewModel> {
                               padding: const EdgeInsets.only(bottom: 12),
                               child: _CartItemCard(
                                 item: item,
+                                onOpen: item.productId > 0
+                                    ? () => Get.toNamed<void>(
+                                        AppRoutes.productDetail,
+                                        arguments: item.productId,
+                                      )
+                                    : null,
                                 onIncrement: () => controller.increment(item),
                                 onDecrement: () => controller.decrement(item),
                                 onRemove: () => controller.remove(item),
@@ -134,176 +141,184 @@ class _CartHeader extends StatelessWidget {
 class _CartItemCard extends StatelessWidget {
   const _CartItemCard({
     required this.item,
+    required this.onOpen,
     required this.onIncrement,
     required this.onDecrement,
     required this.onRemove,
   });
   final CartItem item;
+  final VoidCallback? onOpen;
   final VoidCallback onIncrement;
   final VoidCallback onDecrement;
   final VoidCallback onRemove;
 
   @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(12),
-    decoration: BoxDecoration(
-      color: Theme.of(context).colorScheme.surface,
-      border: Border.all(color: Theme.of(context).dividerColor),
-      borderRadius: BorderRadius.circular(16),
-      boxShadow: const [
-        BoxShadow(
-          color: Color(0x08000000),
-          blurRadius: 6,
-          offset: Offset(0, 4),
-        ),
-      ],
-    ),
-    child: Column(
-      children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: item.imageUrl != null && item.imageUrl!.isNotEmpty
-                  ? Image.network(
-                      item.imageUrl!,
-                      width: 72,
-                      height: 72,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, _, _) => const _CartImageFallback(),
-                    )
-                  : item.imageAsset.isNotEmpty
-                  ? Image.asset(
-                      item.imageAsset,
-                      width: 72,
-                      height: 72,
-                      fit: BoxFit.cover,
-                    )
-                  : const _CartImageFallback(),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    item.name.tr,
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.onSurface,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
+  Widget build(BuildContext context) => InkWell(
+    onTap: onOpen,
+    borderRadius: BorderRadius.circular(16),
+    child: Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        border: Border.all(color: Theme.of(context).dividerColor),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x08000000),
+            blurRadius: 6,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: item.imageUrl != null && item.imageUrl!.isNotEmpty
+                    ? Image.network(
+                        item.imageUrl!,
+                        width: 72,
+                        height: 72,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) => const _CartImageFallback(),
+                      )
+                    : item.imageAsset.isNotEmpty
+                    ? Image.asset(
+                        item.imageAsset,
+                        width: 72,
+                        height: 72,
+                        fit: BoxFit.cover,
+                      )
+                    : const _CartImageFallback(),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.name.tr,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    'SKU: ${item.sku}'.tr,
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      fontSize: 11,
+                    const SizedBox(height: 3),
+                    Text(
+                      'SKU: ${item.sku}'.tr,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        fontSize: 11,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Container(
-                        width: 8,
-                        height: 8,
-                        decoration: BoxDecoration(
-                          color: Color(item.variantColor),
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: Theme.of(context).dividerColor,
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            color: Color(item.variantColor),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: Theme.of(context).dividerColor,
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        item.variant,
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 5),
-                  Row(
-                    children: [
-                      Text(
-                        CartPage.money(item.unitPrice),
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.primary,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      const Spacer(),
-                      _QuantityButton(
-                        symbol: '−',
-                        onTap: onDecrement,
-                        filled: false,
-                      ),
-                      SizedBox(
-                        width: 28,
-                        child: Text(
-                          '${item.quantity}'.tr,
-                          textAlign: TextAlign.center,
+                        const SizedBox(width: 6),
+                        Text(
+                          item.variant,
                           style: TextStyle(
-                            fontSize: 16,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurfaceVariant,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 5),
+                    Row(
+                      children: [
+                        Text(
+                          CartPage.money(item.unitPrice),
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.primary,
+                            fontSize: 14,
                             fontWeight: FontWeight.w800,
                           ),
                         ),
-                      ),
-                      _QuantityButton(
-                        symbol: '+',
-                        onTap: onIncrement,
-                        filled: true,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: Text(
-                      'Total: ${CartPage.money(item.unitPrice * item.quantity)}'
-                          .tr,
-                      style: TextStyle(
-                        color: AppColors.accent,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w800,
+                        const Spacer(),
+                        _QuantityButton(
+                          symbol: '−',
+                          onTap: onDecrement,
+                          filled: false,
+                        ),
+                        SizedBox(
+                          width: 28,
+                          child: Text(
+                            '${item.quantity}'.tr,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                        _QuantityButton(
+                          symbol: '+',
+                          onTap: onIncrement,
+                          filled: true,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: Text(
+                        'Total: ${CartPage.money(item.unitPrice * item.quantity)}'
+                            .tr,
+                        style: TextStyle(
+                          color: AppColors.accent,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
                     ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          Divider(height: 24, color: Theme.of(context).dividerColor),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: InkWell(
+              key: Key('remove-cart-${item.id}'),
+              onTap: onRemove,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.delete_outline_rounded,
+                    color: Color(0xFFEF4444),
+                    size: 15,
+                  ),
+                  SizedBox(width: 5),
+                  Text(
+                    'Remove'.tr,
+                    style: TextStyle(color: Color(0xFFEF4444), fontSize: 12),
                   ),
                 ],
               ),
             ),
-          ],
-        ),
-        Divider(height: 24, color: Theme.of(context).dividerColor),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: InkWell(
-            key: Key('remove-cart-${item.id}'),
-            onTap: onRemove,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.delete_outline_rounded,
-                  color: Color(0xFFEF4444),
-                  size: 15,
-                ),
-                SizedBox(width: 5),
-                Text(
-                  'Remove'.tr,
-                  style: TextStyle(color: Color(0xFFEF4444), fontSize: 12),
-                ),
-              ],
-            ),
           ),
-        ),
-      ],
+        ],
+      ),
     ),
   );
 }

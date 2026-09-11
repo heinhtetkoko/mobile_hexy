@@ -93,6 +93,8 @@ class CollectionsRemoteDataSource {
       variantId: _positiveInt(
         source['product_variant_id'] ?? source['variant_id'],
       ),
+      inStock: source['in_stock'] is bool ? source['in_stock'] as bool : null,
+      availableQty: _nullableNumber(source['available_qty']),
       imageAsset: '',
       imageUrl:
           (source['image_url'] ?? source['image'] ?? source['thumbnail_url'])
