@@ -774,161 +774,163 @@ class _ProductCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => _PressBounce(
     enabled: useReferenceCard,
-    child: InkWell(
-      onTap: product.id.isEmpty
-          ? null
-          : () => Get.toNamed(AppRoutes.productDetail, arguments: product.id),
-      borderRadius: BorderRadius.circular(useReferenceCard ? 18 : 12),
-      child: Container(
-        width: 142,
-        margin: useReferenceCard
-            ? const EdgeInsets.symmetric(vertical: 12)
-            : null,
-        padding: EdgeInsets.all(useReferenceCard ? 0 : 8),
-        decoration: BoxDecoration(
-          color: useReferenceCard
-              ? Theme.of(context).brightness == Brightness.dark
-                    ? Theme.of(context).colorScheme.surfaceContainerHighest
-                    : Colors.white
-              : Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.circular(useReferenceCard ? 18 : 12),
-          border: useReferenceCard
-              ? Border.all(color: const Color(0xFFF0F0F0))
-              : null,
-          boxShadow: [
-            BoxShadow(
-              color: useReferenceCard
-                  ? const Color(0x0D000000)
-                  : const Color(0x16000000),
-              blurRadius: useReferenceCard ? 12 : 9,
-              offset: Offset(0, useReferenceCard ? 4 : 3),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  if (useReferenceCard)
-                    ClipRRect(
-                      borderRadius: const BorderRadius.vertical(
-                        top: Radius.circular(17),
-                      ),
-                      child: SizedBox(
-                        width: double.infinity,
+    child: Padding(
+      padding: useReferenceCard
+          ? const EdgeInsets.symmetric(vertical: 12)
+          : EdgeInsets.zero,
+      child: InkWell(
+        onTap: product.id.isEmpty
+            ? null
+            : () => Get.toNamed(AppRoutes.productDetail, arguments: product.id),
+        borderRadius: BorderRadius.circular(useReferenceCard ? 18 : 12),
+        child: Container(
+          width: 142,
+          padding: EdgeInsets.all(useReferenceCard ? 0 : 8),
+          decoration: BoxDecoration(
+            color: useReferenceCard
+                ? Theme.of(context).brightness == Brightness.dark
+                      ? Theme.of(context).colorScheme.surfaceContainerHighest
+                      : Colors.white
+                : Theme.of(context).colorScheme.surface,
+            borderRadius: BorderRadius.circular(useReferenceCard ? 18 : 12),
+            border: useReferenceCard
+                ? Border.all(color: const Color(0xFFF0F0F0))
+                : null,
+            boxShadow: [
+              BoxShadow(
+                color: useReferenceCard
+                    ? const Color(0x0D000000)
+                    : const Color(0x16000000),
+                blurRadius: useReferenceCard ? 12 : 9,
+                offset: Offset(0, useReferenceCard ? 4 : 3),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    if (useReferenceCard)
+                      ClipRRect(
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(17),
+                        ),
+                        child: SizedBox(
+                          width: double.infinity,
+                          child: product.imageUrl?.isNotEmpty == true
+                              ? Image.network(
+                                  product.imageUrl!,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, _, _) => const Icon(
+                                    Icons.image_not_supported_outlined,
+                                    size: 40,
+                                  ),
+                                )
+                              : Image.asset(
+                                  product.imageAsset,
+                                  fit: BoxFit.cover,
+                                ),
+                        ),
+                      )
+                    else
+                      Center(
                         child: product.imageUrl?.isNotEmpty == true
                             ? Image.network(
                                 product.imageUrl!,
-                                fit: BoxFit.cover,
+                                fit: BoxFit.contain,
                                 errorBuilder: (_, _, _) => const Icon(
                                   Icons.image_not_supported_outlined,
-                                  size: 40,
+                                  size: 36,
                                 ),
                               )
                             : Image.asset(
                                 product.imageAsset,
-                                fit: BoxFit.cover,
+                                fit: BoxFit.contain,
                               ),
                       ),
-                    )
-                  else
-                    Center(
-                      child: product.imageUrl?.isNotEmpty == true
-                          ? Image.network(
-                              product.imageUrl!,
-                              fit: BoxFit.contain,
-                              errorBuilder: (_, _, _) => const Icon(
-                                Icons.image_not_supported_outlined,
-                                size: 36,
-                              ),
-                            )
-                          : Image.asset(
-                              product.imageAsset,
-                              fit: BoxFit.contain,
-                            ),
-                    ),
-                  if ((product.discountPercent ?? 0) > 0)
-                    Positioned(
-                      left: 7,
-                      top: 7,
-                      child: _HomeDiscountFlag(
-                        percent: product.discountPercent!,
+                    if ((product.discountPercent ?? 0) > 0)
+                      Positioned(
+                        left: 7,
+                        top: 7,
+                        child: _HomeDiscountFlag(
+                          percent: product.discountPercent!,
+                        ),
                       ),
-                    ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 5),
-            Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: useReferenceCard ? 16 : 0,
-              ),
-              child: Text(
-                product.name.tr,
-                maxLines: useReferenceCard ? 1 : 2,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurface,
-                  fontSize: 11,
-                  fontWeight: useReferenceCard
-                      ? FontWeight.w800
-                      : FontWeight.w700,
+                  ],
                 ),
               ),
-            ),
-            SizedBox(height: useReferenceCard ? 8 : 4),
-            Padding(
-              padding: EdgeInsets.fromLTRB(
-                useReferenceCard ? 16 : 0,
-                0,
-                useReferenceCard ? 16 : 0,
-                useReferenceCard ? 12 : 0,
+              const SizedBox(height: 5),
+              Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: useReferenceCard ? 16 : 0,
+                ),
+                child: Text(
+                  product.name.tr,
+                  maxLines: useReferenceCard ? 1 : 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface,
+                    fontSize: 11,
+                    fontWeight: useReferenceCard
+                        ? FontWeight.w800
+                        : FontWeight.w700,
+                  ),
+                ),
               ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      product.price,
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.primary,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w800,
+              SizedBox(height: useReferenceCard ? 8 : 4),
+              Padding(
+                padding: EdgeInsets.fromLTRB(
+                  useReferenceCard ? 16 : 0,
+                  0,
+                  useReferenceCard ? 16 : 0,
+                  useReferenceCard ? 12 : 0,
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        product.price,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.primary,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
                     ),
-                  ),
-                  GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: onAddToCart,
-                    child: useReferenceCard
-                        ? Container(
-                            width: 24,
-                            height: 24,
-                            decoration: const BoxDecoration(
-                              color: StationeryHomePage._pink,
-                              shape: BoxShape.circle,
+                    GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: onAddToCart,
+                      child: useReferenceCard
+                          ? Container(
+                              width: 24,
+                              height: 24,
+                              decoration: const BoxDecoration(
+                                color: StationeryHomePage._pink,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.shopping_cart_outlined,
+                                color: Colors.white,
+                                size: 16,
+                              ),
+                            )
+                          : const Padding(
+                              padding: EdgeInsets.all(4),
+                              child: Icon(
+                                Icons.add_shopping_cart_outlined,
+                                color: StationeryHomePage._pink,
+                                size: 19,
+                              ),
                             ),
-                            child: const Icon(
-                              Icons.shopping_cart_outlined,
-                              color: Colors.white,
-                              size: 16,
-                            ),
-                          )
-                        : const Padding(
-                            padding: EdgeInsets.all(4),
-                            child: Icon(
-                              Icons.add_shopping_cart_outlined,
-                              color: StationeryHomePage._pink,
-                              size: 19,
-                            ),
-                          ),
-                  ),
-                ],
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     ),
@@ -1307,125 +1309,130 @@ class _FlashSaleCard extends StatelessWidget {
   final VoidCallback onAddToCart;
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
-    behavior: HitTestBehavior.opaque,
-    onTap: onTap,
-    child: Container(
-      width: 202,
-      padding: const EdgeInsets.all(13),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(22),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x16000000),
-            blurRadius: 12,
-            offset: Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(14),
-                child: Container(
-                  width: double.infinity,
-                  height: 116,
-                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                  child: _RemoteOrAssetImage(
-                    product: product,
-                    fit: BoxFit.cover,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 11),
-              Text(
-                product.name.tr,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurface,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(height: 7),
-              Text(
-                product.price,
-                style: const TextStyle(
-                  color: StationeryHomePage._pink,
-                  fontSize: 19,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-              const SizedBox(height: 9),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(4),
-                child: LinearProgressIndicator(
-                  value: progress,
-                  minHeight: 6,
-                  color: StationeryHomePage._pink,
-                  backgroundColor: Theme.of(context).dividerColor,
-                ),
-              ),
-              const SizedBox(height: 5),
-              Text(
-                '${_quantityText(product.availableQty ?? 0)} left!'.tr,
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  fontSize: 11,
-                ),
-              ),
-              const Spacer(),
-              SizedBox(
-                width: double.infinity,
-                height: 36,
-                child: FilledButton(
-                  onPressed: onAddToCart,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: StationeryHomePage._pink,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(13),
-                    ),
-                    textStyle: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  child: Text('Add to Cart'.tr),
-                ),
-              ),
-            ],
-          ),
-          if ((product.discountPercent ?? 0) > 0)
-            Positioned(
-              left: -3,
-              top: -3,
-              child: ClipPath(
-                clipper: const _ArrowFlagClipper(),
-                child: Container(
-                  width: 72,
-                  height: 24,
-                  padding: const EdgeInsets.only(right: 8),
-                  alignment: Alignment.center,
-                  color: StationeryHomePage._pink,
-                  child: Text(
-                    '${_quantityText(product.discountPercent!)}%',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-              ),
+  Widget build(BuildContext context) => _PressBounce(
+    enabled: true,
+    child: InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(22),
+      child: Container(
+        width: 202,
+        padding: const EdgeInsets.all(13),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: BorderRadius.circular(22),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x16000000),
+              blurRadius: 12,
+              offset: Offset(0, 6),
             ),
-        ],
+          ],
+        ),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(14),
+                  child: Container(
+                    width: double.infinity,
+                    height: 116,
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.surfaceContainerHighest,
+                    child: _RemoteOrAssetImage(
+                      product: product,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 11),
+                Text(
+                  product.name.tr,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 7),
+                Text(
+                  product.price,
+                  style: const TextStyle(
+                    color: StationeryHomePage._pink,
+                    fontSize: 19,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 9),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: progress,
+                    minHeight: 6,
+                    color: StationeryHomePage._pink,
+                    backgroundColor: Theme.of(context).dividerColor,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  '${_quantityText(product.availableQty ?? 0)} left!'.tr,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    fontSize: 11,
+                  ),
+                ),
+                const Spacer(),
+                SizedBox(
+                  width: double.infinity,
+                  height: 36,
+                  child: FilledButton(
+                    onPressed: onAddToCart,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: StationeryHomePage._pink,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(13),
+                      ),
+                      textStyle: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    child: Text('Add to Cart'.tr),
+                  ),
+                ),
+              ],
+            ),
+            if ((product.discountPercent ?? 0) > 0)
+              Positioned(
+                left: -3,
+                top: -3,
+                child: ClipPath(
+                  clipper: const _ArrowFlagClipper(),
+                  child: Container(
+                    width: 72,
+                    height: 24,
+                    padding: const EdgeInsets.only(right: 8),
+                    alignment: Alignment.center,
+                    color: StationeryHomePage._pink,
+                    child: Text(
+                      '${_quantityText(product.discountPercent!)}%',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     ),
   );
@@ -1597,143 +1604,149 @@ class _RecommendedCard extends StatelessWidget {
   final HomeProduct product;
 
   @override
-  Widget build(BuildContext context) => InkWell(
-    key: Key('recommended-product-${product.id}'),
-    onTap: product.id.isEmpty
-        ? null
-        : () =>
-              Get.toNamed<void>(AppRoutes.productDetail, arguments: product.id),
-    borderRadius: BorderRadius.circular(14),
-    child: Container(
-      width: 158,
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x12000000),
-            blurRadius: 10,
-            offset: Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Stack(
-            children: [
-              ClipRRect(
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(14),
-                ),
-                child: Container(
-                  width: double.infinity,
-                  height: 112,
-                  color: Theme.of(context).colorScheme.surface,
-                  child: _RemoteOrAssetImage(
-                    product: product,
-                    fit: BoxFit.cover,
-                  ),
-                ),
-              ),
-              if ((product.discountPercent ?? 0) > 0)
-                Positioned(
-                  left: 8,
-                  top: 8,
-                  child: _HomeDiscountFlag(percent: product.discountPercent!),
-                ),
-              Positioned(
-                right: 8,
-                top: 8,
-                child: Obx(() {
-                  final controller = Get.find<StationeryHomeViewModel>();
-                  final isUpdating = controller.updatingRecommendedWishlistIds
-                      .contains(product.id);
-                  final isFavorite = controller.recommendedFavoriteIds.contains(
-                    product.id,
-                  );
-                  return GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: isUpdating
-                        ? null
-                        : () => controller.toggleRecommendedWishlist(product),
-                    child: Container(
-                      width: 30,
-                      height: 30,
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.surface,
-                        shape: BoxShape.circle,
-                      ),
-                      child: isUpdating
-                          ? const Padding(
-                              padding: EdgeInsets.all(7),
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : Icon(
-                              isFavorite
-                                  ? Icons.favorite_rounded
-                                  : Icons.favorite_border_rounded,
-                              color: StationeryHomePage._pink,
-                              size: 18,
-                            ),
-                    ),
-                  );
-                }),
-              ),
-            ],
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(10, 9, 10, 8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+  Widget build(BuildContext context) => _PressBounce(
+    enabled: true,
+    child: InkWell(
+      key: Key('recommended-product-${product.id}'),
+      onTap: product.id.isEmpty
+          ? null
+          : () => Get.toNamed<void>(
+              AppRoutes.productDetail,
+              arguments: product.id,
+            ),
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        width: 158,
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x12000000),
+              blurRadius: 10,
+              offset: Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Stack(
               children: [
-                Text(
-                  product.name.tr,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurface,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
+                ClipRRect(
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(14),
+                  ),
+                  child: Container(
+                    width: double.infinity,
+                    height: 112,
+                    color: Theme.of(context).colorScheme.surface,
+                    child: _RemoteOrAssetImage(
+                      product: product,
+                      fit: BoxFit.cover,
+                    ),
                   ),
                 ),
-                const SizedBox(height: 6),
-                Text(
-                  '★★★★★'.tr,
-                  style: TextStyle(color: Color(0xFFF59E0B), fontSize: 11),
-                ),
-                const SizedBox(height: 3),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        product.price,
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.primary,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w800,
+                if ((product.discountPercent ?? 0) > 0)
+                  Positioned(
+                    left: 8,
+                    top: 8,
+                    child: _HomeDiscountFlag(percent: product.discountPercent!),
+                  ),
+                Positioned(
+                  right: 8,
+                  top: 8,
+                  child: Obx(() {
+                    final controller = Get.find<StationeryHomeViewModel>();
+                    final isUpdating = controller.updatingRecommendedWishlistIds
+                        .contains(product.id);
+                    final isFavorite = controller.recommendedFavoriteIds
+                        .contains(product.id);
+                    return GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: isUpdating
+                          ? null
+                          : () => controller.toggleRecommendedWishlist(product),
+                      child: Container(
+                        width: 30,
+                        height: 30,
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.surface,
+                          shape: BoxShape.circle,
                         ),
+                        child: isUpdating
+                            ? const Padding(
+                                padding: EdgeInsets.all(7),
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : Icon(
+                                isFavorite
+                                    ? Icons.favorite_rounded
+                                    : Icons.favorite_border_rounded,
+                                color: StationeryHomePage._pink,
+                                size: 18,
+                              ),
                       ),
-                    ),
-                    Container(
-                      width: 30,
-                      height: 30,
-                      decoration: const BoxDecoration(
-                        color: StationeryHomePage._pink,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.shopping_cart_outlined,
-                        color: Colors.white,
-                        size: 16,
-                      ),
-                    ),
-                  ],
+                    );
+                  }),
                 ),
               ],
             ),
-          ),
-        ],
+            Padding(
+              padding: const EdgeInsets.fromLTRB(10, 9, 10, 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    product.name.tr,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurface,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    '★★★★★'.tr,
+                    style: TextStyle(color: Color(0xFFF59E0B), fontSize: 11),
+                  ),
+                  const SizedBox(height: 3),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          product.price,
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.primary,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                      Container(
+                        width: 30,
+                        height: 30,
+                        decoration: const BoxDecoration(
+                          color: StationeryHomePage._pink,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.shopping_cart_outlined,
+                          color: Colors.white,
+                          size: 16,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     ),
   );
