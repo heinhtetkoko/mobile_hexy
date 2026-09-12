@@ -88,15 +88,17 @@ class CheckoutViewModel extends BaseViewModel {
   Future<bool> selectDeliveryMethod(CheckoutDeliveryMethod method) async {
     if (isUpdatingDeliveryMethod.value) return false;
     if (method.id == selectedDeliveryMethod.value?.id) return true;
+    final previousMethod = selectedDeliveryMethod.value;
+    selectedDeliveryMethod.value = method;
     isUpdatingDeliveryMethod.value = true;
     try {
       final data = await _checkoutRemoteDataSource.updateCheckout(
         deliveryMethodId: method.id,
       );
-      selectedDeliveryMethod.value = method;
       _applyCheckout(data, fallbackDeliveryMethodId: method.id);
       return true;
     } catch (error) {
+      selectedDeliveryMethod.value = previousMethod;
       _showError('Could not update delivery method', error);
       return false;
     } finally {

@@ -78,13 +78,10 @@ class CheckoutPage extends GetView<CheckoutViewModel> {
             address: controller.selectedAddress.value,
             updating: controller.isUpdatingAddress.value,
             onEdit: () => _showAddressDialog(context),
+            onAdd: _addShippingAddress,
           ),
           const SizedBox(height: 10),
-          _DeliveryMethod(
-            method: controller.selectedDeliveryMethod.value,
-            updating: controller.isUpdatingDeliveryMethod.value,
-            onTap: () => _showDeliveryMethodDialog(context),
-          ),
+          _DeliveryMethod(controller: controller),
           const SizedBox(height: 10),
           _PaymentMethod(controller: controller),
           const SizedBox(height: 10),
@@ -106,11 +103,8 @@ class CheckoutPage extends GetView<CheckoutViewModel> {
       builder: (_) => _AddressSelectDialog(controller: controller),
     );
     if (result == _addShippingAddressAction) {
-      final saved = await Get.toNamed<dynamic>(
-        '${AppRoutes.addressForm}?mode=new',
-      );
+      final saved = await _addShippingAddress();
       if (saved == true) {
-        await controller.loadCheckout();
         if (context.mounted) await _showAddressDialog(context);
       }
       return;
@@ -118,12 +112,12 @@ class CheckoutPage extends GetView<CheckoutViewModel> {
     if (result is ShippingAddress) await controller.selectAddress(result);
   }
 
-  Future<void> _showDeliveryMethodDialog(BuildContext context) async {
-    final method = await showDialog<CheckoutDeliveryMethod>(
-      context: context,
-      builder: (_) => _DeliveryMethodSelectDialog(controller: controller),
+  Future<bool> _addShippingAddress() async {
+    final saved = await Get.toNamed<dynamic>(
+      '${AppRoutes.addressForm}?mode=new',
     );
-    if (method != null) await controller.selectDeliveryMethod(method);
+    if (saved == true) await controller.loadCheckout();
+    return saved == true;
   }
 }
 
@@ -304,131 +298,421 @@ class _DeliveryInformation extends StatelessWidget {
   const _DeliveryInformation({
     required this.address,
     required this.onEdit,
+    required this.onAdd,
     required this.updating,
   });
   final ShippingAddress? address;
   final VoidCallback onEdit;
+  final VoidCallback onAdd;
   final bool updating;
+
+  @override
+  Widget build(BuildContext context) {
+    if (address == null) {
+      return _MissingShippingAddress(
+        onAdd: updating ? null : onAdd,
+        updating: updating,
+      );
+    }
+    return _Panel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _SectionTitle(
+            emoji: '📍',
+            title: 'Delivery Information',
+            action: 'Edit',
+            onAction: updating ? null : onEdit,
+          ),
+          SizedBox(height: 14),
+          Text(
+            address!.name.tr,
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+          ),
+          SizedBox(height: 4),
+          Text(
+            address!.phone,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+              fontSize: 12,
+            ),
+          ),
+          SizedBox(height: 4),
+          Text(
+            _addressText(address!).tr,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _addressText(ShippingAddress value) => [
+    value.building,
+    value.streetAddress,
+    value.cityTownship,
+    value.stateRegion,
+  ].where((part) => part.trim().isNotEmpty).join(', ');
+}
+
+class _MissingShippingAddress extends StatelessWidget {
+  const _MissingShippingAddress({required this.onAdd, required this.updating});
+
+  final VoidCallback? onAdd;
+  final bool updating;
+
+  static const _danger = Color(0xFFEF4444);
+  static const _paleDanger = Color(0xFFFFF5F5);
+  static const _dashColor = Color(0xFFFCA5A5);
+
+  @override
+  Widget build(BuildContext context) => Container(
+    clipBehavior: Clip.antiAlias,
+    decoration: BoxDecoration(
+      color: Theme.of(context).colorScheme.surface,
+      border: Border.all(color: Theme.of(context).dividerColor),
+      borderRadius: BorderRadius.circular(16),
+      boxShadow: const [
+        BoxShadow(
+          color: Color(0x08000000),
+          blurRadius: 6,
+          offset: Offset(0, 4),
+        ),
+      ],
+    ),
+    child: IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(width: 4, color: _danger),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.location_on_outlined,
+                        size: 22,
+                        color: Color(0xFF111827),
+                      ),
+                      const SizedBox(width: 7),
+                      Expanded(
+                        child: Wrap(
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          spacing: 8,
+                          runSpacing: 4,
+                          children: [
+                            Text(
+                              'Shipping Address'.tr,
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.onSurface,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: _paleDanger,
+                                borderRadius: BorderRadius.circular(7),
+                              ),
+                              child: Text(
+                                'REQUIRED'.tr,
+                                style: const TextStyle(
+                                  color: _danger,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      InkWell(
+                        key: const Key('checkout-add-address-link'),
+                        onTap: onAdd,
+                        borderRadius: BorderRadius.circular(8),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 6),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'Add Address'.tr,
+                                style: const TextStyle(
+                                  color: AppColors.accent,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                              const SizedBox(width: 2),
+                              const Icon(
+                                Icons.arrow_forward_rounded,
+                                size: 16,
+                                color: AppColors.accent,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  InkWell(
+                    key: const Key('checkout-add-address-warning'),
+                    onTap: onAdd,
+                    borderRadius: BorderRadius.circular(13),
+                    child: CustomPaint(
+                      foregroundPainter: const _DashedRoundedRectPainter(
+                        color: _dashColor,
+                        radius: 13,
+                      ),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 20,
+                        ),
+                        decoration: BoxDecoration(
+                          color: _paleDanger,
+                          borderRadius: BorderRadius.circular(13),
+                        ),
+                        child: Column(
+                          children: [
+                            const Icon(
+                              Icons.error_outline_rounded,
+                              color: _danger,
+                              size: 30,
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Shipping address is required to proceed'.tr,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                color: _danger,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              'Tap here to add your address'.tr,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  SizedBox(
+                    height: 48,
+                    child: FilledButton(
+                      key: const Key('checkout-add-shipping-address-empty'),
+                      onPressed: onAdd,
+                      style: FilledButton.styleFrom(
+                        backgroundColor: _danger,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        textStyle: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      child: updating
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : Text('Add Shipping Address'.tr),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+class _DashedRoundedRectPainter extends CustomPainter {
+  const _DashedRoundedRectPainter({required this.color, required this.radius});
+
+  final Color color;
+  final double radius;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 1.5
+      ..style = PaintingStyle.stroke;
+    final path = Path()
+      ..addRRect(
+        RRect.fromRectAndRadius(Offset.zero & size, Radius.circular(radius)),
+      );
+    for (final metric in path.computeMetrics()) {
+      var distance = 0.0;
+      while (distance < metric.length) {
+        canvas.drawPath(metric.extractPath(distance, distance + 7), paint);
+        distance += 12;
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _DashedRoundedRectPainter oldDelegate) =>
+      color != oldDelegate.color || radius != oldDelegate.radius;
+}
+
+class _DeliveryMethod extends StatelessWidget {
+  const _DeliveryMethod({required this.controller});
+  final CheckoutViewModel controller;
 
   @override
   Widget build(BuildContext context) => _Panel(
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _SectionTitle(
-          emoji: '📍',
-          title: 'Delivery Information',
-          action: 'Edit',
-          onAction: updating ? null : onEdit,
-        ),
-        SizedBox(height: 14),
-        Text(
-          (address?.name.isNotEmpty == true
-                  ? address!.name
-                  : 'Select a shipping address')
-              .tr,
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
-        ),
-        SizedBox(height: 4),
-        Text(
-          address?.phone ?? '',
-          style: TextStyle(
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-            fontSize: 12,
-          ),
-        ),
-        SizedBox(height: 4),
-        Text(
-          _addressText(address).tr,
-          style: TextStyle(
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-            fontSize: 12,
-          ),
-        ),
-      ],
-    ),
-  );
-
-  String _addressText(ShippingAddress? value) => value == null
-      ? 'Tap Edit to choose delivery information.'
-      : [
-          value.building,
-          value.streetAddress,
-          value.cityTownship,
-          value.stateRegion,
-        ].where((part) => part.trim().isNotEmpty).join(', ');
-}
-
-class _DeliveryMethod extends StatelessWidget {
-  const _DeliveryMethod({
-    required this.method,
-    required this.onTap,
-    required this.updating,
-  });
-  final CheckoutDeliveryMethod? method;
-  final VoidCallback onTap;
-  final bool updating;
-
-  @override
-  Widget build(BuildContext context) => InkWell(
-    onTap: updating ? null : onTap,
-    borderRadius: BorderRadius.circular(12),
-    child: Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primaryContainer,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '🚚 ${method?.name.isNotEmpty == true ? method!.name : 'Select Delivery Method'}'
-                      .tr,
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.onPrimaryContainer,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w800,
-                  ),
+        const _SectionTitle(emoji: '🚚', title: 'Delivery Method'),
+        const SizedBox(height: 8),
+        Obx(() {
+          final methods = controller.deliveryMethods;
+          if (methods.isEmpty) {
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              child: Text(
+                'No delivery methods are available for this address.'.tr,
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  fontSize: 13,
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  (method?.description?.isNotEmpty == true
-                          ? method!.description!
-                          : 'Tap to choose a delivery method')
-                      .tr,
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.onPrimaryContainer,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          if (updating)
-            const SizedBox(
-              width: 18,
-              height: 18,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            )
-          else
-            Text(
-              method == null
-                  ? 'Change'.tr
-                  : method!.formattedPrice?.isNotEmpty == true
-                  ? method!.formattedPrice!
-                  : CartPage.money(method!.price),
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onPrimaryContainer,
-                fontSize: 14,
-                fontWeight: FontWeight.w800,
               ),
-            ),
-        ],
-      ),
+            );
+          }
+          final updating = controller.isUpdatingDeliveryMethod.value;
+          return Column(
+            children: methods.map((method) {
+              final selected =
+                  controller.selectedDeliveryMethod.value?.id == method.id;
+              return InkWell(
+                key: Key('checkout-delivery-method-${method.id}'),
+                onTap: updating
+                    ? null
+                    : () => controller.selectDeliveryMethod(method),
+                child: Container(
+                  constraints: const BoxConstraints(minHeight: 56),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 2,
+                    vertical: 9,
+                  ),
+                  decoration: BoxDecoration(
+                    border: Border(
+                      left: selected
+                          ? BorderSide(
+                              color: Theme.of(context).colorScheme.primary,
+                              width: 4,
+                            )
+                          : BorderSide.none,
+                      bottom: BorderSide(color: Theme.of(context).dividerColor),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      const SizedBox(width: 8),
+                      Icon(
+                        selected
+                            ? Icons.radio_button_checked
+                            : Icons.radio_button_off,
+                        size: 18,
+                        color: selected
+                            ? Theme.of(context).colorScheme.primary
+                            : Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              method.name,
+                              style: TextStyle(
+                                color: selected
+                                    ? Theme.of(context).colorScheme.onSurface
+                                    : Theme.of(
+                                        context,
+                                      ).colorScheme.onSurfaceVariant,
+                                fontSize: 14,
+                                fontWeight: selected
+                                    ? FontWeight.w800
+                                    : FontWeight.w500,
+                              ),
+                            ),
+                            if (method.description?.isNotEmpty == true) ...[
+                              const SizedBox(height: 2),
+                              Text(
+                                method.description!,
+                                style: TextStyle(
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurfaceVariant,
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      if (updating && selected)
+                        const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      else
+                        Text(
+                          method.formattedPrice?.isNotEmpty == true
+                              ? method.formattedPrice!
+                              : CartPage.money(method.price),
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.primary,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      const SizedBox(width: 8),
+                    ],
+                  ),
+                ),
+              );
+            }).toList(),
+          );
+        }),
+      ],
     ),
   );
 }
@@ -500,67 +784,6 @@ class _AddressSelectDialog extends StatelessWidget {
         label: Text('Add Address'.tr),
       ),
     ],
-  );
-}
-
-class _DeliveryMethodSelectDialog extends StatelessWidget {
-  const _DeliveryMethodSelectDialog({required this.controller});
-  final CheckoutViewModel controller;
-
-  @override
-  Widget build(BuildContext context) => AlertDialog(
-    title: Text('Select Delivery Method'.tr),
-    contentPadding: const EdgeInsets.fromLTRB(8, 12, 8, 8),
-    content: SizedBox(
-      width: double.maxFinite,
-      child: controller.deliveryMethods.isEmpty
-          ? Padding(
-              padding: const EdgeInsets.all(20),
-              child: Text(
-                'No delivery methods are available for this address.'.tr,
-                textAlign: TextAlign.center,
-              ),
-            )
-          : ListView.separated(
-              shrinkWrap: true,
-              itemCount: controller.deliveryMethods.length,
-              separatorBuilder: (_, _) => const Divider(height: 1),
-              itemBuilder: (_, index) {
-                final method = controller.deliveryMethods[index];
-                final selected =
-                    method.id == controller.selectedDeliveryMethod.value?.id;
-                return ListTile(
-                  key: Key('checkout-delivery-method-${method.id}'),
-                  onTap: () => Navigator.of(context).pop(method),
-                  leading: Icon(
-                    selected
-                        ? Icons.radio_button_checked
-                        : Icons.radio_button_off,
-                    color: selected
-                        ? Theme.of(context).colorScheme.primary
-                        : Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-                  title: Text(
-                    method.name,
-                    style: const TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                  subtitle: method.description?.isNotEmpty == true
-                      ? Text(method.description!)
-                      : null,
-                  trailing: Text(
-                    method.formattedPrice?.isNotEmpty == true
-                        ? method.formattedPrice!
-                        : CartPage.money(method.price),
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.primary,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                );
-              },
-            ),
-    ),
-    actions: [TextButton(onPressed: Get.back, child: Text('Cancel'.tr))],
   );
 }
 
