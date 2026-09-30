@@ -1,3 +1,4 @@
+import 'package:mobile_hexy/core/utils/money_formatter.dart';
 import 'package:get/get.dart';
 import 'package:mobile_hexy/core/base/base_view_model.dart';
 import 'package:mobile_hexy/data/datasources/orders_remote_data_source.dart';
@@ -290,10 +291,10 @@ class OrderDetailViewModel extends BaseViewModel {
     final text = _displayText(value);
     if (text.isEmpty) return '';
     final amount = double.tryParse(text.replaceAll(',', ''));
-    if (amount == null || currencySymbol.isEmpty) return text;
-    final formatted = amount == amount.roundToDouble()
-        ? amount.toInt().toString()
-        : amount.toStringAsFixed(2);
+    if (amount == null || currencySymbol.isEmpty) {
+      return MoneyFormatter.display(text);
+    }
+    final formatted = MoneyFormatter.format(amount);
     return '$formatted $currencySymbol';
   }
 

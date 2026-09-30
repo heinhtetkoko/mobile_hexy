@@ -1,3 +1,4 @@
+import 'package:mobile_hexy/core/utils/money_formatter.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:mobile_hexy/core/theme/app_colors.dart';
@@ -437,34 +438,6 @@ class _MissingShippingAddress extends StatelessWidget {
                           ],
                         ),
                       ),
-                      const SizedBox(width: 6),
-                      InkWell(
-                        key: const Key('checkout-add-address-link'),
-                        onTap: onAdd,
-                        borderRadius: BorderRadius.circular(8),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 6),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                'Add Address'.tr,
-                                style: const TextStyle(
-                                  color: AppColors.accent,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                              const SizedBox(width: 2),
-                              const Icon(
-                                Icons.arrow_forward_rounded,
-                                size: 16,
-                                color: AppColors.accent,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
                     ],
                   ),
                   const SizedBox(height: 16),
@@ -696,7 +669,7 @@ class _DeliveryMethod extends StatelessWidget {
                       else
                         Text(
                           method.formattedPrice?.isNotEmpty == true
-                              ? method.formattedPrice!
+                              ? MoneyFormatter.display(method.formattedPrice!)
                               : CartPage.money(method.price),
                           style: TextStyle(
                             color: Theme.of(context).colorScheme.primary,

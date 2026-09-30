@@ -1,3 +1,4 @@
+import 'package:mobile_hexy/core/utils/money_formatter.dart';
 import 'package:dio/dio.dart';
 import 'package:mobile_hexy/core/networks/api_endpoints.dart';
 import 'package:mobile_hexy/core/networks/api_service.dart';
@@ -55,7 +56,7 @@ class NewArrivalsRemoteDataSource {
     return HomeProduct(
       id: json['id']?.toString() ?? '',
       name: json['name']?.toString() ?? '',
-      price: '${price.toStringAsFixed(2)} $symbol'.trim(),
+      price: '${MoneyFormatter.format(price, decimalDigits: 2)} $symbol'.trim(),
       imageAsset: '',
       imageUrl: json['image_url']?.toString(),
       hot: json['in_stock'] == true,

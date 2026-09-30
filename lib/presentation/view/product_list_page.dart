@@ -1,3 +1,4 @@
+import 'package:mobile_hexy/core/utils/money_formatter.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:mobile_hexy/app.dart';
@@ -17,7 +18,7 @@ class ProductListPage extends GetView<ProductListViewModel> {
       child: Column(
         children: [
           _Header(controller: controller),
-          _Toolbar(controller: controller),
+          if (controller.supportsSortFilter) _Toolbar(controller: controller),
           Expanded(
             child: Obx(() {
               if (controller.isLoading.value) {
@@ -44,6 +45,7 @@ class ProductListPage extends GetView<ProductListViewModel> {
                 onNotification: (notification) {
                   if (controller.hasNextPage.value &&
                       !controller.isLoadingMore.value &&
+                      controller.loadMoreError.value == null &&
                       notification.metrics.extentAfter < 320) {
                     controller.loadMore();
                   }
@@ -79,6 +81,21 @@ class ProductListPage extends GetView<ProductListViewModel> {
                                 arguments: products[index].id,
                               ),
                             ),
+                          ),
+                        ),
+                      if (controller.loadMoreError.value != null)
+                        SliverToBoxAdapter(
+                          child: Column(
+                            children: [
+                              Text(
+                                controller.loadMoreError.value!,
+                                textAlign: TextAlign.center,
+                              ),
+                              TextButton(
+                                onPressed: controller.loadMore,
+                                child: const Text('Retry'),
+                              ),
+                            ],
                           ),
                         ),
                       if (controller.isLoadingMore.value)
@@ -309,13 +326,14 @@ class _FilterSheet extends StatelessWidget {
                   spacing: 8,
                   runSpacing: 8,
                   children: controller.filterCategories.map((category) {
-                    final selected =
-                        controller.pendingCategory.value == category.name;
+                    final selected = controller.pendingCategories.contains(
+                      category.id,
+                    );
                     return ChoiceChip(
                       selected: selected,
                       showCheckmark: false,
-                      onSelected: (_) => controller.pendingCategory.value =
-                          selected ? '' : category.name,
+                      onSelected: (_) =>
+                          controller.togglePendingCategory(category.id),
                       selectedColor: Theme.of(context).colorScheme.primary,
                       backgroundColor: Theme.of(
                         context,
@@ -345,13 +363,13 @@ class _FilterSheet extends StatelessWidget {
                 () => Wrap(
                   children: controller.filterBrands.map((brand) {
                     final selected = controller.pendingBrands.contains(
-                      brand.name,
+                      brand.id,
                     );
                     return SizedBox(
                       width: MediaQuery.sizeOf(context).width / 2 - 16,
                       height: 40,
                       child: InkWell(
-                        onTap: () => controller.togglePendingBrand(brand.name),
+                        onTap: () => controller.togglePendingBrand(brand.id),
                         child: Row(
                           children: [
                             Icon(
@@ -379,47 +397,97 @@ class _FilterSheet extends StatelessWidget {
                 ),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Obx(
-                () => Column(
+            if (controller.usesSectionFilter)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Column(
                   children: [
                     Row(
                       children: [
-                        Text(
-                          'Price Range'.tr,
-                          style: TextStyle(
-                            color: Theme.of(context).colorScheme.onSurface,
-                            fontSize: 15,
-                            fontWeight: FontWeight.w800,
+                        Expanded(
+                          child: TextField(
+                            key: const Key('minimum-price'),
+                            controller: controller.minPriceInput,
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
+                            ),
+                            decoration: const InputDecoration(
+                              labelText: 'Minimum price',
+                              hintText: 'No minimum',
+                            ),
                           ),
                         ),
-                        const Spacer(),
-                        Text(
-                          '${_money(controller.pendingPriceRange.value.start)} — ${_money(controller.pendingPriceRange.value.end)}'
-                              .tr,
-                          style: TextStyle(
-                            color: Theme.of(context).colorScheme.primary,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: TextField(
+                            key: const Key('maximum-price'),
+                            controller: controller.maxPriceInput,
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
+                            ),
+                            decoration: const InputDecoration(
+                              labelText: 'Maximum price',
+                              hintText: 'No maximum',
+                            ),
                           ),
                         ),
                       ],
                     ),
-                    RangeSlider(
-                      values: controller.pendingPriceRange.value,
-                      min: 0,
-                      max: 15000,
-                      divisions: 15,
-                      activeColor: Theme.of(context).colorScheme.primary,
-                      inactiveColor: Theme.of(context).dividerColor,
-                      onChanged: (value) =>
-                          controller.pendingPriceRange.value = value,
+                    Obx(
+                      () => controller.priceError.value == null
+                          ? const SizedBox.shrink()
+                          : Text(
+                              controller.priceError.value!,
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.error,
+                              ),
+                            ),
                     ),
                   ],
                 ),
+              )
+            else
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Obx(
+                  () => Column(
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            'Price Range'.tr,
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.onSurface,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          const Spacer(),
+                          Text(
+                            '${_money(controller.pendingPriceRange.value.start)} — ${_money(controller.pendingPriceRange.value.end)}'
+                                .tr,
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.primary,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                      RangeSlider(
+                        values: controller.pendingPriceRange.value,
+                        min: 0,
+                        max: 15000,
+                        divisions: 15,
+                        activeColor: Theme.of(context).colorScheme.primary,
+                        inactiveColor: Theme.of(context).dividerColor,
+                        onChanged: (value) =>
+                            controller.pendingPriceRange.value = value,
+                      ),
+                    ],
+                  ),
+                ),
               ),
-            ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Obx(
@@ -467,13 +535,7 @@ class _FilterSheet extends StatelessWidget {
   );
 
   static String _money(double value) {
-    final digits = value.round().toString();
-    final buffer = StringBuffer();
-    for (var index = 0; index < digits.length; index++) {
-      if (index > 0 && (digits.length - index) % 3 == 0) buffer.write(',');
-      buffer.write(digits[index]);
-    }
-    return '$buffer Ks';
+    return '${MoneyFormatter.format(value.round())} Ks';
   }
 }
 
@@ -505,7 +567,9 @@ class _SortBySheet extends StatelessWidget {
     'Price: Low to High',
     'Price: High to Low',
     'Biggest Discount',
+    'Highest Rating',
     'A–Z',
+    'Z–A',
   ];
 
   @override
@@ -524,98 +588,100 @@ class _SortBySheet extends StatelessWidget {
           ),
         ],
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Align(
-            child: SizedBox(
-              width: 32,
-              height: 4,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: Theme.of(context).dividerColor,
-                  borderRadius: BorderRadius.all(Radius.circular(2)),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Align(
+              child: SizedBox(
+                width: 32,
+                height: 4,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).dividerColor,
+                    borderRadius: BorderRadius.all(Radius.circular(2)),
+                  ),
                 ),
               ),
             ),
-          ),
-          Padding(
-            padding: EdgeInsets.fromLTRB(16, 16, 16, 10),
-            child: Text(
-              'Sort By'.tr,
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurface,
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
+            Padding(
+              padding: EdgeInsets.fromLTRB(16, 16, 16, 10),
+              child: Text(
+                'Sort By'.tr,
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
             ),
-          ),
-          Obx(
-            () => Column(
-              children: options.map((option) {
-                final selected = controller.pendingSort.value == option;
-                return InkWell(
-                  key: Key('sort-${option.toLowerCase()}'),
-                  onTap: () => controller.pendingSort.value = option,
-                  child: SizedBox(
-                    height: 44,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Row(
-                        children: [
-                          Icon(
-                            selected
-                                ? Icons.radio_button_checked
-                                : Icons.radio_button_off,
-                            color: selected
-                                ? Theme.of(context).colorScheme.primary
-                                : Theme.of(
-                                    context,
-                                  ).colorScheme.onSurfaceVariant,
-                            size: 22,
-                          ),
-                          const SizedBox(width: 12),
-                          Text(
-                            option,
-                            style: TextStyle(
-                              color: Theme.of(context).colorScheme.onSurface,
-                              fontSize: 15,
-                              fontWeight: selected
-                                  ? FontWeight.w600
-                                  : FontWeight.w400,
+            Obx(
+              () => Column(
+                children: options.map((option) {
+                  final selected = controller.pendingSort.value == option;
+                  return InkWell(
+                    key: Key('sort-${option.toLowerCase()}'),
+                    onTap: () => controller.pendingSort.value = option,
+                    child: SizedBox(
+                      height: 44,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Row(
+                          children: [
+                            Icon(
+                              selected
+                                  ? Icons.radio_button_checked
+                                  : Icons.radio_button_off,
+                              color: selected
+                                  ? Theme.of(context).colorScheme.primary
+                                  : Theme.of(
+                                      context,
+                                    ).colorScheme.onSurfaceVariant,
+                              size: 22,
                             ),
-                          ),
-                        ],
+                            const SizedBox(width: 12),
+                            Text(
+                              option,
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.onSurface,
+                                fontSize: 15,
+                                fontWeight: selected
+                                    ? FontWeight.w600
+                                    : FontWeight.w400,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                );
-              }).toList(),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(20),
-            child: SizedBox(
-              width: double.infinity,
-              height: 48,
-              child: FilledButton(
-                key: const Key('apply-sort'),
-                onPressed: controller.applySort,
-                style: FilledButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  shape: const StadiumBorder(),
-                  textStyle: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                child: Text('Apply'.tr),
+                  );
+                }).toList(),
               ),
             ),
-          ),
-        ],
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: FilledButton(
+                  key: const Key('apply-sort'),
+                  onPressed: controller.applySort,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    shape: const StadiumBorder(),
+                    textStyle: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  child: Text('Apply'.tr),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     ),
   );

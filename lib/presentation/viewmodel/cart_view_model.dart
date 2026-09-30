@@ -168,6 +168,10 @@ class CartViewModel extends BaseViewModel {
           ? rawItems.whereType<Map>().map(_parseItem)
           : const <CartItem>[],
     );
+    _remoteDataSource.badgeCount.value = items.fold<int>(
+      0,
+      (total, item) => total + item.quantity,
+    );
     final totalsSource =
         data['order_summary'] ?? data['totals'] ?? data['summary'] ?? data;
     final totals = _normalizeSummary(totalsSource);

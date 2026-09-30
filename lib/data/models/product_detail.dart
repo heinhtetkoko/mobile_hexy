@@ -1,3 +1,5 @@
+import 'package:mobile_hexy/core/utils/money_formatter.dart';
+
 class ProductVariantValue {
   const ProductVariantValue({
     required this.id,
@@ -5,6 +7,10 @@ class ProductVariantValue {
     required this.available,
     required this.variantId,
     required this.selected,
+    this.attributeValueId,
+    this.ptavId,
+    this.nextAttributeValueIds = const [],
+    this.nextPtavIds = const [],
   });
 
   final int id;
@@ -12,6 +18,10 @@ class ProductVariantValue {
   final bool available;
   final int? variantId;
   final bool selected;
+  final int? attributeValueId;
+  final int? ptavId;
+  final List<int> nextAttributeValueIds;
+  final List<int> nextPtavIds;
 }
 
 class ProductVariantSection {
@@ -67,6 +77,7 @@ class ProductDetailCard {
 class ProductDetail {
   const ProductDetail({
     required this.id,
+    this.selectedVariantId,
     required this.name,
     required this.sku,
     required this.price,
@@ -96,6 +107,7 @@ class ProductDetail {
   });
 
   final int id;
+  final int? selectedVariantId;
   final String name;
   final String sku;
   final double price;
@@ -129,7 +141,6 @@ class ProductDetail {
       : '${_formatAmount(compareAtPrice!)} $currencySymbol'.trim();
 
   static String _formatAmount(double value) {
-    if (value == value.roundToDouble()) return value.toInt().toString();
-    return value.toStringAsFixed(2);
+    return MoneyFormatter.format(value);
   }
 }

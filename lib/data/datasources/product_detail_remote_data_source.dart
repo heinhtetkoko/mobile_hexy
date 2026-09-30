@@ -8,9 +8,24 @@ class ProductDetailRemoteDataSource {
 
   final ApiService _apiService;
 
-  Future<ProductDetail> fetch(int id) async {
+  Future<ProductDetail> fetch(
+    int id, {
+    int? productVariantId,
+    List<int> attributeValueIds = const [],
+    List<int> ptavIds = const [],
+    String? color,
+    String? size,
+  }) async {
     final response = await _apiService.get<dynamic>(
       ApiEndpoints.productDetail(id),
+      queryParameters: {
+        'product_variant_id': ?productVariantId,
+        if (attributeValueIds.isNotEmpty)
+          'attribute_value_ids': attributeValueIds.join(','),
+        if (ptavIds.isNotEmpty) 'ptav_ids': ptavIds.join(','),
+        'color': ?color,
+        'size': ?size,
+      },
       options: Options(extra: const {ApiEndpoints.requiresAuthKey: false}),
     );
     final body = response.data;
@@ -18,7 +33,17 @@ class ProductDetailRemoteDataSource {
       throw const FormatException('Could not load product details.');
     }
     final data = Map<String, dynamic>.from(body['data'] as Map);
-    final currency = data['currency'];
+    final selectedVariant = data['selected_variant'] is Map
+        ? data['selected_variant'] as Map
+        : const {};
+    final selectedVariantId = _intValue(
+      selectedVariant['product_variant_id'] ??
+          selectedVariant['id'] ??
+          data['product_variant_id'],
+    );
+    final priceData = data['price'] is Map ? data['price'] as Map : const {};
+    final stock = data['stock'] is Map ? data['stock'] as Map : const {};
+    final currency = data['currency'] ?? priceData['currency'];
     final category = data['category'];
     final variantSections = data['variant_sections'];
     final specifications = data['specifications'];
@@ -27,30 +52,32 @@ class ProductDetailRemoteDataSource {
     final quantitySelector = data['quantity_selector'];
     final relatedProducts = data['related_products'];
     final youMightAlsoLike = data['you_might_also_like'];
-    final imageUrls = <String>[
-      if (data['image_url']?.toString().isNotEmpty == true)
-        data['image_url'].toString(),
-      if (images is List)
-        ...images.whereType<Map>().map(
-          (value) => value['image_url']?.toString() ?? '',
-        ),
+    final variantValues = data['variant_values'];
+    final selectedImages = variantValues is List
+        ? variantValues.whereType<Map>().where(
+            (value) =>
+                value['selected'] == true ||
+                (selectedVariantId != null &&
+                    _intValue(
+                          value['product_variant_id'] ?? value['variant_id'],
+                        ) ==
+                        selectedVariantId),
+          )
+        : const <Map>[];
+    final uniqueImageUrls = <String>[
+      _imageUrl(selectedVariant),
+      ...selectedImages.map(_imageUrl),
       if (gallery is Map && gallery['items'] is List)
-        ...(gallery['items'] as List).whereType<Map>().map(
-          (value) =>
-              value['image_url']?.toString() ??
-              value['zoom_url']?.toString() ??
-              '',
-        ),
-      if (gallery is List) ...gallery.map((value) => value.toString()),
-    ];
-    final uniqueImageUrls = imageUrls
-        .where((value) => value.isNotEmpty)
-        .toSet()
-        .toList(growable: false);
+        ...(gallery['items'] as List).map(_imageUrl),
+      if (gallery is List) ...gallery.map(_imageUrl),
+      if (images is List) ...images.map(_imageUrl),
+      _imageUrl(data['image_url']),
+    ].where((value) => value.isNotEmpty).toSet().toList(growable: false);
     final categoryName = category is Map
         ? category['name']?.toString() ?? ''
         : data['category_name']?.toString() ?? '';
     return ProductDetail(
+      selectedVariantId: selectedVariantId,
       id: int.tryParse(data['id']?.toString() ?? '') ?? id,
       name: data['name']?.toString() ?? '',
       sku: data['sku'] == false ? '' : data['sku']?.toString() ?? '',
@@ -81,9 +108,20 @@ class ProductDetailRemoteDataSource {
       imageUrls: uniqueImageUrls,
       rating: double.tryParse(data['rating']?.toString() ?? '') ?? 0,
       reviewCount: int.tryParse(data['review_count']?.toString() ?? '') ?? 0,
-      inStock: data['in_stock'] == true,
+      inStock:
+          (data['in_stock'] ??
+              selectedVariant['in_stock'] ??
+              stock['in_stock']) ==
+          true,
       availableQuantity:
-          double.tryParse(data['available_qty']?.toString() ?? '') ?? 0,
+          double.tryParse(
+            (data['available_qty'] ??
+                        selectedVariant['available_qty'] ??
+                        stock['qty'])
+                    ?.toString() ??
+                '',
+          ) ??
+          0,
       description:
           data['description_plain']?.toString() ??
           data['description']?.toString() ??
@@ -123,6 +161,27 @@ class ProductDetailRemoteDataSource {
       relatedProducts: _parseProductCards(relatedProducts, currency),
       youMightAlsoLike: _parseProductCards(youMightAlsoLike, currency),
     );
+  }
+
+  List<int> _ids(Object? source) => source is List
+      ? source.map(_intValue).whereType<int>().where((id) => id > 0).toList()
+      : const [];
+
+  String _imageUrl(Object? source) {
+    if (source is Map) {
+      for (final key in ['image_url', 'zoom_url', 'thumbnail_url']) {
+        final value = _imageUrl(source[key]);
+        if (value.isNotEmpty) return value;
+      }
+      return '';
+    }
+    if (source is! String || source.trim().isEmpty) return '';
+    final uri = Uri.tryParse(source.trim());
+    if (uri == null) return '';
+    final resolved = Uri.parse(ApiEndpoints.baseUrl).resolveUri(uri);
+    return ['http', 'https'].contains(resolved.scheme)
+        ? resolved.toString()
+        : '';
   }
 
   String _shareUrl(Object? value, int productId) {
@@ -198,6 +257,10 @@ class ProductDetailRemoteDataSource {
                     '',
               ),
               selected: raw['selected'] == true,
+              attributeValueId: _intValue(raw['value_id'] ?? raw['id']),
+              ptavId: _intValue(raw['ptav_id']),
+              nextAttributeValueIds: _ids(raw['next_attribute_value_ids']),
+              nextPtavIds: _ids(raw['next_ptav_ids']),
             );
           }
           return ProductVariantValue(

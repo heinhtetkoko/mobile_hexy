@@ -1,3 +1,5 @@
+import 'package:mobile_hexy/core/utils/money_formatter.dart';
+
 enum OrderStatus { pending, processing, delivered, refunded, cancelled }
 
 class OrderSummary {
@@ -77,18 +79,16 @@ class OrderSummary {
       value = value['amount'] ?? value['value'];
     }
     if (value is num) return '${_number(value)} $symbol'.trim();
-    return value?.toString() ?? '';
+    return MoneyFormatter.display(value);
   }
 
   static String _moveSymbolAfterAmount(String value, String symbol) {
-    if (symbol.isEmpty) return value;
+    if (symbol.isEmpty) return MoneyFormatter.display(value);
     final amount = value.replaceAll(symbol, '').trim();
-    return '$amount $symbol'.trim();
+    return MoneyFormatter.display('$amount $symbol'.trim());
   }
 
-  static String _number(num value) => value == value.roundToDouble()
-      ? value.toInt().toString()
-      : value.toStringAsFixed(2);
+  static String _number(num value) => MoneyFormatter.format(value);
 }
 
 OrderStatus parseOrderStatus(String? value) {

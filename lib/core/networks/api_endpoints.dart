@@ -2,7 +2,7 @@ abstract final class ApiEndpoints {
   static const baseUrl = String.fromEnvironment(
     'API_BASE_URL',
     defaultValue:
-        'https://heinhtetkoko-odooecommerce-main-37823252.dev.odoo.com/',
+        'https://heinhtetkoko-odooecommerce-staging-38769300.dev.odoo.com/',
   );
   static const login = 'api/v1/auth/token';
   static const googleLogin = 'api/v1/auth/google';
@@ -27,6 +27,7 @@ abstract final class ApiEndpoints {
   static const collections = 'api/v1/collections';
   static String collection(Object id) => 'api/v1/collections/$id';
   static const productSearch = 'api/v1/product/search';
+  static const productFilter = 'api/v1/product/filter';
   static const allProducts = 'api/v1/products';
   static const cart = 'api/v1/cart';
   static const checkout = 'api/v1/checkout';

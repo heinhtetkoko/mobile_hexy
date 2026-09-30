@@ -1,3 +1,4 @@
+import 'package:mobile_hexy/core/utils/money_formatter.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:mobile_hexy/app.dart';
@@ -599,7 +600,7 @@ class _OrderReceipt extends StatelessWidget {
       'formatted_grand_total',
       'amount_total_formatted',
     ]);
-    if (formatted.isNotEmpty) return formatted;
+    if (formatted.isNotEmpty) return MoneyFormatter.display(formatted);
     final raw = _find(data, const [
       'grand_total',
       'amount_total',
@@ -614,10 +615,8 @@ class _OrderReceipt extends StatelessWidget {
     final amount = raw is num
         ? raw.toDouble()
         : double.tryParse(raw.toString().replaceAll(',', ''));
-    if (amount == null) return raw.toString();
-    final amountText = amount == amount.roundToDouble()
-        ? amount.toInt().toString()
-        : amount.toStringAsFixed(2);
+    if (amount == null) return MoneyFormatter.display(raw);
+    final amountText = MoneyFormatter.format(amount);
     return '$amountText $currency'.trim();
   }
 }

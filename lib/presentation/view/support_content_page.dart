@@ -173,16 +173,15 @@ class _ContactContent extends StatelessWidget {
     final nested = root['contact'];
     final map = nested is Map ? {...root, ...nested} : root;
     final rawStores =
+        map['shops'] ??
         map['stores'] ??
         map['branches'] ??
         map['locations'] ??
-        map['shops'] ??
         map['outlets'];
     if (rawStores is List) {
       final stores = rawStores
           .whereType<Map>()
-          .map((store) => <dynamic, dynamic>{...map, ...store})
-          .take(3)
+          .map((store) => Map<dynamic, dynamic>.from(store))
           .toList(growable: false);
       if (stores.isNotEmpty) return _ContactStoreList(stores: stores);
     }
@@ -367,18 +366,76 @@ class _ContactStoreList extends StatelessWidget {
   final List<Map<dynamic, dynamic>> stores;
 
   @override
-  Widget build(BuildContext context) => ListView.separated(
-    physics: const AlwaysScrollableScrollPhysics(),
-    padding: const EdgeInsets.all(16),
-    itemCount: stores.length,
-    separatorBuilder: (_, _) => const SizedBox(height: 16),
-    itemBuilder: (context, index) =>
-        _ContactStoreCard(store: stores[index], index: index),
+  Widget build(BuildContext context) => DefaultTabController(
+    length: stores.length,
+    child: Column(
+      children: [
+        Material(
+          color: Theme.of(context).colorScheme.surface,
+          elevation: 1,
+          child: TabBar(
+            isScrollable: true,
+            tabAlignment: TabAlignment.start,
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            labelPadding: const EdgeInsets.symmetric(horizontal: 16),
+            indicatorColor: Theme.of(context).colorScheme.primary,
+            indicatorWeight: 3,
+            indicatorSize: TabBarIndicatorSize.label,
+            labelColor: Theme.of(context).colorScheme.primary,
+            unselectedLabelColor: Theme.of(
+              context,
+            ).colorScheme.onSurfaceVariant,
+            labelStyle: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+            ),
+            unselectedLabelStyle: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+            ),
+            tabs: stores.indexed
+                .map(
+                  (entry) => Tab(
+                    key: Key('contact-shop-tab-${entry.$2['id'] ?? entry.$1}'),
+                    text: _storeName(entry.$2, entry.$1),
+                  ),
+                )
+                .toList(growable: false),
+          ),
+        ),
+        Expanded(
+          child: TabBarView(
+            children: stores.indexed
+                .map(
+                  (entry) => ListView(
+                    key: PageStorageKey(
+                      'contact-shop-${entry.$2['id'] ?? entry.$1}',
+                    ),
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: EdgeInsets.zero,
+                    children: [
+                      _ContactStoreView(store: entry.$2, index: entry.$1),
+                    ],
+                  ),
+                )
+                .toList(growable: false),
+          ),
+        ),
+      ],
+    ),
   );
 }
 
-class _ContactStoreCard extends StatelessWidget {
-  const _ContactStoreCard({required this.store, required this.index});
+String _storeName(Map<dynamic, dynamic> store, int index) =>
+    (store['store_name'] ??
+            store['branch_name'] ??
+            store['name'] ??
+            store['title'])
+        ?.toString() ??
+    'Store ${index + 1}';
+
+class _ContactStoreView extends StatelessWidget {
+  const _ContactStoreView({required this.store, required this.index});
 
   final Map<dynamic, dynamic> store;
   final int index;
@@ -410,81 +467,153 @@ class _ContactStoreCard extends StatelessWidget {
       directionsUrl: directionsUrl,
       address: address.join(', '),
     );
-    final name =
-        (store['store_name'] ??
-                store['branch_name'] ??
-                store['name'] ??
-                store['title'])
-            ?.toString() ??
-        'Store ${index + 1}';
+    final name = _storeName(store, index);
     final phones = _contactValues(
       store['phones'] ?? store['phone_numbers'] ?? store['phone'],
     );
     final emails = _contactValues(store['emails'] ?? store['email']);
+    final imageUrl = store['store_image_url']?.toString();
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Theme.of(context).dividerColor),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            name,
-            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
-          ),
-          if (phones.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            _ContactDetailRow(
-              icon: Icons.phone_outlined,
-              iconColor: const Color(0xFF24205F),
-              iconBackground: const Color(0xFFF0F1FF),
-              values: phones,
-              onValueTap: _openPhoneDialer,
-            ),
-          ],
-          if (emails.isNotEmpty) ...[
-            const Divider(height: 1),
-            _ContactDetailRow(
-              icon: Icons.mail_outline_rounded,
-              iconColor: const Color(0xFFE91E75),
-              iconBackground: const Color(0xFFFFEDF5),
-              values: emails,
-              onValueTap: (email) => _openContactLink(
-                Uri(scheme: 'mailto', path: email.trim()),
-                label: 'Email',
+    return Column(
+      children: [
+        SizedBox(
+          height: 230,
+          width: double.infinity,
+          child: imageUrl?.isNotEmpty == true
+              ? Image.network(
+                  imageUrl!,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, _, _) => Image.asset(
+                    'assets/images/contact/storefront.png',
+                    fit: BoxFit.cover,
+                  ),
+                )
+              : Image.asset(
+                  'assets/images/contact/storefront.png',
+                  fit: BoxFit.cover,
+                ),
+        ),
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surface,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x10000000),
+                      blurRadius: 14,
+                      offset: Offset(0, 5),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    if (phones.isNotEmpty) ...[
+                      _ContactDetailRow(
+                        icon: Icons.phone_outlined,
+                        iconColor: const Color(0xFF24205F),
+                        iconBackground: const Color(0xFFF0F1FF),
+                        values: phones,
+                        onValueTap: _openPhoneDialer,
+                      ),
+                    ],
+                    if (emails.isNotEmpty) ...[
+                      const Divider(height: 1),
+                      _ContactDetailRow(
+                        icon: Icons.mail_outline_rounded,
+                        iconColor: const Color(0xFFE91E75),
+                        iconBackground: const Color(0xFFFFEDF5),
+                        values: emails,
+                        onValueTap: (email) => _openContactLink(
+                          Uri(scheme: 'mailto', path: email.trim()),
+                          label: 'Email',
+                        ),
+                      ),
+                    ],
+                    if (address.isNotEmpty) ...[
+                      const Divider(height: 1),
+                      _ContactDetailRow(
+                        icon: Icons.location_on_outlined,
+                        iconColor: const Color(0xFF10B968),
+                        iconBackground: const Color(0xFFEAFFF3),
+                        values: [
+                          ...address,
+                          if (mapUri != null) 'Get Directions →',
+                        ],
+                        onTap: mapUri == null
+                            ? null
+                            : () => _openContactLink(mapUri, label: 'Maps'),
+                      ),
+                    ],
+                  ],
+                ),
               ),
-            ),
-          ],
-          if (address.isNotEmpty) ...[
-            const Divider(height: 1),
-            _ContactDetailRow(
-              icon: Icons.location_on_outlined,
-              iconColor: const Color(0xFF10B968),
-              iconBackground: const Color(0xFFEAFFF3),
-              values: [...address, if (mapUri != null) 'Get Directions →'],
-              onTap: mapUri == null
-                  ? null
-                  : () => _openContactLink(mapUri, label: 'Maps'),
-            ),
-          ],
-          const SizedBox(height: 12),
-          _ContactMapCard(
-            latitude: latitude,
-            longitude: longitude,
-            storeName: name,
-            mapLabel: location is Map
-                ? location['label']?.toString() ?? 'Open in Maps'
-                : 'Open in Maps',
-            onOpenMap: mapUri == null
-                ? null
-                : () => _openContactLink(mapUri, label: 'Maps'),
+              const SizedBox(height: 14),
+              _ContactMapCard(
+                latitude: latitude,
+                longitude: longitude,
+                storeName: name,
+                mapLabel: location is Map
+                    ? location['label']?.toString() ?? 'Open in Maps'
+                    : 'Open in Maps',
+                onOpenMap: mapUri == null
+                    ? null
+                    : () => _openContactLink(mapUri, label: 'Maps'),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: _ContactSocialButton(
+                      label: 'FB Page',
+                      icon: Icons.facebook,
+                      color: const Color(0xFF1877F2),
+                      onPressed: () => _openContactLink(
+                        Uri.parse('https://www.facebook.com/share/19ZDP3opBp/'),
+                        label: 'Facebook',
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _ContactSocialButton(
+                      label: 'Viber Call',
+                      icon: Icons.phone_outlined,
+                      color: const Color(0xFF7354ED),
+                      onPressed: () => _openContactLink(
+                        Uri(
+                          scheme: 'viber',
+                          host: 'chat',
+                          queryParameters: const {'number': '+959752473565'},
+                        ),
+                        label: 'Viber',
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _ContactSocialButton(
+                      label: 'TikTok',
+                      icon: Icons.play_arrow_rounded,
+                      color: Colors.black,
+                      onPressed: () => _openContactLink(
+                        Uri.parse(
+                          'https://www.tiktok.com/@hexcy.stationery?_r=1&_t=ZS-99Q8z9h6u2O',
+                        ),
+                        label: 'TikTok',
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

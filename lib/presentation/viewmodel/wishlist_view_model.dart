@@ -3,6 +3,7 @@ import 'package:mobile_hexy/core/base/base_view_model.dart';
 import 'package:mobile_hexy/data/datasources/wishlist_remote_data_source.dart';
 import 'package:mobile_hexy/data/datasources/cart_remote_data_source.dart';
 import 'package:mobile_hexy/data/models/wishlist_item.dart';
+import 'package:mobile_hexy/presentation/widgets/add_to_cart_success_dialog.dart';
 
 class WishlistViewModel extends BaseViewModel {
   WishlistViewModel(this._remoteDataSource, this._cartRemoteDataSource);
@@ -52,14 +53,13 @@ class WishlistViewModel extends BaseViewModel {
     if (updatingIds.contains(item.id)) return;
     updatingIds.add(item.id);
     try {
-      final result = await _remoteDataSource.moveToCart(item.productId);
+      final result = await _remoteDataSource.moveToCart(
+        item.productId,
+        variantId: item.variantId,
+      );
       items.assignAll(result.items);
       await _cartRemoteDataSource.fetchCart();
-      Get.snackbar(
-        'Added to cart',
-        item.name,
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      await showAddToCartSuccessDialog(productName: item.name);
     } catch (error) {
       _showError(error);
     } finally {

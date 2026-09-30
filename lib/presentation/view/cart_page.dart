@@ -1,3 +1,4 @@
+import 'package:mobile_hexy/core/utils/money_formatter.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:mobile_hexy/app.dart';
@@ -9,16 +10,10 @@ class CartPage extends GetView<CartViewModel> {
   const CartPage({super.key});
 
   static String money(int value) {
-    final digits = value.toString();
-    final buffer = StringBuffer();
-    for (var index = 0; index < digits.length; index++) {
-      if (index > 0 && (digits.length - index) % 3 == 0) buffer.write(',');
-      buffer.write(digits[index]);
-    }
     final symbol = Get.isRegistered<CartViewModel>()
         ? Get.find<CartViewModel>().currencySymbol.value.trim()
         : 'Ks';
-    return '$buffer $symbol'.trim();
+    return '${MoneyFormatter.format(value)} $symbol'.trim();
   }
 
   @override
@@ -512,7 +507,9 @@ class _OrderSummary extends StatelessWidget {
 
   String _summaryDisplay(CartSummaryRow row) {
     final formatted = row.formattedValue?.trim();
-    if (formatted != null && formatted.isNotEmpty) return formatted;
+    if (formatted != null && formatted.isNotEmpty) {
+      return MoneyFormatter.display(formatted);
+    }
     final value = CartPage.money(row.amount.abs());
     return row.isDiscount && row.amount != 0 ? '−$value' : value;
   }

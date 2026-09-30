@@ -1,3 +1,4 @@
+import 'package:mobile_hexy/core/utils/money_formatter.dart';
 import 'package:dio/dio.dart';
 import 'package:get/get.dart';
 import 'package:mobile_hexy/core/networks/api_endpoints.dart';
@@ -38,12 +39,17 @@ class WishlistRemoteDataSource {
         if (variantId != null && variantId > 0) 'variant_id': variantId,
       });
 
-  Future<WishlistResult> moveToCart(int productId) => _performAction({
-    'action': 'move_to_cart',
-    'product_id': productId,
-    'quantity': 1,
-    'remove_from_wishlist': true,
-  });
+  Future<WishlistResult> moveToCart(int productId, {int? variantId}) =>
+      _performAction({
+        'action': 'move_to_cart',
+        'product_id': productId,
+        if (variantId != null && variantId > 0) ...{
+          'product_variant_id': variantId,
+          'variant_id': variantId,
+        },
+        'quantity': 1,
+        'remove_from_wishlist': true,
+      });
 
   Future<WishlistResult> clear() => _performAction({'action': 'clear'});
 
@@ -92,9 +98,7 @@ class WishlistRemoteDataSource {
               '',
         ) ??
         0;
-    final amount = price == price.roundToDouble()
-        ? price.toInt().toString()
-        : price.toStringAsFixed(2);
+    final amount = MoneyFormatter.format(price);
     return WishlistItem(
       id: (json['wishlist_id'] ?? json['id'])?.toString() ?? '',
       productId:
@@ -102,6 +106,7 @@ class WishlistRemoteDataSource {
             (source['product_id'] ?? source['id'])?.toString() ?? '',
           ) ??
           0,
+      variantId: _variantId(json, source),
       name: source['name']?.toString() ?? '',
       price: '$amount $symbol'.trim(),
       imageAsset: '',
@@ -111,5 +116,27 @@ class WishlistRemoteDataSource {
       inStock: source['in_stock'] != false,
       cartQuantity: int.tryParse(source['cart_qty']?.toString() ?? '') ?? 0,
     );
+  }
+
+  int? _variantId(Map<dynamic, dynamic> item, Map<dynamic, dynamic> source) {
+    final variant =
+        source['product_variant'] ?? source['variant'] ?? item['variant'];
+    final variants = source['variants'] ?? item['variants'];
+    final firstVariant = variants is List && variants.isNotEmpty
+        ? variants.first
+        : null;
+    final rawId =
+        item['product_variant_id'] ??
+        item['variant_id'] ??
+        source['product_variant_id'] ??
+        source['variant_id'] ??
+        (variant is Map ? variant['id'] ?? variant['variant_id'] : variant) ??
+        (firstVariant is Map
+            ? firstVariant['product_variant_id'] ??
+                  firstVariant['variant_id'] ??
+                  firstVariant['id']
+            : firstVariant);
+    final id = int.tryParse(rawId?.toString() ?? '');
+    return id != null && id > 0 ? id : null;
   }
 }

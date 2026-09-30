@@ -3,9 +3,7 @@ import 'package:get/get.dart';
 import 'package:mobile_hexy/app.dart';
 import 'package:mobile_hexy/core/base/base_view_model.dart';
 import 'package:mobile_hexy/data/datasources/category_products_remote_data_source.dart';
-import 'package:mobile_hexy/data/datasources/best_sellers_remote_data_source.dart';
 import 'package:mobile_hexy/data/datasources/home_products_remote_data_source.dart';
-import 'package:mobile_hexy/data/datasources/new_arrivals_remote_data_source.dart';
 import 'package:mobile_hexy/data/datasources/brands_remote_data_source.dart';
 import 'package:mobile_hexy/data/datasources/categories_remote_data_source.dart';
 import 'package:mobile_hexy/data/datasources/cart_remote_data_source.dart';
@@ -26,17 +24,16 @@ import 'package:mobile_hexy/data/models/catalog_brand.dart';
 class ProductListViewModel extends BaseViewModel {
   ProductListViewModel(
     this._remoteDataSource,
-    this._bestSellersDataSource,
-    this._newArrivalsDataSource,
     this._homeProductsDataSource,
     this._cartRemoteDataSource,
     this._wishlistRemoteDataSource,
-    this._collectionsRemoteDataSource,
-  );
+    this._collectionsRemoteDataSource, {
+    this.request,
+  });
+
+  final ProductListRequest? request;
 
   final CategoryProductsRemoteDataSource _remoteDataSource;
-  final BestSellersRemoteDataSource _bestSellersDataSource;
-  final NewArrivalsRemoteDataSource _newArrivalsDataSource;
   final HomeProductsRemoteDataSource _homeProductsDataSource;
   final CartRemoteDataSource _cartRemoteDataSource;
   final WishlistRemoteDataSource _wishlistRemoteDataSource;
@@ -48,12 +45,18 @@ class ProductListViewModel extends BaseViewModel {
   final sortLabel = 'Sort by'.obs;
   final pendingSort = 'Default Sorting'.obs;
   final activeFilters = 0.obs;
-  final selectedCategory = ''.obs;
-  final pendingCategory = ''.obs;
-  final selectedBrands = <String>{}.obs;
-  final pendingBrands = <String>{}.obs;
+  final selectedCategories = <int>{}.obs;
+  final pendingCategories = <int>{}.obs;
+  final selectedBrands = <int>{}.obs;
+  final pendingBrands = <int>{}.obs;
   final priceRange = const RangeValues(0, 15000).obs;
   final pendingPriceRange = const RangeValues(0, 15000).obs;
+  double? minPrice;
+  double? maxPrice;
+  final minPriceInput = TextEditingController();
+  final maxPriceInput = TextEditingController();
+  final priceError = RxnString();
+  final pendingPriceActive = false.obs;
   final inStockOnly = false.obs;
   final pendingInStockOnly = false.obs;
   final filterCategories = <CatalogCategory>[].obs;
@@ -70,6 +73,8 @@ class ProductListViewModel extends BaseViewModel {
   int? _collectionId;
   int? _brandId;
   int _page = 1;
+  int _loadRevision = 0;
+  final loadMoreError = RxnString();
   ProductListMode? _mode;
   Worker? _searchWorker;
   int _wishlistMutationRevision = 0;
@@ -77,17 +82,31 @@ class ProductListViewModel extends BaseViewModel {
   @override
   void onInit() {
     super.onInit();
+    void updatePriceCount() {
+      pendingPriceActive.value =
+          minPriceInput.text.trim().isNotEmpty ||
+          maxPriceInput.text.trim().isNotEmpty;
+    }
+
+    minPriceInput.addListener(updatePriceCount);
+    maxPriceInput.addListener(updatePriceCount);
     _loadFilterOptions();
     _loadWishlistState();
-    final category = Get.arguments;
+    final category = request ?? Get.arguments;
     if (category is CatalogCategory) {
       _categoryId = category.id;
       categoryName.value = category.name;
-      selectedCategory.value = category.name;
-      pendingCategory.value = category.name;
+      selectedCategories.add(category.id);
+      pendingCategories.add(category.id);
       loadProducts();
     } else if (category is ProductListRequest) {
       _mode = category.mode;
+      sortLabel.value = switch (_mode) {
+        ProductListMode.bestSellers => 'Popular',
+        ProductListMode.newArrivals => 'New Arrivals',
+        ProductListMode.flashSale => 'Biggest Discount',
+        _ => 'Sort by',
+      };
       categoryName.value = switch (category.mode) {
         ProductListMode.bestSellers => 'Best Sellers',
         ProductListMode.newArrivals => 'New Arrivals',
@@ -150,23 +169,33 @@ class ProductListViewModel extends BaseViewModel {
 
   @override
   void onClose() {
+    _loadRevision++;
+    minPriceInput.dispose();
+    maxPriceInput.dispose();
     _searchWorker?.dispose();
     super.onClose();
   }
 
   Future<void> loadProducts() async {
     if (_categoryId <= 0 && _mode == null) return;
+    final revision = ++_loadRevision;
+    _page = 1;
+    hasNextPage.value = false;
+    isLoadingMore.value = false;
+    loadMoreError.value = null;
     isLoading.value = true;
     errorMessage.value = null;
     try {
       final result = await _fetchPage(1);
+      if (revision != _loadRevision) return;
       products.assignAll(result.products);
       _page = result.page;
       hasNextPage.value = result.hasNext;
     } catch (_) {
+      if (revision != _loadRevision) return;
       errorMessage.value = 'Could not load products. Please try again.';
     } finally {
-      isLoading.value = false;
+      if (revision == _loadRevision) isLoading.value = false;
     }
   }
 
@@ -377,67 +406,120 @@ class ProductListViewModel extends BaseViewModel {
   }
 
   Future<void> applySort() async {
+    if (!supportsSortFilter) return;
     sortLabel.value = pendingSort.value == 'Default Sorting'
         ? 'Sort by'
         : pendingSort.value;
-    Get.back<void>();
+    if (Get.isBottomSheetOpen == true) Get.back<void>();
     await loadProducts();
   }
 
   void beginFilter() {
-    pendingCategory.value = selectedCategory.value;
+    minPriceInput.text = minPrice?.toString() ?? '';
+    maxPriceInput.text = maxPrice?.toString() ?? '';
+    priceError.value = null;
+    pendingCategories.assignAll(selectedCategories);
     pendingBrands.assignAll(selectedBrands);
     pendingPriceRange.value = priceRange.value;
     pendingInStockOnly.value = inStockOnly.value;
   }
 
-  void togglePendingBrand(String brand) => pendingBrands.contains(brand)
+  void togglePendingBrand(int brand) => pendingBrands.contains(brand)
       ? pendingBrands.remove(brand)
+      : usesSectionFilter
+      ? pendingBrands.add(brand)
       : pendingBrands.assignAll([brand]);
 
   void resetPendingFilters() {
-    pendingCategory.value = '';
+    minPriceInput.clear();
+    maxPriceInput.clear();
+    priceError.value = null;
+    pendingCategories.clear();
     pendingBrands.clear();
     pendingPriceRange.value = const RangeValues(0, 15000);
     pendingInStockOnly.value = false;
   }
 
   int get pendingFilterCount =>
-      (pendingCategory.value.isEmpty ? 0 : 1) +
+      pendingCategories.length +
       pendingBrands.length +
-      (pendingPriceRange.value == const RangeValues(0, 15000) ? 0 : 1) +
+      (usesSectionFilter
+          ? (pendingPriceActive.value ? 1 : 0)
+          : (pendingPriceRange.value == const RangeValues(0, 15000) ? 0 : 1)) +
       (pendingInStockOnly.value ? 1 : 0);
 
   Future<void> applyFilters() async {
-    selectedCategory.value = pendingCategory.value;
+    if (!supportsSortFilter) return;
+    if (usesSectionFilter) {
+      final minText = minPriceInput.text.trim().replaceAll(',', '');
+      final maxText = maxPriceInput.text.trim().replaceAll(',', '');
+      final minimum = double.tryParse(minText);
+      final maximum = double.tryParse(maxText);
+      if ((minText.isNotEmpty &&
+              (minimum == null || !minimum.isFinite || minimum < 0)) ||
+          (maxText.isNotEmpty &&
+              (maximum == null || !maximum.isFinite || maximum < 0)) ||
+          (minimum != null && maximum != null && minimum > maximum)) {
+        priceError.value =
+            'Enter a valid price range (minimum must not exceed maximum).';
+        return;
+      }
+      minPrice = minimum;
+      maxPrice = maximum;
+      priceError.value = null;
+    }
+    selectedCategories.assignAll(pendingCategories);
     selectedBrands.assignAll(pendingBrands);
     priceRange.value = pendingPriceRange.value;
     inStockOnly.value = pendingInStockOnly.value;
     activeFilters.value = pendingFilterCount;
-    Get.back<void>();
+    if (Get.isBottomSheetOpen == true) Get.back<void>();
     await loadProducts();
+  }
+
+  bool get supportsSortFilter => _mode != ProductListMode.recommended;
+
+  bool get usesSectionFilter => section != null;
+
+  String? get section => switch (_mode) {
+    ProductListMode.bestSellers => 'best_sellers',
+    ProductListMode.newArrivals => 'new_arrivals',
+    ProductListMode.flashSale => 'flash_sale',
+    _ => null,
+  };
+
+  void togglePendingCategory(int id) {
+    if (pendingCategories.contains(id)) {
+      pendingCategories.remove(id);
+    } else if (usesSectionFilter) {
+      pendingCategories.add(id);
+    } else {
+      pendingCategories.assignAll([id]);
+    }
   }
 
   Future<void> loadMore() async {
     if ((_categoryId <= 0 && _mode == null) ||
         !hasNextPage.value ||
-        isLoadingMore.value) {
+        isLoading.value ||
+        isLoadingMore.value ||
+        errorMessage.value != null) {
       return;
     }
+    final revision = _loadRevision;
     isLoadingMore.value = true;
+    loadMoreError.value = null;
     try {
       final result = await _fetchPage(_page + 1);
+      if (revision != _loadRevision) return;
       products.addAll(result.products);
       _page = result.page;
       hasNextPage.value = result.hasNext;
     } catch (_) {
-      Get.snackbar(
-        'Could not load products',
-        'Please try again.',
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      if (revision != _loadRevision) return;
+      loadMoreError.value = 'Could not load more products. Please try again.';
     } finally {
-      isLoadingMore.value = false;
+      if (revision == _loadRevision) isLoadingMore.value = false;
     }
   }
 
@@ -459,24 +541,32 @@ class ProductListViewModel extends BaseViewModel {
 
     switch (_mode!) {
       case ProductListMode.bestSellers:
-        final result = await _bestSellersDataSource.fetch(
-          page: page,
-          limit: pageLimit,
-        );
-        return _catalogResult(result.products, result.page, result.hasNext);
       case ProductListMode.newArrivals:
-        final result = await _newArrivalsDataSource.fetch(
-          page: page,
-          limit: pageLimit,
-        );
-        return _catalogResult(result.products, result.page, result.hasNext);
       case ProductListMode.flashSale:
-        final result = await _homeProductsDataSource.fetch(
-          path: ApiEndpoints.flashSale,
+        final result = await _remoteDataSource.fetchFilteredProducts(
+          section: section!,
+          categoryId: selectedCategories.length == 1
+              ? selectedCategories.single
+              : null,
+          categoryIds: selectedCategories.length > 1
+              ? selectedCategories.toList()
+              : const [],
+          brandId: selectedBrands.length == 1 ? selectedBrands.single : null,
+          brandIds: selectedBrands.length > 1
+              ? selectedBrands.toList()
+              : const [],
+          minPrice: minPrice,
+          maxPrice: maxPrice,
+          inStock: inStockOnly.value ? true : null,
+          sort: _sortValue,
           page: page,
           limit: pageLimit,
         );
-        return _catalogResult(result.products, result.page, result.hasNext);
+        return (
+          products: result.products,
+          page: result.page,
+          hasNext: result.hasNext,
+        );
       case ProductListMode.recommended:
         final result = await _homeProductsDataSource.fetch(
           path: ApiEndpoints.recommendedProducts,
@@ -526,12 +616,8 @@ class ProductListViewModel extends BaseViewModel {
           hasNext: result.hasNext,
         );
       case ProductListMode.search:
-        final selectedCategoryId = filterCategories
-            .firstWhereOrNull((item) => item.name == selectedCategory.value)
-            ?.id;
-        final selectedBrandId = filterBrands
-            .firstWhereOrNull((item) => selectedBrands.contains(item.name))
-            ?.id;
+        final selectedCategoryId = selectedCategories.firstOrNull;
+        final selectedBrandId = selectedBrands.firstOrNull;
         final result = await _remoteDataSource.fetchAllProducts(
           query: query.value.trim(),
           categoryId: selectedCategoryId,
@@ -557,7 +643,9 @@ class ProductListViewModel extends BaseViewModel {
     'Price: Low to High' => 'price_asc',
     'Price: High to Low' => 'price_desc',
     'Biggest Discount' => 'highest_discount',
-    'A–Z' => 'name',
+    'Highest Rating' => 'highest_rating',
+    'A–Z' => 'a_z',
+    'Z–A' => 'z_a',
     _ => 'default',
   };
 

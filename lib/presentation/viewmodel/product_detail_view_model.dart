@@ -32,6 +32,9 @@ class ProductDetailViewModel extends BaseViewModel {
   final isFavorite = false.obs;
   final product = Rxn<ProductDetail>();
   final isLoading = false.obs;
+  final isLoadingVariant = false.obs;
+  final variantError = RxnString();
+  int _detailRevision = 0;
   final isAddingToCart = false.obs;
   final isBuyingNow = false.obs;
   final isUpdatingWishlist = false.obs;
@@ -65,30 +68,15 @@ class ProductDetailViewModel extends BaseViewModel {
       errorMessage.value = 'No product selected.';
       return;
     }
+    final revision = ++_detailRevision;
+    isLoadingVariant.value = false;
+    variantError.value = null;
     isLoading.value = true;
     errorMessage.value = null;
     try {
       final result = await _remoteDataSource.fetch(id);
-      product.value = result;
-      selectedImage.value = 0;
-      final variantValues = result.variantSections.expand(
-        (section) => section.values,
-      );
-      final selectedValues = variantValues.where((value) => value.selected);
-      selectedVariantId.value = selectedValues.isNotEmpty
-          ? _firstVariantId(selectedValues) ?? _firstVariantId(variantValues)
-          : _firstVariantId(variantValues);
-      selectedVariantValues.assignAll({
-        for (final section in result.variantSections)
-          if (section.values.any((value) => value.available))
-            section.key:
-                section.values
-                    .firstWhereOrNull(
-                      (value) => value.selected && value.available,
-                    )
-                    ?.id ??
-                section.values.firstWhere((value) => value.available).id,
-      });
+      if (revision != _detailRevision) return;
+      _applyVariantDetail(result);
       quantity.value = result.defaultQuantity;
       if (arguments is Map && arguments['quantity'] is int) {
         quantity.value = (arguments['quantity'] as int).clamp(
@@ -106,9 +94,10 @@ class ProductDetailViewModel extends BaseViewModel {
           ].where((item) => item.wishlist).map((item) => item.id),
         );
     } catch (_) {
+      if (revision != _detailRevision) return;
       errorMessage.value = 'Could not load product details. Please try again.';
     } finally {
-      isLoading.value = false;
+      if (revision == _detailRevision) isLoading.value = false;
     }
   }
 
@@ -126,6 +115,7 @@ class ProductDetailViewModel extends BaseViewModel {
 
   @override
   void onClose() {
+    _detailRevision++;
     scrollController.dispose();
     super.onClose();
   }
@@ -177,10 +167,118 @@ class ProductDetailViewModel extends BaseViewModel {
     }
   }
 
-  void selectVariantValue(String sectionKey, ProductVariantValue value) {
-    if (!value.available) return;
-    selectedVariantValues[sectionKey] = value.id;
-    if (value.variantId != null) selectedVariantId.value = value.variantId;
+  void _applyVariantDetail(ProductDetail result) {
+    selectedImage.value = 0;
+    final variantValues = result.variantSections.expand(
+      (section) => section.values,
+    );
+    final selectedValues = variantValues.where((value) => value.selected);
+    selectedVariantId.value =
+        result.selectedVariantId ??
+        (selectedValues.isNotEmpty
+            ? _firstVariantId(selectedValues) ?? _firstVariantId(variantValues)
+            : _firstVariantId(variantValues));
+    selectedVariantValues.assignAll({
+      for (final section in result.variantSections)
+        if (section.values.any((value) => value.available))
+          section.key:
+              section.values
+                  .firstWhereOrNull(
+                    (value) => value.selected && value.available,
+                  )
+                  ?.id ??
+              section.values.firstWhere((value) => value.available).id,
+    });
+    product.value = result;
+    isFavorite.value = result.wishlist;
+  }
+
+  Future<void> selectVariantValue(
+    String sectionKey,
+    ProductVariantValue value,
+  ) async {
+    final detail = product.value;
+    if (detail == null ||
+        !value.available ||
+        isLoading.value ||
+        isLoadingVariant.value ||
+        isAddingToCart.value ||
+        isBuyingNow.value ||
+        isUpdatingWishlist.value) {
+      return;
+    }
+    if (selectedVariantValues[sectionKey] == value.id) return;
+    final selectedOptions = <String, ProductVariantValue>{};
+    for (final section in detail.variantSections) {
+      final option = section.key == sectionKey
+          ? value
+          : section.values.firstWhereOrNull(
+              (option) => option.id == selectedVariantValues[section.key],
+            );
+      if (option != null) selectedOptions[section.key] = option;
+    }
+    final variantId = value.variantId;
+    var ptavIds = <int>[];
+    var attributeIds = <int>[];
+    String? color;
+    String? size;
+    if (variantId == null) {
+      if (value.nextPtavIds.isNotEmpty) {
+        ptavIds = value.nextPtavIds;
+      } else if (value.nextAttributeValueIds.isNotEmpty) {
+        attributeIds = value.nextAttributeValueIds;
+      } else if (selectedOptions.length == detail.variantSections.length &&
+          selectedOptions.values.every((option) => option.ptavId != null)) {
+        ptavIds = selectedOptions.values
+            .map((option) => option.ptavId!)
+            .toList();
+      } else if (selectedOptions.length == detail.variantSections.length &&
+          selectedOptions.values.every(
+            (option) => option.attributeValueId != null,
+          )) {
+        attributeIds = selectedOptions.values
+            .map((option) => option.attributeValueId!)
+            .toList();
+      } else if (selectedOptions.keys.every(
+        (key) => key == 'color' || key == 'size',
+      )) {
+        color = selectedOptions['color']?.name;
+        size = selectedOptions['size']?.name;
+      }
+      if (ptavIds.isEmpty &&
+          attributeIds.isEmpty &&
+          color == null &&
+          size == null) {
+        variantError.value =
+            'This option has no variant selector. Please try another option.';
+        return;
+      }
+    }
+    final revision = ++_detailRevision;
+    isLoadingVariant.value = true;
+    variantError.value = null;
+    try {
+      final result = await _remoteDataSource.fetch(
+        detail.id,
+        productVariantId: variantId,
+        ptavIds: ptavIds,
+        attributeValueIds: attributeIds,
+        color: color,
+        size: size,
+      );
+      if (revision != _detailRevision) return;
+      _applyVariantDetail(result);
+      quantity.value = quantity.value.clamp(
+        result.quantityMin,
+        effectiveQuantityMaximum,
+      );
+    } catch (_) {
+      if (revision != _detailRevision) return;
+      variantError.value =
+          'Could not load this variant. Tap the option to try again.';
+    } finally {
+      if (revision == _detailRevision) isLoadingVariant.value = false;
+    }
   }
 
   Future<void> addToCart() async {
@@ -215,7 +313,11 @@ class ProductDetailViewModel extends BaseViewModel {
     required bool isBuyNowAction,
   }) async {
     final detail = product.value;
-    if (detail == null || isAddingToCart.value || isBuyingNow.value) {
+    if (detail == null ||
+        isLoadingVariant.value ||
+        isLoading.value ||
+        isAddingToCart.value ||
+        isBuyingNow.value) {
       return false;
     }
     if (!detail.inStock || detail.availableQuantity <= 0) {
@@ -258,7 +360,12 @@ class ProductDetailViewModel extends BaseViewModel {
 
   Future<void> toggleWishlist() async {
     final detail = product.value;
-    if (detail == null || isUpdatingWishlist.value) return;
+    if (detail == null ||
+        isLoadingVariant.value ||
+        isLoading.value ||
+        isUpdatingWishlist.value) {
+      return;
+    }
     if (!await _ensureAuthenticated('wishlist')) return;
     final wasFavorite = isFavorite.value;
     isUpdatingWishlist.value = true;

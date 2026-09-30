@@ -1,3 +1,4 @@
+import 'package:mobile_hexy/core/utils/money_formatter.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:mobile_hexy/presentation/viewmodel/order_detail_view_model.dart';
@@ -130,12 +131,14 @@ class OrderDetailPage extends GetView<OrderDetailViewModel> {
               child: controller.summaryRows.isEmpty
                   ? _DetailRow(
                       label: 'Grand Total',
-                      value: controller.text(const [
-                        'formatted_total',
-                        'grand_total',
-                        'amount_total',
-                        'total',
-                      ]),
+                      value: MoneyFormatter.display(
+                        controller.text(const [
+                          'formatted_total',
+                          'grand_total',
+                          'amount_total',
+                          'total',
+                        ]),
+                      ),
                       bold: true,
                     )
                   : Column(
@@ -159,14 +162,13 @@ class OrderDetailPage extends GetView<OrderDetailViewModel> {
     ),
   );
 
-  static String _amountText(Map<String, dynamic> row) =>
-      (row['formatted_value'] ??
-              row['formatted_amount'] ??
-              row['display_value'] ??
-              row['amount'] ??
-              row['value'])
-          ?.toString() ??
-      '';
+  static String _amountText(Map<String, dynamic> row) => MoneyFormatter.display(
+    row['formatted_value'] ??
+        row['formatted_amount'] ??
+        row['display_value'] ??
+        row['amount'] ??
+        row['value'],
+  );
 }
 
 class _Section extends StatelessWidget {
@@ -251,7 +253,7 @@ class _OrderItemRow extends StatelessWidget {
             ),
           ),
           Text(
-            price.toString(),
+            MoneyFormatter.display(price),
             style: TextStyle(
               color: Theme.of(context).colorScheme.primary,
               fontWeight: FontWeight.w800,

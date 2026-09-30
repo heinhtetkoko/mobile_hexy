@@ -46,6 +46,21 @@ class ProductDetailPage extends GetView<ProductDetailViewModel> {
                           child: _ProductInfo(controller: controller),
                         ),
                         SliverToBoxAdapter(
+                          child: Obx(
+                            () => Column(
+                              children: [
+                                if (controller.isLoadingVariant.value)
+                                  const LinearProgressIndicator(),
+                                if (controller.variantError.value != null)
+                                  Padding(
+                                    padding: const EdgeInsets.all(16),
+                                    child: Text(controller.variantError.value!),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        SliverToBoxAdapter(
                           child: _Variants(controller: controller),
                         ),
                         SliverToBoxAdapter(
@@ -644,7 +659,7 @@ class _Variants extends StatelessWidget {
                 .toList(growable: false),
           ),
         )
-        .where((item) => item.values.isNotEmpty)
+        .where((item) => item.values.length > 1)
         .toList(growable: false);
     if (sections.isEmpty) return const SizedBox.shrink();
     return Padding(
@@ -678,8 +693,12 @@ class _Variants extends StatelessWidget {
                         label: Text(value.name),
                         selected: selected,
                         showCheckmark: false,
-                        onSelected: (_) =>
-                            controller.selectVariantValue(section.key, value),
+                        onSelected: controller.isLoadingVariant.value
+                            ? null
+                            : (_) => controller.selectVariantValue(
+                                section.key,
+                                value,
+                              ),
                         selectedColor: Theme.of(context).colorScheme.primary,
                         backgroundColor: Theme.of(
                           context,
@@ -1155,7 +1174,9 @@ class _BottomActions extends StatelessWidget {
             child: Obx(
               () => FilledButton(
                 onPressed:
-                    controller.isAddingToCart.value ||
+                    controller.isLoadingVariant.value ||
+                        controller.isLoading.value ||
+                        controller.isAddingToCart.value ||
                         controller.isBuyingNow.value
                     ? null
                     : controller.addToCart,
@@ -1196,7 +1217,9 @@ class _BottomActions extends StatelessWidget {
             child: Obx(
               () => FilledButton(
                 onPressed:
-                    controller.isAddingToCart.value ||
+                    controller.isLoadingVariant.value ||
+                        controller.isLoading.value ||
+                        controller.isAddingToCart.value ||
                         controller.isBuyingNow.value
                     ? null
                     : controller.buyNow,

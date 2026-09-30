@@ -1,3 +1,4 @@
+import 'package:mobile_hexy/core/utils/money_formatter.dart';
 import 'package:dio/dio.dart';
 import 'package:mobile_hexy/core/networks/api_endpoints.dart';
 import 'package:mobile_hexy/core/networks/api_service.dart';
@@ -111,7 +112,5 @@ class CollectionsRemoteDataSource {
   double? _nullableNumber(Object? value) => value is num
       ? value.toDouble()
       : double.tryParse(value?.toString() ?? '');
-  String _format(num value) => value == value.roundToDouble()
-      ? value.toInt().toString()
-      : value.toStringAsFixed(2);
+  String _format(num value) => MoneyFormatter.format(value);
 }

@@ -1,3 +1,4 @@
+import 'package:mobile_hexy/core/utils/money_formatter.dart';
 import 'package:dio/dio.dart';
 import 'package:mobile_hexy/core/networks/api_endpoints.dart';
 import 'package:mobile_hexy/core/networks/api_service.dart';
@@ -102,7 +103,47 @@ class CategoryProductsRemoteDataSource {
         'limit': limit,
       },
     );
-    final body = response.data;
+    return _parseProductsResponse(response.data, page);
+  }
+
+  Future<CategoryProductsResult> fetchFilteredProducts({
+    required String section,
+    List<int> categoryIds = const [],
+    List<int> brandIds = const [],
+    int? categoryId,
+    int? brandId,
+    double? minPrice,
+    double? maxPrice,
+    bool? inStock,
+    required String sort,
+    required int page,
+    required int limit,
+  }) async {
+    final response = await _apiService.get<dynamic>(
+      ApiEndpoints.productFilter,
+      queryParameters: {
+        'section': section,
+        if (categoryIds.isNotEmpty) 'category_ids': categoryIds.join(','),
+        if (brandIds.isNotEmpty) 'brand_ids': brandIds.join(','),
+        if (section == 'flash_sale') ...{
+          'flash_sale': true,
+          'program_type': 'promotion',
+        },
+        'category_id': ?categoryId,
+        'brand_id': ?brandId,
+        'min_price': ?minPrice,
+        'max_price': ?maxPrice,
+        'in_stock': ?inStock,
+        'sort': sort == 'biggest_discount' ? 'highest_discount' : sort,
+        'page': page,
+        'limit': limit,
+      },
+      options: Options(extra: const {ApiEndpoints.requiresAuthKey: false}),
+    );
+    return _parseProductsResponse(response.data, page);
+  }
+
+  CategoryProductsResult _parseProductsResponse(dynamic body, int page) {
     if (body is! Map || body['success'] != true || body['data'] is! List) {
       throw const FormatException('Could not load products.');
     }
@@ -187,10 +228,11 @@ class CategoryProductsRemoteDataSource {
     return CatalogProduct(
       id: json['id']?.toString() ?? '',
       name: json['name']?.toString() ?? '',
-      price: '${price.toStringAsFixed(2)} $symbol'.trim(),
+      price: '${MoneyFormatter.format(price, decimalDigits: 2)} $symbol'.trim(),
       originalPrice: compareAt == null
           ? null
-          : '${compareAt.toStringAsFixed(2)} $symbol'.trim(),
+          : '${MoneyFormatter.format(compareAt, decimalDigits: 2)} $symbol'
+                .trim(),
       discount: discount > 0 ? '${_formatPercent(discount)}%' : null,
       variantId: _positiveInt(
         json['product_variant_id'] ??

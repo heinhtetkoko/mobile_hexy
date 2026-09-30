@@ -1,3 +1,4 @@
+import 'package:mobile_hexy/core/utils/money_formatter.dart';
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 import 'package:mobile_hexy/app.dart';
@@ -375,9 +376,7 @@ class CheckoutDeliveryMethod {
         ? price
         : double.tryParse(price?.toString() ?? '');
     if (amount == null) return null;
-    final value = amount == amount.roundToDouble()
-        ? amount.toInt().toString()
-        : amount.toStringAsFixed(2);
+    final value = MoneyFormatter.format(amount);
     return '$value $symbol';
   }
 }
