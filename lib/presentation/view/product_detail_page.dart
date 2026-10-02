@@ -565,10 +565,14 @@ class _ProductInfo extends StatelessWidget {
               color: Theme.of(context).colorScheme.surface,
               borderRadius: BorderRadius.circular(16),
             ),
-            child: Row(
+            child: Wrap(
+              spacing: 12,
+              runSpacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 Text(
                   product.formattedPrice,
+                  key: const Key('product-current-price'),
                   style: TextStyle(
                     color: Theme.of(context).colorScheme.primary,
                     fontSize: 28,
@@ -576,9 +580,9 @@ class _ProductInfo extends StatelessWidget {
                   ),
                 ),
                 if (product.formattedCompareAtPrice != null) ...[
-                  const SizedBox(width: 12),
                   Text(
                     product.formattedCompareAtPrice!,
+                    key: const Key('product-original-price'),
                     style: TextStyle(
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
                       decoration: TextDecoration.lineThrough,
@@ -586,7 +590,6 @@ class _ProductInfo extends StatelessWidget {
                   ),
                 ],
                 if (product.discountPercent > 0) ...[
-                  const SizedBox(width: 12),
                   _DiscountBadge(percent: product.discountPercent),
                 ],
               ],

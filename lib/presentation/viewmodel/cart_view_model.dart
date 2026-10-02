@@ -9,6 +9,7 @@ class CartViewModel extends BaseViewModel {
   CartViewModel(this._remoteDataSource);
   final CartRemoteDataSource _remoteDataSource;
   final items = <CartItem>[].obs;
+  final freeProducts = <CartItem>[].obs;
   final couponController = TextEditingController();
   final couponApplied = false.obs;
   final shippingAddress = Rxn<CartShippingAddress>();
@@ -168,6 +169,13 @@ class CartViewModel extends BaseViewModel {
           ? rawItems.whereType<Map>().map(_parseItem)
           : const <CartItem>[],
     );
+    // Only show rewards supplied by this API response, including checkout.
+    final rawFreeProducts = data['free_products'];
+    freeProducts.assignAll(
+      rawFreeProducts is List
+          ? rawFreeProducts.whereType<Map>().map(_parseFreeProduct)
+          : const <CartItem>[],
+    );
     _remoteDataSource.badgeCount.value = items.fold<int>(
       0,
       (total, item) => total + item.quantity,
@@ -271,6 +279,36 @@ class CartViewModel extends BaseViewModel {
       imageUrl: _imageUrl(
         source['image_url'] ?? source['image'] ?? source['thumbnail_url'],
       ),
+    );
+  }
+
+  CartItem _parseFreeProduct(Map<dynamic, dynamic> json) {
+    final quantity = json['quantity'] is num
+        ? json['quantity'] as num
+        : num.tryParse(json['quantity']?.toString() ?? '') ?? 0;
+    return CartItem(
+      id: (json['line_id'] ?? json['id'] ?? json['product_id'] ?? '')
+          .toString(),
+      productId: _intValue(json['product_id']) ?? 0,
+      name: json['product_name']?.toString() ?? '',
+      sku: (json['sku'] ?? json['default_code'])?.toString() ?? '',
+      variant: json['variant_name']?.toString() ?? '',
+      variantColor: _color(json['variant_color'] ?? json['color']),
+      unitPrice: _amount(json['unit_price']),
+      quantity: quantity.toInt(),
+      freeQuantity: quantity,
+      imageAsset: '',
+      imageUrl: _imageUrl(json['image_url']),
+      isFreeProduct: true,
+      freeProductValue: json['free_product_value'] == null
+          ? null
+          : _amount(json['free_product_value']),
+      discountPercentage: json['discount_percentage'] is num
+          ? json['discount_percentage'] as num
+          : num.tryParse(json['discount_percentage']?.toString() ?? ''),
+      currency: _currencySymbol(json['currency']),
+      programName: json['program_name']?.toString() ?? '',
+      programType: json['program_type']?.toString() ?? '',
     );
   }
 

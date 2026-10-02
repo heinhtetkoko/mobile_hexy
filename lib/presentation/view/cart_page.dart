@@ -45,7 +45,7 @@ class CartPage extends GetView<CartViewModel> {
                           ...controller.items.map(
                             (item) => Padding(
                               padding: const EdgeInsets.only(bottom: 12),
-                              child: _CartItemCard(
+                              child: CartItemCard(
                                 item: item,
                                 onOpen: item.productId > 0
                                     ? () => Get.toNamed<void>(
@@ -56,6 +56,21 @@ class CartPage extends GetView<CartViewModel> {
                                 onIncrement: () => controller.increment(item),
                                 onDecrement: () => controller.decrement(item),
                                 onRemove: () => controller.remove(item),
+                              ),
+                            ),
+                          ),
+                          ...controller.freeProducts.map(
+                            (item) => Padding(
+                              key: Key('free-product-${item.id}'),
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: CartItemCard(
+                                item: item,
+                                onOpen: item.productId > 0
+                                    ? () => Get.toNamed<void>(
+                                        AppRoutes.productDetail,
+                                        arguments: item.productId,
+                                      )
+                                    : null,
                               ),
                             ),
                           ),
@@ -133,19 +148,24 @@ class _CartHeader extends StatelessWidget {
   );
 }
 
-class _CartItemCard extends StatelessWidget {
-  const _CartItemCard({
+class CartItemCard extends StatelessWidget {
+  const CartItemCard({
+    super.key,
     required this.item,
     required this.onOpen,
-    required this.onIncrement,
-    required this.onDecrement,
-    required this.onRemove,
+    this.onIncrement,
+    this.onDecrement,
+    this.onRemove,
   });
   final CartItem item;
   final VoidCallback? onOpen;
-  final VoidCallback onIncrement;
-  final VoidCallback onDecrement;
-  final VoidCallback onRemove;
+  final VoidCallback? onIncrement;
+  final VoidCallback? onDecrement;
+  final VoidCallback? onRemove;
+
+  String money(num value) => item.isFreeProduct && item.currency.isNotEmpty
+      ? '${MoneyFormatter.format(value)} ${item.currency}'
+      : CartPage.money(value.toInt());
 
   @override
   Widget build(BuildContext context) => InkWell(
@@ -203,44 +223,72 @@ class _CartItemCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 3),
-                    Text(
-                      'SKU: ${item.sku}'.tr,
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        fontSize: 11,
+                    if (!item.isFreeProduct || item.sku.isNotEmpty)
+                      Text(
+                        'SKU: ${item.sku}'.tr,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          fontSize: 11,
+                        ),
                       ),
-                    ),
                     const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Container(
-                          width: 8,
-                          height: 8,
-                          decoration: BoxDecoration(
-                            color: Color(item.variantColor),
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: Theme.of(context).dividerColor,
+                    if (!item.isFreeProduct || item.variant.isNotEmpty)
+                      Row(
+                        children: [
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: Color(item.variantColor),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: Theme.of(context).dividerColor,
+                              ),
                             ),
                           ),
+                          const SizedBox(width: 6),
+                          Text(
+                            item.variant,
+                            style: TextStyle(
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurfaceVariant,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    if (item.isFreeProduct) ...[
+                      Text(
+                        'Free Product'.tr,
+                        style: const TextStyle(
+                          color: AppColors.success,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
                         ),
-                        const SizedBox(width: 6),
+                      ),
+                      if (item.programName.isNotEmpty ||
+                          item.programType.isNotEmpty)
                         Text(
-                          item.variant,
-                          style: TextStyle(
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.onSurfaceVariant,
+                          item.programName.isNotEmpty
+                              ? item.programName
+                              : item.programType,
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                      if (item.discountPercentage != null)
+                        Text(
+                          '${item.discountPercentage}% off',
+                          style: const TextStyle(
+                            color: AppColors.success,
                             fontSize: 12,
                           ),
                         ),
-                      ],
-                    ),
+                    ],
                     const SizedBox(height: 5),
                     Row(
                       children: [
                         Text(
-                          CartPage.money(item.unitPrice),
+                          money(item.unitPrice),
                           style: TextStyle(
                             color: Theme.of(context).colorScheme.primary,
                             fontSize: 14,
@@ -248,15 +296,18 @@ class _CartItemCard extends StatelessWidget {
                           ),
                         ),
                         const Spacer(),
-                        _QuantityButton(
-                          symbol: '−',
-                          onTap: onDecrement,
-                          filled: false,
-                        ),
+                        if (!item.isFreeProduct)
+                          _QuantityButton(
+                            symbol: '−',
+                            onTap: onDecrement!,
+                            filled: false,
+                          ),
                         SizedBox(
-                          width: 28,
+                          width: item.isFreeProduct ? null : 28,
                           child: Text(
-                            '${item.quantity}'.tr,
+                            item.isFreeProduct
+                                ? 'Qty: ${item.displayQuantity}'
+                                : '${item.quantity}'.tr,
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               fontSize: 16,
@@ -264,18 +315,19 @@ class _CartItemCard extends StatelessWidget {
                             ),
                           ),
                         ),
-                        _QuantityButton(
-                          symbol: '+',
-                          onTap: onIncrement,
-                          filled: true,
-                        ),
+                        if (!item.isFreeProduct)
+                          _QuantityButton(
+                            symbol: '+',
+                            onTap: onIncrement!,
+                            filled: true,
+                          ),
                       ],
                     ),
                     const SizedBox(height: 4),
                     Align(
                       alignment: Alignment.centerRight,
                       child: Text(
-                        'Total: ${CartPage.money(item.unitPrice * item.quantity)}'
+                        '${item.isFreeProduct ? 'Free value' : 'Total'}: ${money(item.isFreeProduct ? item.freeProductValue ?? item.unitPrice * item.displayQuantity : item.unitPrice * item.quantity)}'
                             .tr,
                         style: TextStyle(
                           color: AppColors.accent,
@@ -289,29 +341,31 @@ class _CartItemCard extends StatelessWidget {
               ),
             ],
           ),
-          Divider(height: 24, color: Theme.of(context).dividerColor),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: InkWell(
-              key: Key('remove-cart-${item.id}'),
-              onTap: onRemove,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.delete_outline_rounded,
-                    color: Color(0xFFEF4444),
-                    size: 15,
-                  ),
-                  SizedBox(width: 5),
-                  Text(
-                    'Remove'.tr,
-                    style: TextStyle(color: Color(0xFFEF4444), fontSize: 12),
-                  ),
-                ],
+          if (!item.isFreeProduct) ...[
+            Divider(height: 24, color: Theme.of(context).dividerColor),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: InkWell(
+                key: Key('remove-cart-${item.id}'),
+                onTap: onRemove,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.delete_outline_rounded,
+                      color: Color(0xFFEF4444),
+                      size: 15,
+                    ),
+                    SizedBox(width: 5),
+                    Text(
+                      'Remove'.tr,
+                      style: TextStyle(color: Color(0xFFEF4444), fontSize: 12),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
+          ],
         ],
       ),
     ),

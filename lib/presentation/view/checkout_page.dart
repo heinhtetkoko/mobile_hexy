@@ -88,6 +88,20 @@ class CheckoutPage extends GetView<CheckoutViewModel> {
           const SizedBox(height: 10),
           _ItemsSummary(controller: controller),
           const SizedBox(height: 10),
+          if (controller.cart.freeProducts.isNotEmpty) ...[
+            Text(
+              'Free Products'.tr,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 10),
+            ...controller.cart.freeProducts.map(
+              (item) => Padding(
+                key: Key('checkout-free-product-${item.id}'),
+                padding: const EdgeInsets.only(bottom: 10),
+                child: CartItemCard(item: item, onOpen: null),
+              ),
+            ),
+          ],
           _PriceBreakdown(controller: controller),
           const SizedBox(height: 10),
           _DeliveryNotes(controller: controller),

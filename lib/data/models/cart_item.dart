@@ -10,6 +10,13 @@ class CartItem {
     required this.imageAsset,
     this.imageUrl,
     this.productId = 0,
+    this.isFreeProduct = false,
+    this.freeProductValue,
+    this.discountPercentage,
+    this.currency = '',
+    this.programName = '',
+    this.programType = '',
+    this.freeQuantity,
   });
 
   final String id;
@@ -22,6 +29,15 @@ class CartItem {
   final String imageAsset;
   final String? imageUrl;
   final int productId;
+  final bool isFreeProduct;
+  final int? freeProductValue;
+  final num? discountPercentage;
+  final String currency;
+  final String programName;
+  final String programType;
+  final num? freeQuantity;
+
+  num get displayQuantity => freeQuantity ?? quantity;
 
   CartItem copyWith({int? quantity}) => CartItem(
     id: id,
@@ -34,5 +50,12 @@ class CartItem {
     imageAsset: imageAsset,
     imageUrl: imageUrl,
     productId: productId,
+    isFreeProduct: isFreeProduct,
+    freeProductValue: freeProductValue,
+    discountPercentage: discountPercentage,
+    currency: currency,
+    programName: programName,
+    programType: programType,
+    freeQuantity: freeQuantity,
   );
 }

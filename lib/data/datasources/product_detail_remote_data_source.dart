@@ -83,24 +83,39 @@ class ProductDetailRemoteDataSource {
       sku: data['sku'] == false ? '' : data['sku']?.toString() ?? '',
       price:
           double.tryParse(
-            (data['current_price'] ?? data['sale_price'] ?? data['price'])
+            (data['current_price'] ??
+                        priceData['current'] ??
+                        priceData['current_price'] ??
+                        data['sale_price'] ??
+                        priceData['sale_price'] ??
+                        (data['price'] is Map ? null : data['price']) ??
+                        data['list_price'] ??
+                        priceData['list_price'])
                     ?.toString() ??
                 '',
           ) ??
           0,
       compareAtPrice: double.tryParse(
-        (data['original_price'] ??
-                    data['list_price'] ??
-                    data['compare_at_price'])
+        (data.containsKey('original_price')
+                    ? data['original_price']
+                    : priceData.containsKey('original_price')
+                    ? priceData['original_price']
+                    : data['compare_at_price'] ??
+                          priceData['compare_at_price'] ??
+                          data['list_price'] ??
+                          priceData['list_price'])
                 ?.toString() ??
             '',
       ),
       discountPercent:
-          int.tryParse(
-            (data['discount_percentage'] ?? data['discount_percent'])
+          double.tryParse(
+            (data['discount_percentage'] ??
+                        data['discount_percent'] ??
+                        priceData['discount_percentage'] ??
+                        priceData['discount_percent'])
                     ?.toString() ??
                 '',
-          ) ??
+          )?.round() ??
           0,
       currencySymbol: currency is Map
           ? currency['symbol']?.toString() ?? ''
