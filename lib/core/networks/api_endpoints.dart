@@ -35,6 +35,7 @@ abstract final class ApiEndpoints {
   static const deliveryMethods = 'api/v1/delivery-methods';
   static const orders = 'api/v1/orders';
   static String orderDetail(Object id) => 'api/v1/orders/$id';
+  static String reorder(Object id) => '${orderDetail(id)}/reorder';
   static const notifications = 'api/notification';
   static const wishlist = 'api/v1/wishlist';
   static const contactUs = 'api/v1/contact-us';

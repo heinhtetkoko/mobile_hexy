@@ -24,10 +24,12 @@ class CheckoutApi extends CheckoutRemoteDataSource {
   Map<String, dynamic> data = payload;
 
   @override
-  Future<Map<String, dynamic>> fetchCheckout() async => data;
+  Future<Map<String, dynamic>> fetchCheckout({String? orderId}) async => data;
 
   @override
-  Future<List<Map<String, dynamic>>> fetchDeliveryMethods() async => [];
+  Future<List<Map<String, dynamic>>> fetchDeliveryMethods({
+    String? orderId,
+  }) async => [];
 }
 
 class AddressApi extends ShippingAddressRemoteDataSource {

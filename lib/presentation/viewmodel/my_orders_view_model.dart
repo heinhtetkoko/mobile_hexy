@@ -4,6 +4,9 @@ import 'package:mobile_hexy/app.dart';
 import 'package:mobile_hexy/core/base/base_view_model.dart';
 import 'package:mobile_hexy/data/datasources/orders_remote_data_source.dart';
 import 'package:mobile_hexy/data/models/order.dart';
+import 'package:mobile_hexy/data/datasources/cart_remote_data_source.dart';
+import 'package:mobile_hexy/presentation/viewmodel/cart_view_model.dart';
+import 'package:mobile_hexy/presentation/viewmodel/main_view_model.dart';
 
 class MyOrdersViewModel extends BaseViewModel {
   MyOrdersViewModel(this._remoteDataSource);
@@ -23,6 +26,7 @@ class MyOrdersViewModel extends BaseViewModel {
   final searchVisible = false.obs;
   final searchController = TextEditingController();
   final orders = <OrderSummary>[].obs;
+  final reorderingOrderIds = <String>{}.obs;
   final isLoading = false.obs;
   final isLoadingMore = false.obs;
   final totalCount = 0.obs;
@@ -144,7 +148,27 @@ class MyOrdersViewModel extends BaseViewModel {
     loadOrders();
   }
 
-  void performAction(String action, OrderSummary order) {
+  bool isReorderAction(String action) =>
+      const {'reorder', 'buy again'}.contains(action.trim().toLowerCase());
+
+  Future<void> performAction(String action, OrderSummary order) async {
+    if (action.trim().toLowerCase() == 'contact support') {
+      Get.toNamed<dynamic>(AppRoutes.contactUs);
+      return;
+    }
+    if (isReorderAction(action)) {
+      await reorder(order);
+      return;
+    }
+    if (order.status == OrderStatus.pending &&
+        action.trim().toLowerCase() == 'proceed to checkout') {
+      if (order.id.trim().isEmpty) return;
+      Get.toNamed<dynamic>(
+        AppRoutes.checkout,
+        arguments: {'order_id': order.id},
+      );
+      return;
+    }
     if (action.toLowerCase().contains('detail') ||
         action.toLowerCase().contains('track')) {
       openDetail(order);
@@ -155,6 +179,50 @@ class MyOrdersViewModel extends BaseViewModel {
       'Order #${order.number}',
       snackPosition: SnackPosition.BOTTOM,
     );
+  }
+
+  Future<void> reorder(OrderSummary order) async {
+    if (order.id.trim().isEmpty || reorderingOrderIds.contains(order.id)) {
+      return;
+    }
+    reorderingOrderIds.add(order.id);
+    try {
+      await _remoteDataSource.reorder(order.id);
+      // Refresh errors must not suggest repeating an already successful POST.
+      var cartRefreshFailed = false;
+      try {
+        if (Get.isRegistered<CartViewModel>()) {
+          final cart = Get.find<CartViewModel>();
+          await cart.loadCart();
+          cartRefreshFailed = cart.errorMessage.value != null;
+        } else if (Get.isRegistered<CartRemoteDataSource>()) {
+          await Get.find<CartRemoteDataSource>().fetchCart();
+        }
+      } catch (_) {
+        cartRefreshFailed = true;
+      }
+      if (Get.isRegistered<MainViewModel>()) {
+        final main = Get.find<MainViewModel>();
+        await main.changePage(3);
+        if (main.selectedIndex.value != 3) return;
+      }
+      Get.offAllNamed<dynamic>(AppRoutes.home, arguments: {'tabIndex': 3});
+      Get.snackbar(
+        'Reorder',
+        cartRefreshFailed
+            ? 'Products added. Pull down to refresh your cart.'
+            : 'Available products added to your cart.',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    } catch (error) {
+      Get.snackbar(
+        'Could not reorder',
+        _message(error),
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    } finally {
+      reorderingOrderIds.remove(order.id);
+    }
   }
 
   void openDetail(OrderSummary order) => Get.toNamed<dynamic>(

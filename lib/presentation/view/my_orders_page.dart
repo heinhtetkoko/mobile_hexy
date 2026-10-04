@@ -308,12 +308,24 @@ class _OrderCard extends GetView<MyOrdersViewModel> {
                 for (var i = 0; i < order.actions.length; i++) ...[
                   if (i > 0) const SizedBox(width: 8),
                   Expanded(
-                    child: _ActionButton(
-                      label: order.actions[i],
-                      primary: _isPrimary(order.actions[i]),
-                      onTap: () =>
-                          controller.performAction(order.actions[i], order),
-                    ),
+                    child: Obx(() {
+                      final reordering = controller.reorderingOrderIds.contains(
+                        order.id,
+                      );
+                      final isReorder = controller.isReorderAction(
+                        order.actions[i],
+                      );
+                      return _ActionButton(
+                        label: order.actions[i],
+                        primary: _isPrimary(order.actions[i]),
+                        onTap: isReorder && reordering
+                            ? null
+                            : () => controller.performAction(
+                                order.actions[i],
+                                order,
+                              ),
+                      );
+                    }),
                   ),
                 ],
               ],
@@ -394,7 +406,7 @@ class _ActionButton extends StatelessWidget {
   });
   final String label;
   final bool primary;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
   @override
   Widget build(BuildContext context) {
     final accent = label == 'Buy Again'

@@ -6,21 +6,38 @@ class CheckoutRemoteDataSource {
 
   final ApiService _apiService;
 
-  Future<Map<String, dynamic>> fetchCheckout() async {
+  Future<Map<String, dynamic>> fetchCheckout({String? orderId}) async {
     final response = await _apiService.get<dynamic>(
       ApiEndpoints.checkout,
-      queryParameters: const {'expanded': true},
+      queryParameters: {
+        'expanded': true,
+        if (orderId != null) 'order_id': _numericId(orderId),
+      },
     );
-    return _checkoutPayload(response.data);
+    final data = _checkoutPayload(response.data);
+    if (orderId != null) {
+      final order = data['order'];
+      final returnedId =
+          data['order_id'] ?? (order is Map ? order['id'] : null) ?? data['id'];
+      if (returnedId?.toString() != orderId) {
+        throw const FormatException(
+          'Checkout could not load the selected pending order.',
+        );
+      }
+    }
+    return data;
   }
 
   Future<Map<String, dynamic>> updateCheckout({
+    String? orderId,
     int? shippingAddressId,
     Object? deliveryMethodId,
     String? paymentMethod,
     String? deliveryNotes,
   }) async {
-    final body = <String, dynamic>{};
+    final body = <String, dynamic>{
+      if (orderId != null) 'order_id': _numericId(orderId),
+    };
     if (shippingAddressId != null) {
       body['shipping_address_id'] = shippingAddressId;
     }
@@ -37,6 +54,7 @@ class CheckoutRemoteDataSource {
   }
 
   Future<Map<String, dynamic>> placeOrder({
+    String? orderId,
     required int shippingAddressId,
     required Object deliveryMethodId,
     required String paymentMethod,
@@ -46,6 +64,7 @@ class CheckoutRemoteDataSource {
     final response = await _apiService.post<dynamic>(
       ApiEndpoints.checkoutPlaceOrder,
       data: {
+        if (orderId != null) 'order_id': _numericId(orderId),
         'shipping_address_id': shippingAddressId,
         'delivery_method_id': _numericId(deliveryMethodId),
         'payment_method_id': null,
@@ -61,9 +80,14 @@ class CheckoutRemoteDataSource {
     return Map<String, dynamic>.from(data);
   }
 
-  Future<List<Map<String, dynamic>>> fetchDeliveryMethods() async {
+  Future<List<Map<String, dynamic>>> fetchDeliveryMethods({
+    String? orderId,
+  }) async {
     final response = await _apiService.get<dynamic>(
       ApiEndpoints.deliveryMethods,
+      queryParameters: orderId == null
+          ? null
+          : {'order_id': _numericId(orderId)},
     );
     final data = _data(response.data);
     final raw = data is List

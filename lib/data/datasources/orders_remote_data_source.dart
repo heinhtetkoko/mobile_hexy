@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:mobile_hexy/core/networks/api_endpoints.dart';
 import 'package:mobile_hexy/core/networks/api_service.dart';
 
@@ -40,6 +41,17 @@ class OrdersRemoteDataSource {
       return data;
     }
     throw const FormatException('Orders are unavailable.');
+  }
+
+  Future<Map<String, dynamic>> reorder(Object orderId) async {
+    final response = await _apiService.post<dynamic>(
+      ApiEndpoints.reorder(orderId),
+      data: {'replace_cart': false},
+      options: Options(
+        extra: const {ApiEndpoints.redirectOnUnauthorizedKey: true},
+      ),
+    );
+    return _payload(response.data, 'Could not reorder.');
   }
 
   Future<Map<String, dynamic>> fetchOrderDetail(Object orderId) async {

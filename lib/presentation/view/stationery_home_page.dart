@@ -236,7 +236,7 @@ class _Header extends StatelessWidget {
             const Spacer(),
             _BadgeIcon(
               icon: Icons.notifications_none_rounded,
-              count: '3',
+              count: '0',
               onTap: onNotificationTap,
             ),
           ],

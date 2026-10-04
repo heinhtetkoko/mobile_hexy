@@ -12,9 +12,11 @@ class CheckoutViewModel extends BaseViewModel {
   CheckoutViewModel(
     this.cart,
     this._checkoutRemoteDataSource,
-    this._addressRemoteDataSource,
-  );
+    this._addressRemoteDataSource, {
+    this.orderId,
+  });
 
+  final String? orderId;
   final CartViewModel cart;
   final CheckoutRemoteDataSource _checkoutRemoteDataSource;
   final ShippingAddressRemoteDataSource _addressRemoteDataSource;
@@ -45,9 +47,9 @@ class CheckoutViewModel extends BaseViewModel {
     errorMessage.value = null;
     try {
       final results = await Future.wait<Object>([
-        _checkoutRemoteDataSource.fetchCheckout(),
+        _checkoutRemoteDataSource.fetchCheckout(orderId: orderId),
         _addressRemoteDataSource.fetchAddresses(),
-        _checkoutRemoteDataSource.fetchDeliveryMethods(),
+        _checkoutRemoteDataSource.fetchDeliveryMethods(orderId: orderId),
       ]);
       addresses.assignAll(results[1] as List<ShippingAddress>);
       deliveryMethods.assignAll(
@@ -72,6 +74,7 @@ class CheckoutViewModel extends BaseViewModel {
     isUpdatingAddress.value = true;
     try {
       final data = await _checkoutRemoteDataSource.updateCheckout(
+        orderId: orderId,
         shippingAddressId: address.id,
       );
       selectedAddress.value = address;
@@ -94,6 +97,7 @@ class CheckoutViewModel extends BaseViewModel {
     isUpdatingDeliveryMethod.value = true;
     try {
       final data = await _checkoutRemoteDataSource.updateCheckout(
+        orderId: orderId,
         deliveryMethodId: method.id,
       );
       _applyCheckout(data, fallbackDeliveryMethodId: method.id);
@@ -112,7 +116,10 @@ class CheckoutViewModel extends BaseViewModel {
     if (isUpdatingNotes.value || notes == _savedNotes) return;
     isUpdatingNotes.value = true;
     try {
-      await _checkoutRemoteDataSource.updateCheckout(deliveryNotes: notes);
+      await _checkoutRemoteDataSource.updateCheckout(
+        orderId: orderId,
+        deliveryNotes: notes,
+      );
       _savedNotes = notes;
     } catch (error) {
       _showError('Could not update delivery notes', error);
@@ -122,7 +129,9 @@ class CheckoutViewModel extends BaseViewModel {
   }
 
   Future<void> _refreshDeliveryMethods() async {
-    final raw = await _checkoutRemoteDataSource.fetchDeliveryMethods();
+    final raw = await _checkoutRemoteDataSource.fetchDeliveryMethods(
+      orderId: orderId,
+    );
     final previousId = selectedDeliveryMethod.value?.id;
     deliveryMethods.assignAll(raw.map(CheckoutDeliveryMethod.fromJson));
     selectedDeliveryMethod.value = deliveryMethods.firstWhereOrNull(
@@ -259,6 +268,7 @@ class CheckoutViewModel extends BaseViewModel {
       );
       final deliveryAddress = selectedAddress.value!;
       final result = await _checkoutRemoteDataSource.placeOrder(
+        orderId: orderId,
         shippingAddressId: selectedAddress.value!.id,
         deliveryMethodId: selectedDeliveryMethod.value!.id,
         paymentMethod: _paymentCode(selectedPayment.value),
@@ -306,6 +316,7 @@ class CheckoutViewModel extends BaseViewModel {
 
   @override
   void onClose() {
+    if (orderId != null) cart.onClose();
     notesController.dispose();
     super.onClose();
   }

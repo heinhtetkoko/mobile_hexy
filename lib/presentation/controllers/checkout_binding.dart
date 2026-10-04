@@ -5,9 +5,18 @@ import 'package:mobile_hexy/presentation/viewmodel/checkout_view_model.dart';
 class CheckoutBinding extends Bindings {
   @override
   void dependencies() {
-    if (!Get.isRegistered<CartViewModel>()) {
+    final arguments = Get.arguments;
+    final orderId = arguments is Map ? arguments['order_id']?.toString() : null;
+    if (orderId == null && !Get.isRegistered<CartViewModel>()) {
       Get.put(CartViewModel(Get.find()), permanent: true);
     }
-    Get.lazyPut(() => CheckoutViewModel(Get.find(), Get.find(), Get.find()));
+    Get.lazyPut(
+      () => CheckoutViewModel(
+        orderId == null ? Get.find() : CartViewModel(Get.find()),
+        Get.find(),
+        Get.find(),
+        orderId: orderId,
+      ),
+    );
   }
 }
