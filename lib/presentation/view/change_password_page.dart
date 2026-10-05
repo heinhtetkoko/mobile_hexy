@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:mobile_hexy/app.dart';
+import 'package:mobile_hexy/presentation/widgets/account_form_field.dart';
 import 'package:mobile_hexy/core/theme/app_colors.dart';
 import 'package:mobile_hexy/presentation/viewmodel/change_password_view_model.dart';
 import 'package:mobile_hexy/presentation/widgets/clean_app_bar.dart';
@@ -17,17 +19,17 @@ class ChangePasswordPage extends GetView<ChangePasswordViewModel> {
       return ListView(
         padding: const EdgeInsets.all(20),
         children: [
-          _PasswordField(
+          AccountFormField(
             label: 'Current Password',
             controller: controller.current,
-            hidden: controller.currentHidden.value,
+            obscureText: controller.currentHidden.value,
             icon: Icons.lock_outline,
-            onEye: controller.currentHidden.toggle,
+            onToggleVisibility: controller.currentHidden.toggle,
           ),
           Align(
             alignment: Alignment.centerRight,
             child: TextButton(
-              onPressed: () {},
+              onPressed: () => Get.toNamed<void>(AppRoutes.inAppForgotPassword),
               child: Text(
                 'Forgot password?'.tr,
                 style: TextStyle(color: AppColors.accent, fontSize: 12),
@@ -35,12 +37,12 @@ class ChangePasswordPage extends GetView<ChangePasswordViewModel> {
             ),
           ),
           const SizedBox(height: 8),
-          _PasswordField(
+          AccountFormField(
             label: 'New Password',
             controller: controller.password,
-            hidden: controller.passwordHidden.value,
+            obscureText: controller.passwordHidden.value,
             icon: Icons.shield_outlined,
-            onEye: controller.passwordHidden.toggle,
+            onToggleVisibility: controller.passwordHidden.toggle,
             onChanged: controller.updateRequirements,
           ),
           const SizedBox(height: 10),
@@ -77,12 +79,12 @@ class ChangePasswordPage extends GetView<ChangePasswordViewModel> {
           _Req('Number', controller.hasNumber),
           _Req('Special character', controller.hasSpecial),
           const SizedBox(height: 18),
-          _PasswordField(
+          AccountFormField(
             label: 'Confirm Password',
             controller: controller.confirm,
-            hidden: controller.confirmHidden.value,
+            obscureText: controller.confirmHidden.value,
             icon: Icons.check_circle_outline,
-            onEye: controller.confirmHidden.toggle,
+            onToggleVisibility: controller.confirmHidden.toggle,
             onChanged: controller.updateRequirements,
           ),
           const SizedBox(height: 8),
@@ -130,65 +132,6 @@ class ChangePasswordPage extends GetView<ChangePasswordViewModel> {
         ],
       );
     }),
-  );
-}
-
-class _PasswordField extends StatelessWidget {
-  const _PasswordField({
-    required this.label,
-    required this.controller,
-    required this.hidden,
-    required this.icon,
-    required this.onEye,
-    this.onChanged,
-  });
-  final String label;
-  final TextEditingController controller;
-  final bool hidden;
-  final IconData icon;
-  final VoidCallback onEye;
-  final ValueChanged<String>? onChanged;
-  @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Text(
-        '$label  *'.tr,
-        style: TextStyle(
-          color: Theme.of(context).colorScheme.onSurface,
-          fontSize: 13,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-      const SizedBox(height: 8),
-      TextField(
-        controller: controller,
-        obscureText: hidden,
-        onChanged: onChanged,
-        style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
-        decoration: InputDecoration(
-          prefixIcon: Icon(
-            icon,
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-          ),
-          suffixIcon: IconButton(
-            onPressed: onEye,
-            icon: Icon(
-              hidden
-                  ? Icons.visibility_off_outlined
-                  : Icons.visibility_outlined,
-            ),
-          ),
-          filled: true,
-          fillColor: Theme.of(context).colorScheme.surface,
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: BorderSide(color: Theme.of(context).dividerColor),
-          ),
-        ),
-      ),
-    ],
   );
 }
 

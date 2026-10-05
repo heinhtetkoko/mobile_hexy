@@ -1,3 +1,5 @@
+import 'package:mobile_hexy/presentation/controllers/in_app_forgot_password_binding.dart';
+import 'package:mobile_hexy/presentation/view/in_app_forgot_password_page.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:mobile_hexy/core/services/app_translations.dart';
@@ -78,6 +80,7 @@ abstract final class AppRoutes {
   static const productList = '/products';
   static const personalInformation = '/personal-information';
   static const changePassword = '/change-password';
+  static const inAppForgotPassword = '/in-app-forgot-password';
   static const contactUs = '/contact-us';
   static const faq = '/faq';
   static const aboutUs = '/about-us';
@@ -157,6 +160,11 @@ abstract final class AppPages {
       name: AppRoutes.changePassword,
       page: ChangePasswordPage.new,
       binding: ChangePasswordBinding(),
+    ),
+    GetPage(
+      name: AppRoutes.inAppForgotPassword,
+      page: InAppForgotPasswordPage.new,
+      binding: InAppForgotPasswordBinding(),
     ),
     GetPage(name: AppRoutes.contactUs, page: SupportContentPage.contact),
     GetPage(name: AppRoutes.faq, page: SupportContentPage.faq),

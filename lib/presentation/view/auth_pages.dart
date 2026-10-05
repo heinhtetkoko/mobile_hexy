@@ -16,7 +16,15 @@ class LoginPage extends GetView<AuthViewModel> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const _BackButton(),
+          _BackButton(
+            onPressed: () {
+              if (Navigator.of(context).canPop()) {
+                Get.back<void>();
+              } else {
+                Get.offAllNamed<void>(AppRoutes.home);
+              }
+            },
+          ),
           const SizedBox(height: 4),
           const _AuthTitle('Login Now'),
           const SizedBox(height: 22),
@@ -635,12 +643,13 @@ class _BottomLink extends StatelessWidget {
 }
 
 class _BackButton extends StatelessWidget {
-  const _BackButton();
+  const _BackButton({this.onPressed});
+  final VoidCallback? onPressed;
   @override
   Widget build(BuildContext context) => Align(
     alignment: Alignment.centerLeft,
     child: IconButton(
-      onPressed: Get.back,
+      onPressed: onPressed ?? Get.back,
       icon: Icon(
         Icons.arrow_back_rounded,
         color: Theme.of(context).colorScheme.primary,
