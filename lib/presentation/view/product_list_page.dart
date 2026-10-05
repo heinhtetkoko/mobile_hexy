@@ -264,271 +264,316 @@ class _FilterSheet extends StatelessWidget {
   final ProductListViewModel controller;
 
   @override
-  Widget build(BuildContext context) => SafeArea(
-    top: false,
-    child: Container(
-      padding: const EdgeInsets.only(top: 24, bottom: 20),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        border: Border(top: BorderSide(color: Theme.of(context).dividerColor)),
-      ),
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Align(
-              child: SizedBox(
-                width: 32,
-                height: 4,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).dividerColor,
-                    borderRadius: BorderRadius.all(Radius.circular(2)),
-                  ),
-                ),
-              ),
+  Widget build(BuildContext context) => AnimatedPadding(
+    duration: const Duration(milliseconds: 200),
+    curve: Curves.easeOut,
+    padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+    child: SafeArea(
+      top: false,
+      child: SizedBox(
+        height:
+            (MediaQuery.sizeOf(context).height -
+                MediaQuery.viewInsetsOf(context).bottom -
+                MediaQuery.paddingOf(context).top) *
+            0.85,
+        child: Container(
+          padding: const EdgeInsets.only(top: 24),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+            border: Border(
+              top: BorderSide(color: Theme.of(context).dividerColor),
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-              child: Row(
-                children: [
-                  Text(
-                    'Filter'.tr,
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.onSurface,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const Spacer(),
-                  TextButton(
-                    key: const Key('reset-filters'),
-                    onPressed: controller.resetPendingFilters,
-                    child: Text(
-                      'Reset All'.tr,
-                      style: TextStyle(
-                        color: AppColors.accent,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const _FilterTitle('Category'),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 10, 16, 20),
-              child: Obx(
-                () => Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: controller.filterCategories.map((category) {
-                    final selected = controller.pendingCategories.contains(
-                      category.id,
-                    );
-                    return ChoiceChip(
-                      selected: selected,
-                      showCheckmark: false,
-                      onSelected: (_) =>
-                          controller.togglePendingCategory(category.id),
-                      selectedColor: Theme.of(context).colorScheme.primary,
-                      backgroundColor: Theme.of(
-                        context,
-                      ).colorScheme.surfaceContainerHighest,
-                      side: BorderSide(
-                        color: selected
-                            ? Theme.of(context).colorScheme.primary
-                            : Theme.of(context).dividerColor,
-                      ),
-                      label: Text(category.name.tr),
-                      labelStyle: TextStyle(
-                        color: selected
-                            ? Theme.of(context).colorScheme.onPrimary
-                            : Theme.of(context).colorScheme.onSurface,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ),
-            ),
-            const _FilterTitle('Brand'),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
-              child: Obx(
-                () => Wrap(
-                  children: controller.filterBrands.map((brand) {
-                    final selected = controller.pendingBrands.contains(
-                      brand.id,
-                    );
-                    return SizedBox(
-                      width: MediaQuery.sizeOf(context).width / 2 - 16,
-                      height: 40,
-                      child: InkWell(
-                        onTap: () => controller.togglePendingBrand(brand.id),
-                        child: Row(
-                          children: [
-                            Icon(
-                              selected
-                                  ? Icons.check_box_rounded
-                                  : Icons.check_box_outline_blank_rounded,
-                              color: selected
-                                  ? Theme.of(context).colorScheme.primary
-                                  : Theme.of(context).colorScheme.outline,
-                              size: 22,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              brand.name,
-                              style: TextStyle(
-                                color: Theme.of(context).colorScheme.onSurface,
-                                fontSize: 14,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ),
-            ),
-            if (controller.usesSectionFilter)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+          ),
+          child: Stack(
+            children: [
+              SingleChildScrollView(
+                padding: const EdgeInsets.only(bottom: 96),
                 child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            key: const Key('minimum-price'),
-                            controller: controller.minPriceInput,
-                            keyboardType: const TextInputType.numberWithOptions(
-                              decimal: true,
-                            ),
-                            decoration: const InputDecoration(
-                              labelText: 'Minimum price',
-                              hintText: 'No minimum',
-                            ),
+                    Align(
+                      child: SizedBox(
+                        width: 32,
+                        height: 4,
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).dividerColor,
+                            borderRadius: BorderRadius.all(Radius.circular(2)),
                           ),
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: TextField(
-                            key: const Key('maximum-price'),
-                            controller: controller.maxPriceInput,
-                            keyboardType: const TextInputType.numberWithOptions(
-                              decimal: true,
-                            ),
-                            decoration: const InputDecoration(
-                              labelText: 'Maximum price',
-                              hintText: 'No maximum',
-                            ),
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
-                    Obx(
-                      () => controller.priceError.value == null
-                          ? const SizedBox.shrink()
-                          : Text(
-                              controller.priceError.value!,
-                              style: TextStyle(
-                                color: Theme.of(context).colorScheme.error,
-                              ),
-                            ),
-                    ),
-                  ],
-                ),
-              )
-            else
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Obx(
-                  () => Column(
-                    children: [
-                      Row(
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                      child: Row(
                         children: [
                           Text(
-                            'Price Range'.tr,
+                            'Filter'.tr,
                             style: TextStyle(
                               color: Theme.of(context).colorScheme.onSurface,
-                              fontSize: 15,
+                              fontSize: 18,
                               fontWeight: FontWeight.w800,
                             ),
                           ),
                           const Spacer(),
-                          Text(
-                            '${_money(controller.pendingPriceRange.value.start)} — ${_money(controller.pendingPriceRange.value.end)}'
-                                .tr,
-                            style: TextStyle(
-                              color: Theme.of(context).colorScheme.primary,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
+                          TextButton(
+                            key: const Key('reset-filters'),
+                            onPressed: controller.resetPendingFilters,
+                            child: Text(
+                              'Reset All'.tr,
+                              style: TextStyle(
+                                color: AppColors.accent,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
                         ],
                       ),
-                      RangeSlider(
-                        values: controller.pendingPriceRange.value,
-                        min: 0,
-                        max: 15000,
-                        divisions: 15,
-                        activeColor: Theme.of(context).colorScheme.primary,
-                        inactiveColor: Theme.of(context).dividerColor,
-                        onChanged: (value) =>
-                            controller.pendingPriceRange.value = value,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Obx(
-                () => SwitchListTile.adaptive(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(
-                    'In Stock Only'.tr,
-                    style: const TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                  value: controller.pendingInStockOnly.value,
-                  activeThumbColor: Theme.of(context).colorScheme.primary,
-                  onChanged: (value) =>
-                      controller.pendingInStockOnly.value = value,
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: SizedBox(
-                width: double.infinity,
-                height: 48,
-                child: Obx(
-                  () => FilledButton(
-                    key: const Key('apply-filters'),
-                    onPressed: controller.applyFilters,
-                    style: FilledButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      shape: const StadiumBorder(),
-                      textStyle: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
+                    ),
+                    const _FilterTitle('Category'),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 10, 16, 20),
+                      child: Obx(
+                        () => Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: controller.filterCategories.map((category) {
+                            final selected = controller.pendingCategories
+                                .contains(category.id);
+                            return ChoiceChip(
+                              selected: selected,
+                              showCheckmark: false,
+                              onSelected: (_) =>
+                                  controller.togglePendingCategory(category.id),
+                              selectedColor: Theme.of(
+                                context,
+                              ).colorScheme.primary,
+                              backgroundColor: Theme.of(
+                                context,
+                              ).colorScheme.surfaceContainerHighest,
+                              side: BorderSide(
+                                color: selected
+                                    ? Theme.of(context).colorScheme.primary
+                                    : Theme.of(context).dividerColor,
+                              ),
+                              label: Text(category.name.tr),
+                              labelStyle: TextStyle(
+                                color: selected
+                                    ? Theme.of(context).colorScheme.onPrimary
+                                    : Theme.of(context).colorScheme.onSurface,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            );
+                          }).toList(),
+                        ),
                       ),
                     ),
-                    child: Text(
-                      'Apply Filters (${controller.pendingFilterCount})'.tr,
+                    const _FilterTitle('Brand'),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
+                      child: Obx(
+                        () => Wrap(
+                          children: controller.filterBrands.map((brand) {
+                            final selected = controller.pendingBrands.contains(
+                              brand.id,
+                            );
+                            return SizedBox(
+                              width: MediaQuery.sizeOf(context).width / 2 - 16,
+                              height: 40,
+                              child: InkWell(
+                                onTap: () =>
+                                    controller.togglePendingBrand(brand.id),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      selected
+                                          ? Icons.check_box_rounded
+                                          : Icons
+                                                .check_box_outline_blank_rounded,
+                                      color: selected
+                                          ? Theme.of(
+                                              context,
+                                            ).colorScheme.primary
+                                          : Theme.of(
+                                              context,
+                                            ).colorScheme.outline,
+                                      size: 22,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      brand.name,
+                                      style: TextStyle(
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.onSurface,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                    ),
+                    if (controller.usesSectionFilter)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Column(
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: TextField(
+                                    key: const Key('minimum-price'),
+                                    controller: controller.minPriceInput,
+                                    keyboardType:
+                                        const TextInputType.numberWithOptions(
+                                          decimal: true,
+                                        ),
+                                    decoration: const InputDecoration(
+                                      labelText: 'Minimum price',
+                                      hintText: 'No minimum',
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: TextField(
+                                    key: const Key('maximum-price'),
+                                    controller: controller.maxPriceInput,
+                                    keyboardType:
+                                        const TextInputType.numberWithOptions(
+                                          decimal: true,
+                                        ),
+                                    decoration: const InputDecoration(
+                                      labelText: 'Maximum price',
+                                      hintText: 'No maximum',
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Obx(
+                              () => controller.priceError.value == null
+                                  ? const SizedBox.shrink()
+                                  : Text(
+                                      controller.priceError.value!,
+                                      style: TextStyle(
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.error,
+                                      ),
+                                    ),
+                            ),
+                          ],
+                        ),
+                      )
+                    else
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Obx(
+                          () => Column(
+                            children: [
+                              Row(
+                                children: [
+                                  Text(
+                                    'Price Range'.tr,
+                                    style: TextStyle(
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.onSurface,
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                  const Spacer(),
+                                  Text(
+                                    '${_money(controller.pendingPriceRange.value.start)} — ${_money(controller.pendingPriceRange.value.end)}'
+                                        .tr,
+                                    style: TextStyle(
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.primary,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              RangeSlider(
+                                values: controller.pendingPriceRange.value,
+                                min: 0,
+                                max: 15000,
+                                divisions: 15,
+                                activeColor: Theme.of(
+                                  context,
+                                ).colorScheme.primary,
+                                inactiveColor: Theme.of(context).dividerColor,
+                                onChanged: (value) =>
+                                    controller.pendingPriceRange.value = value,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Obx(
+                        () => SwitchListTile.adaptive(
+                          contentPadding: EdgeInsets.zero,
+                          title: Text(
+                            'In Stock Only'.tr,
+                            style: const TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                          value: controller.pendingInStockOnly.value,
+                          activeThumbColor: Theme.of(
+                            context,
+                          ).colorScheme.primary,
+                          onChanged: (value) =>
+                              controller.pendingInStockOnly.value = value,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Positioned(
+                left: 16,
+                right: 16,
+                bottom: 16,
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: Obx(
+                    () => FilledButton(
+                      key: const Key('apply-filters'),
+                      onPressed: controller.applyFilters,
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        elevation: 6,
+                        shadowColor: AppColors.primary.withValues(alpha: 0.35),
+                        shape: const StadiumBorder(),
+                        textStyle: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      child: Text(
+                        'Apply Filters (${controller.pendingFilterCount})'.tr,
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     ),
