@@ -1,3 +1,4 @@
+import 'package:mobile_hexy/data/datasources/notifications_remote_data_source.dart';
 import 'dart:async';
 
 import 'package:flutter/widgets.dart';
@@ -147,7 +148,9 @@ class StationeryHomeViewModel extends BaseViewModel {
       AppConstants.accessTokenKey,
     );
     if (token == null || token.trim().isEmpty) {
+      unreadNotificationCount.value = null;
       await Get.toNamed<dynamic>(AppRoutes.login);
+      await loadUnreadNotificationCount();
       return;
     }
 
@@ -180,6 +183,32 @@ class StationeryHomeViewModel extends BaseViewModel {
     }
   }
 
+  final unreadNotificationCount = RxnInt();
+  int _notificationRevision = 0;
+
+  Future<void> loadUnreadNotificationCount() async {
+    final revision = ++_notificationRevision;
+    final storage = Get.find<SecureStorage>();
+    final token = await storage.read(AppConstants.accessTokenKey);
+    if (_isDisposed || revision != _notificationRevision) return;
+    if (token == null || token.trim().isEmpty) {
+      unreadNotificationCount.value = null;
+      return;
+    }
+    try {
+      final count = await Get.find<NotificationsRemoteDataSource>()
+          .fetchUnreadCount();
+      final currentToken = await storage.read(AppConstants.accessTokenKey);
+      if (!_isDisposed && revision == _notificationRevision) {
+        unreadNotificationCount.value = currentToken == token ? count : null;
+      }
+    } catch (_) {
+      if (!_isDisposed && revision == _notificationRevision) {
+        unreadNotificationCount.value = null;
+      }
+    }
+  }
+
   Future<void> openNotifications() async {
     final token = await Get.find<SecureStorage>().read(
       AppConstants.accessTokenKey,
@@ -189,12 +218,14 @@ class StationeryHomeViewModel extends BaseViewModel {
       return;
     }
     await Get.toNamed<void>(AppRoutes.notifications);
+    await loadUnreadNotificationCount();
   }
 
   @override
   void onInit() {
     super.onInit();
     catalog = _getHomeCatalog();
+    loadUnreadNotificationCount();
     loadBanners();
     loadPromoBanners();
     loadCategories();
@@ -237,6 +268,7 @@ class StationeryHomeViewModel extends BaseViewModel {
 
   Future<void> refreshHome() async {
     await Future.wait([
+      loadUnreadNotificationCount(),
       loadBanners(),
       loadPromoBanners(),
       loadCategories(),

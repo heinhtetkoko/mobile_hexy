@@ -46,6 +46,7 @@ class HomeProduct {
     this.discountPercent,
     this.variantId,
     this.countdownSeconds,
+    this.rating = 0,
   });
 
   final String id;
@@ -59,6 +60,7 @@ class HomeProduct {
   final double? discountPercent;
   final int? variantId;
   final int? countdownSeconds;
+  final double rating;
 }
 
 class HomeCatalog {

@@ -1,3 +1,4 @@
+import 'package:mobile_hexy/data/datasources/profile_remote_data_source.dart';
 import 'dart:async';
 import 'dart:io';
 
@@ -23,6 +24,99 @@ class ProfileViewModel extends BaseViewModel {
   final currentLanguage =
       (Get.locale?.languageCode == 'my' ? 'Myanmar' : 'English').obs;
   final isLoggingOut = false.obs;
+  final canDeleteAccount = false.obs;
+  final isDeletingAccount = false.obs;
+  bool _deleteConfirmationOpen = false;
+  int _availabilityRevision = 0;
+
+  Future<void> loadDeleteAccountAvailability() async {
+    final revision = ++_availabilityRevision;
+    canDeleteAccount.value = false;
+    try {
+      final available = await Get.find<ProfileRemoteDataSource>()
+          .canDeleteAccount();
+      if (!isClosed && revision == _availabilityRevision) {
+        canDeleteAccount.value = available;
+      }
+    } catch (_) {
+      if (!isClosed && revision == _availabilityRevision) {
+        canDeleteAccount.value = false;
+      }
+    }
+  }
+
+  Future<void> confirmDeleteAccount() async {
+    if (!canDeleteAccount.value ||
+        isDeletingAccount.value ||
+        isLoggingOut.value ||
+        _deleteConfirmationOpen) {
+      return;
+    }
+    _deleteConfirmationOpen = true;
+    bool confirmed;
+    try {
+      confirmed =
+          await Get.dialog<bool>(
+            AlertDialog(
+              title: Text('Delete account?'.tr),
+              content: Text(
+                'This permanently deletes your account. This action cannot be undone.'
+                    .tr,
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Get.back(result: false),
+                  child: Text('Cancel'.tr),
+                ),
+                FilledButton(
+                  onPressed: () => Get.back(result: true),
+                  child: Text('Delete Account'.tr),
+                ),
+              ],
+            ),
+          ) ??
+          false;
+    } finally {
+      _deleteConfirmationOpen = false;
+    }
+    if (!confirmed || !canDeleteAccount.value || isClosed) return;
+    isDeletingAccount.value = true;
+    try {
+      final source = Get.find<ProfileRemoteDataSource>();
+      if (!await source.canDeleteAccount()) {
+        canDeleteAccount.value = false;
+        Get.snackbar(
+          'Account Delete',
+          'Account deletion is currently unavailable.',
+          snackPosition: SnackPosition.BOTTOM,
+        );
+        return;
+      }
+      await source.deleteAccount();
+      await _logoutUser();
+      final storage = Get.find<SecureStorage>();
+      await storage.remove(AppConstants.rememberedLoginKey);
+      await storage.remove(AppConstants.rememberedPasswordKey);
+      Get.offAllNamed<void>(AppRoutes.login);
+      Get.snackbar(
+        'Account deleted',
+        'Your account has been deleted.',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    } catch (error) {
+      Get.snackbar(
+        'Unable to delete account',
+        error
+            .toString()
+            .replaceFirst('Exception: ', '')
+            .replaceFirst('FormatException: ', ''),
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    } finally {
+      isDeletingAccount.value = false;
+    }
+  }
+
   final profile = Rxn<ProfileSummary>();
   final isProfileLoading = false.obs;
   final profileError = RxnString();
@@ -35,6 +129,8 @@ class ProfileViewModel extends BaseViewModel {
   }
 
   Future<void> loadProfile() async {
+    if (isProfileLoading.value) return;
+    final availability = loadDeleteAccountAvailability();
     isProfileLoading.value = true;
     profileError.value = null;
     try {
@@ -42,6 +138,7 @@ class ProfileViewModel extends BaseViewModel {
     } catch (_) {
       profileError.value = 'Could not load your profile.';
     } finally {
+      await availability;
       isProfileLoading.value = false;
     }
   }
@@ -175,13 +272,21 @@ class ProfileViewModel extends BaseViewModel {
   }
 
   Future<void> confirmLogout() async {
-    if (isLoggingOut.value) return;
+    if (isLoggingOut.value ||
+        isDeletingAccount.value ||
+        _deleteConfirmationOpen) {
+      return;
+    }
     final confirmed = await showLogoutSheet();
     if (confirmed) await logout();
   }
 
   Future<void> logout() async {
-    if (isLoggingOut.value) return;
+    if (isLoggingOut.value ||
+        isDeletingAccount.value ||
+        _deleteConfirmationOpen) {
+      return;
+    }
     isLoggingOut.value = true;
     try {
       await _logoutUser();

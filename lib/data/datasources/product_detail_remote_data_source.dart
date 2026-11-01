@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:mobile_hexy/core/base/exceptions.dart';
 import 'package:mobile_hexy/core/networks/api_endpoints.dart';
 import 'package:mobile_hexy/core/networks/api_service.dart';
 import 'package:mobile_hexy/data/models/product_detail.dart';
@@ -7,6 +8,30 @@ class ProductDetailRemoteDataSource {
   const ProductDetailRemoteDataSource(this._apiService);
 
   final ApiService _apiService;
+
+  Future<void> submitRating(int productId, int rating) async {
+    if (productId <= 0 || rating < 1 || rating > 5) {
+      throw ArgumentError('Choose a rating from 1 to 5 for a valid product.');
+    }
+    final response = await _apiService.post<dynamic>(
+      ApiEndpoints.productRating(productId),
+      data: {'rating': rating},
+      options: Options(
+        extra: const {
+          ApiEndpoints.requiresAuthKey: true,
+          ApiEndpoints.redirectOnUnauthorizedKey: true,
+        },
+      ),
+    );
+    final body = response.data;
+    if (body is! Map || body['success'] != true) {
+      throw ServerException(
+        body is Map
+            ? body['message']?.toString() ?? 'Could not submit your rating.'
+            : 'The server returned an invalid rating response.',
+      );
+    }
+  }
 
   Future<ProductDetail> fetch(
     int id, {

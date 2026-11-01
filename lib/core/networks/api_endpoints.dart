@@ -1,8 +1,7 @@
 abstract final class ApiEndpoints {
   static const baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue:
-        'https://heinhtetkoko-odooecommerce-staging-38769300.dev.odoo.com/',
+    defaultValue: 'https://www.hexcymegastore.com/',
   );
   static const login = 'api/v1/auth/token';
   static const googleLogin = 'api/v1/auth/google';
@@ -13,6 +12,7 @@ abstract final class ApiEndpoints {
   static const banners = 'api/v1/banners';
   static const promoBanners = 'api/v1/promo-banners';
   static const popupAds = 'api/v1/popup-ads';
+  static const deleteAccount = 'api/v1/delete-account';
   static const profile = 'api/v1/profile';
   static const personalInfo = 'api/v1/profile/personal-info';
   static const avatar = 'api/v1/profile/avatar';
@@ -49,6 +49,7 @@ abstract final class ApiEndpoints {
   static const shippingAddresses = 'api/v1/profile/addresses';
   static String shippingAddress(Object id) => 'api/v1/profile/addresses/$id';
   static String productDetail(Object id) => 'api/v1/products/$id';
+  static String productRating(Object id) => '${productDetail(id)}/rating';
   static const requiresAuthKey = 'requiresAuth';
   static const redirectOnUnauthorizedKey = 'redirectOnUnauthorized';
   static const connectTimeout = Duration(seconds: 15);

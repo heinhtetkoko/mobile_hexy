@@ -30,7 +30,7 @@ class SplashPage extends GetView<SplashViewModel> {
                             image: AssetImage(AssetPaths.appLogo),
                             width: 160,
                             height: 160,
-                            fit: BoxFit.cover,
+                            fit: BoxFit.contain,
                           ),
                         ),
                         SizedBox(height: 28),

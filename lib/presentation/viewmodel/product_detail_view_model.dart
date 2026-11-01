@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mobile_hexy/core/base/exceptions.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:mobile_hexy/core/base/base_view_model.dart';
@@ -25,6 +26,44 @@ class ProductDetailViewModel extends BaseViewModel {
   final ProductDetailRemoteDataSource _remoteDataSource;
   final CartRemoteDataSource _cartRemoteDataSource;
   final WishlistRemoteDataSource _wishlistRemoteDataSource;
+  final isSubmittingRating = false.obs;
+  final submittedRating = RxnInt();
+
+  Future<void> submitRating(int rating) async {
+    final detail = product.value;
+    if (detail == null ||
+        rating < 1 ||
+        rating > 5 ||
+        isSubmittingRating.value) {
+      return;
+    }
+    isSubmittingRating.value = true;
+    try {
+      if (!await _ensureAuthenticated('rating')) return;
+      if (isClosed || product.value?.id != detail.id) return;
+      await _remoteDataSource.submitRating(detail.id, rating);
+      if (isClosed || product.value?.id != detail.id) return;
+      submittedRating.value = rating;
+      Get.snackbar(
+        'Rating submitted',
+        'Thank you for rating this product.',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    } catch (error) {
+      if (!isClosed) {
+        Get.snackbar(
+          'Unable to submit rating',
+          error is ServerException
+              ? error.message
+              : error.toString().replaceFirst('Exception: ', ''),
+          snackPosition: SnackPosition.BOTTOM,
+        );
+      }
+    } finally {
+      isSubmittingRating.value = false;
+    }
+  }
+
   final selectedImage = 0.obs;
   final selectedVariantId = RxnInt();
   final selectedVariantValues = <String, int>{}.obs;
@@ -68,6 +107,7 @@ class ProductDetailViewModel extends BaseViewModel {
       errorMessage.value = 'No product selected.';
       return;
     }
+    if (product.value?.id != id) submittedRating.value = null;
     final revision = ++_detailRevision;
     isLoadingVariant.value = false;
     variantError.value = null;
@@ -98,6 +138,52 @@ class ProductDetailViewModel extends BaseViewModel {
       errorMessage.value = 'Could not load product details. Please try again.';
     } finally {
       if (revision == _detailRevision) isLoading.value = false;
+    }
+  }
+
+  bool _isRefreshing = false;
+
+  Future<void> refreshProduct() async {
+    final detail = product.value;
+    if (detail == null ||
+        _isRefreshing ||
+        isLoading.value ||
+        isLoadingVariant.value) {
+      return;
+    }
+    _isRefreshing = true;
+    final revision = ++_detailRevision;
+    try {
+      final result = await _remoteDataSource.fetch(
+        detail.id,
+        productVariantId: selectedVariantId.value,
+      );
+      if (revision != _detailRevision || isClosed) return;
+      final imageIndex = selectedImage.value;
+      _applyVariantDetail(result);
+      selectedImage.value = result.imageUrls.isEmpty
+          ? 0
+          : imageIndex.clamp(0, result.imageUrls.length - 1);
+      quantity.value = quantity.value.clamp(
+        result.quantityMin,
+        effectiveQuantityMaximum,
+      );
+      recommendationFavoriteIds.assignAll(
+        [
+          ...result.relatedProducts,
+          ...result.youMightAlsoLike,
+        ].where((item) => item.wishlist).map((item) => item.id),
+      );
+    } catch (_) {
+      if (revision == _detailRevision && !isClosed) {
+        Get.snackbar(
+          'Unable to refresh',
+          'Please try again.',
+          snackPosition: SnackPosition.BOTTOM,
+        );
+      }
+    } finally {
+      _isRefreshing = false;
     }
   }
 

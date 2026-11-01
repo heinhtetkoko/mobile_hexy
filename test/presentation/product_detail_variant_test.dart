@@ -92,6 +92,25 @@ void main() {
   });
 
   test(
+    'refresh uses current product and variant and preserves quantity',
+    () async {
+      await load();
+      vm.quantity.value = 3;
+      final before = api.calls.length;
+      final pending = vm.refreshProduct();
+      await vm.refreshProduct();
+      expect(api.calls.length, before + 1);
+      expect(api.calls.last.path, 'api/v1/products/22');
+      expect(api.calls.last.query['product_variant_id'], 35);
+      respond(detail(35));
+      await pending;
+      expect(vm.product.value!.id, 22);
+      expect(vm.selectedVariantId.value, 35);
+      expect(vm.quantity.value, 3);
+    },
+  );
+
+  test(
     'selecting a variant refreshes gallery, price, stock and selected IDs',
     () async {
       await load();

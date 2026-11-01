@@ -18,156 +18,203 @@ class ProfilePage extends GetView<ProfileViewModel> {
         children: [
           _ProfileAppBar(onTap: controller.openItem),
           Expanded(
-            child: CustomScrollView(
-              slivers: [
-                SliverToBoxAdapter(
-                  child: Obx(
-                    () => _ProfileHero(
-                      profile: controller.profile.value,
-                      loading: controller.isProfileLoading.value,
-                      error: controller.profileError.value,
-                      onRetry: controller.loadProfile,
+            child: RefreshIndicator(
+              onRefresh: controller.loadProfile,
+              child: CustomScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: Obx(
+                      () => _ProfileHero(
+                        profile: controller.profile.value,
+                        loading: controller.isProfileLoading.value,
+                        error: controller.profileError.value,
+                        onRetry: controller.loadProfile,
+                      ),
                     ),
                   ),
-                ),
-                SliverToBoxAdapter(
-                  child: Obx(
-                    () => _Orders(
-                      onTap: controller.openItem,
-                      profile: controller.profile.value,
+                  SliverToBoxAdapter(
+                    child: Obx(
+                      () => _Orders(
+                        onTap: controller.openItem,
+                        profile: controller.profile.value,
+                      ),
                     ),
                   ),
-                ),
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                  sliver: SliverList.list(
-                    children: [
-                      _MenuSection(
-                        title: 'MY ACCOUNT',
-                        items: const [
-                          _MenuItem(
-                            Icons.person_outline_rounded,
-                            'Personal Information',
-                          ),
-                          _MenuItem(
-                            Icons.location_on_outlined,
-                            'Shipping Addresses',
-                          ),
-                          _MenuItem(
-                            Icons.lock_outline_rounded,
-                            'Change Password',
-                          ),
-                        ],
-                        onTap: controller.openItem,
-                      ),
-                      _MenuSection(
-                        title: 'SUPPORT',
-                        items: const [
-                          _MenuItem(
-                            Icons.phone_outlined,
-                            'Hot Line',
-                            trailingText: '+95 9 786-837-620',
-                          ),
-                          _MenuItem(Icons.contact_mail_outlined, 'Contact Us'),
-                          _MenuItem(Icons.format_list_bulleted_rounded, 'FAQ'),
-                        ],
-                        onTap: controller.openItem,
-                      ),
-                      Obx(
-                        () => _MenuSection(
-                          title: 'APPLICATION',
-                          items: [
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                    sliver: SliverList.list(
+                      children: [
+                        _MenuSection(
+                          title: 'MY ACCOUNT',
+                          items: const [
                             _MenuItem(
-                              Icons.language_rounded,
-                              'Language',
-                              trailingText: controller.currentLanguage.value,
+                              Icons.person_outline_rounded,
+                              'Personal Information',
                             ),
                             _MenuItem(
-                              Icons.dark_mode_outlined,
-                              'Dark Mode',
-                              toggleValue: controller.darkModeEnabled.value,
-                              onToggle: controller.toggleDarkMode,
+                              Icons.location_on_outlined,
+                              'Shipping Addresses',
                             ),
-                            const _MenuItem(
-                              Icons.info_outline_rounded,
-                              'About Us',
-                            ),
-                            const _MenuItem(
-                              Icons.shield_outlined,
-                              'Privacy Policy',
-                            ),
-                            const _MenuItem(
-                              Icons.description_outlined,
-                              'Terms & Conditions',
+                            _MenuItem(
+                              Icons.lock_outline_rounded,
+                              'Change Password',
                             ),
                           ],
                           onTap: controller.openItem,
                         ),
-                      ),
-                      const SizedBox(height: 4),
-                      Obx(
-                        () => SizedBox(
-                          height: 52,
-                          child: OutlinedButton.icon(
-                            key: const Key('profile-log-out'),
-                            onPressed: controller.isLoggingOut.value
-                                ? null
-                                : controller.confirmLogout,
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: const Color(0xFFEF4444),
-                              side: const BorderSide(
-                                color: Color(0xFFEF4444),
-                                width: 1.2,
-                              ),
-                              shape: const StadiumBorder(),
-                              textStyle: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                              ),
+                        _MenuSection(
+                          title: 'SUPPORT',
+                          items: const [
+                            _MenuItem(
+                              Icons.phone_outlined,
+                              'Hot Line',
+                              trailingText: '+95 9 786-837-620',
                             ),
-                            icon: controller.isLoggingOut.value
-                                ? const SizedBox.square(
-                                    dimension: 18,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  )
-                                : const Icon(Icons.logout_rounded, size: 20),
-                            label: Text(
-                              controller.isLoggingOut.value
-                                  ? 'Logging Out...'.tr
-                                  : 'Log Out'.tr,
+                            _MenuItem(
+                              Icons.contact_mail_outlined,
+                              'Contact Us',
+                            ),
+                            _MenuItem(
+                              Icons.format_list_bulleted_rounded,
+                              'FAQ',
+                            ),
+                          ],
+                          onTap: controller.openItem,
+                        ),
+                        Obx(
+                          () => _MenuSection(
+                            title: 'APPLICATION',
+                            items: [
+                              _MenuItem(
+                                Icons.language_rounded,
+                                'Language',
+                                trailingText: controller.currentLanguage.value,
+                              ),
+                              _MenuItem(
+                                Icons.dark_mode_outlined,
+                                'Dark Mode',
+                                toggleValue: controller.darkModeEnabled.value,
+                                onToggle: controller.toggleDarkMode,
+                              ),
+                              const _MenuItem(
+                                Icons.info_outline_rounded,
+                                'About Us',
+                              ),
+                              const _MenuItem(
+                                Icons.shield_outlined,
+                                'Privacy Policy',
+                              ),
+                              const _MenuItem(
+                                Icons.description_outlined,
+                                'Terms & Conditions',
+                              ),
+                            ],
+                            onTap: controller.openItem,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Obx(
+                          () => SizedBox(
+                            height: 52,
+                            child: OutlinedButton.icon(
+                              key: const Key('profile-log-out'),
+                              onPressed:
+                                  controller.isLoggingOut.value ||
+                                      controller.isDeletingAccount.value
+                                  ? null
+                                  : controller.confirmLogout,
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: const Color(0xFFEF4444),
+                                side: const BorderSide(
+                                  color: Color(0xFFEF4444),
+                                  width: 1.2,
+                                ),
+                                shape: const StadiumBorder(),
+                                textStyle: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              icon: controller.isLoggingOut.value
+                                  ? const SizedBox.square(
+                                      dimension: 18,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : const Icon(Icons.logout_rounded, size: 20),
+                              label: Text(
+                                controller.isLoggingOut.value
+                                    ? 'Logging Out...'.tr
+                                    : 'Log Out'.tr,
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                      Padding(
-                        padding: EdgeInsets.symmetric(vertical: 15),
-                        child: Column(
-                          children: [
-                            Text(
-                              'HEXY STATIONERY'.tr,
-                              style: TextStyle(
-                                color: Color(0xFF9CA3AF),
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
+                        const SizedBox(height: 12),
+                        Obx(
+                          () => SizedBox(
+                            height: 52,
+                            child: OutlinedButton.icon(
+                              key: const Key('profile-delete-account'),
+                              onPressed:
+                                  controller.canDeleteAccount.value &&
+                                      !controller.isDeletingAccount.value &&
+                                      !controller.isLoggingOut.value
+                                  ? controller.confirmDeleteAccount
+                                  : null,
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: const Color(0xFFEF4444),
+                                shape: const StadiumBorder(),
+                              ),
+                              icon: controller.isDeletingAccount.value
+                                  ? const SizedBox.square(
+                                      dimension: 18,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : const Icon(
+                                      Icons.delete_outline_rounded,
+                                      size: 20,
+                                    ),
+                              label: Text(
+                                controller.isDeletingAccount.value
+                                    ? 'Deleting...'.tr
+                                    : 'Account Delete'.tr,
                               ),
                             ),
-                            SizedBox(height: 3),
-                            Text(
-                              'Version 2.4.1'.tr,
-                              style: TextStyle(
-                                color: Color(0xFF9CA3AF),
-                                fontSize: 11,
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
-                      ),
-                    ],
+                        Padding(
+                          padding: EdgeInsets.symmetric(vertical: 15),
+                          child: Column(
+                            children: [
+                              Text(
+                                'HEXY STATIONERY'.tr,
+                                style: TextStyle(
+                                  color: Color(0xFF9CA3AF),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              SizedBox(height: 3),
+                              Text(
+                                'Version 2.4.1'.tr,
+                                style: TextStyle(
+                                  color: Color(0xFF9CA3AF),
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ],

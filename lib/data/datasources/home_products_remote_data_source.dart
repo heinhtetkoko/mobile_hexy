@@ -95,7 +95,13 @@ class HomeProductsRemoteDataSource {
             _firstVariantId(json['variants']),
       ),
       countdownSeconds: _countdownSeconds(json),
+      rating: _rating(json['rating']),
     );
+  }
+
+  double _rating(Object? value) {
+    final parsed = double.tryParse(value?.toString() ?? '');
+    return parsed == null || !parsed.isFinite ? 0 : parsed.clamp(0, 5);
   }
 
   int? _countdownSeconds(Map<dynamic, dynamic> json) {

@@ -1,3 +1,4 @@
+import 'package:mobile_hexy/presentation/viewmodel/stationery_home_view_model.dart';
 import 'package:get/get.dart';
 import 'package:mobile_hexy/core/base/base_view_model.dart';
 import 'package:mobile_hexy/app.dart';
@@ -44,6 +45,9 @@ class MainViewModel extends BaseViewModel {
     }
 
     if (selectedIndex.value != index) selectedIndex.value = index;
+    if (index == 0 && Get.isRegistered<StationeryHomeViewModel>()) {
+      await Get.find<StationeryHomeViewModel>().loadUnreadNotificationCount();
+    }
     if (index == 2) await Get.find<WishlistViewModel>().loadWishlist();
     if (index == 3) await Get.find<CartViewModel>().loadCart();
     if (index == 4) await Get.find<ProfileViewModel>().loadProfile();

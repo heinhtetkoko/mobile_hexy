@@ -36,54 +36,60 @@ class ProductDetailPage extends GetView<ProductDetailViewModel> {
                     )
                   : product == null
                   ? const Center(child: Text('Product not found.'))
-                  : CustomScrollView(
-                      controller: controller.scrollController,
-                      slivers: [
-                        SliverToBoxAdapter(
-                          child: _Gallery(controller: controller),
-                        ),
-                        SliverToBoxAdapter(
-                          child: _ProductInfo(controller: controller),
-                        ),
-                        SliverToBoxAdapter(
-                          child: Obx(
-                            () => Column(
-                              children: [
-                                if (controller.isLoadingVariant.value)
-                                  const LinearProgressIndicator(),
-                                if (controller.variantError.value != null)
-                                  Padding(
-                                    padding: const EdgeInsets.all(16),
-                                    child: Text(controller.variantError.value!),
-                                  ),
-                              ],
+                  : RefreshIndicator(
+                      onRefresh: controller.refreshProduct,
+                      child: CustomScrollView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        controller: controller.scrollController,
+                        slivers: [
+                          SliverToBoxAdapter(
+                            child: _Gallery(controller: controller),
+                          ),
+                          SliverToBoxAdapter(
+                            child: _ProductInfo(controller: controller),
+                          ),
+                          SliverToBoxAdapter(
+                            child: Obx(
+                              () => Column(
+                                children: [
+                                  if (controller.isLoadingVariant.value)
+                                    const LinearProgressIndicator(),
+                                  if (controller.variantError.value != null)
+                                    Padding(
+                                      padding: const EdgeInsets.all(16),
+                                      child: Text(
+                                        controller.variantError.value!,
+                                      ),
+                                    ),
+                                ],
+                              ),
                             ),
                           ),
-                        ),
-                        SliverToBoxAdapter(
-                          child: _Variants(controller: controller),
-                        ),
-                        SliverToBoxAdapter(
-                          child: _Description(controller: controller),
-                        ),
-                        SliverToBoxAdapter(
-                          child: _Specifications(controller: controller),
-                        ),
-                        SliverToBoxAdapter(
-                          child: _ProductRecommendations(
-                            title: 'Related Products',
-                            products: product.relatedProducts,
-                            bottomSpacing: 8,
+                          SliverToBoxAdapter(
+                            child: _Variants(controller: controller),
                           ),
-                        ),
-                        SliverToBoxAdapter(
-                          child: _ProductRecommendations(
-                            title: 'You Might Also Like',
-                            products: product.youMightAlsoLike,
+                          SliverToBoxAdapter(
+                            child: _Description(controller: controller),
                           ),
-                        ),
-                        const SliverToBoxAdapter(child: SizedBox(height: 16)),
-                      ],
+                          SliverToBoxAdapter(
+                            child: _Specifications(controller: controller),
+                          ),
+                          SliverToBoxAdapter(
+                            child: _ProductRecommendations(
+                              title: 'Related Products',
+                              products: product.relatedProducts,
+                              bottomSpacing: 8,
+                            ),
+                          ),
+                          SliverToBoxAdapter(
+                            child: _ProductRecommendations(
+                              title: 'You Might Also Like',
+                              products: product.youMightAlsoLike,
+                            ),
+                          ),
+                          const SliverToBoxAdapter(child: SizedBox(height: 16)),
+                        ],
+                      ),
                     ),
             ),
           ],
@@ -532,14 +538,42 @@ class _ProductInfo extends StatelessWidget {
           const SizedBox(height: 12),
           Row(
             children: [
-              ...List.generate(
-                5,
-                (index) => Icon(
-                  index < product.rating.round()
-                      ? Icons.star_rounded
-                      : Icons.star_border_rounded,
-                  color: const Color(0xFFFBBF24),
-                  size: 18,
+              Obx(
+                () => Row(
+                  children: [
+                    ...List.generate(
+                      5,
+                      (index) => IconButton(
+                        key: Key('product-rating-${index + 1}'),
+                        tooltip: 'Rate ${index + 1} out of 5',
+                        onPressed: controller.isSubmittingRating.value
+                            ? null
+                            : () => controller.submitRating(index + 1),
+                        padding: EdgeInsets.zero,
+                        style: IconButton.styleFrom(
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        constraints: const BoxConstraints(
+                          minWidth: 24,
+                          minHeight: 44,
+                        ),
+                        icon: Icon(
+                          index <
+                                  (controller.submittedRating.value ??
+                                      product.rating.round())
+                              ? Icons.star_rounded
+                              : Icons.star_border_rounded,
+                          color: const Color(0xFFFBBF24),
+                          size: 18,
+                        ),
+                      ),
+                    ),
+                    if (controller.isSubmittingRating.value)
+                      const SizedBox.square(
+                        dimension: 14,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                  ],
                 ),
               ),
               const SizedBox(width: 7),

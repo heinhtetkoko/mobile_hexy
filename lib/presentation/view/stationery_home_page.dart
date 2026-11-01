@@ -1,3 +1,4 @@
+import 'package:mobile_hexy/core/services/asset_paths.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:mobile_hexy/app.dart';
@@ -25,11 +26,14 @@ class StationeryHomePage extends GetView<StationeryHomeViewModel> {
         bottom: false,
         child: Column(
           children: [
-            _Header(
-              onNotificationTap: controller.openNotifications,
-              onSearchTap: () => Get.toNamed<void>(
-                AppRoutes.productList,
-                arguments: const ProductListRequest.search(),
+            Obx(
+              () => _Header(
+                notificationCount: controller.unreadNotificationCount.value,
+                onNotificationTap: controller.openNotifications,
+                onSearchTap: () => Get.toNamed<void>(
+                  AppRoutes.productList,
+                  arguments: const ProductListRequest.search(),
+                ),
               ),
             ),
             Expanded(
@@ -201,7 +205,12 @@ class StationeryHomePage extends GetView<StationeryHomeViewModel> {
 }
 
 class _Header extends StatelessWidget {
-  const _Header({required this.onSearchTap, required this.onNotificationTap});
+  const _Header({
+    required this.onSearchTap,
+    required this.onNotificationTap,
+    this.notificationCount,
+  });
+  final int? notificationCount;
   final VoidCallback onSearchTap;
   final VoidCallback onNotificationTap;
 
@@ -228,15 +237,16 @@ class _Header extends StatelessWidget {
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(4),
               ),
-              child: Image.asset(
-                'assets/images/Frame_hexy.png',
-                fit: BoxFit.cover,
-              ),
+              child: Image.asset(AssetPaths.appLogo, fit: BoxFit.contain),
             ),
             const Spacer(),
             _BadgeIcon(
               icon: Icons.notifications_none_rounded,
-              count: '0',
+              count: notificationCount == null || notificationCount == 0
+                  ? null
+                  : notificationCount! > 99
+                  ? '99+'
+                  : '$notificationCount',
               onTap: onNotificationTap,
             ),
           ],
@@ -278,7 +288,7 @@ class _BadgeIcon extends StatelessWidget {
     required this.onTap,
   });
   final IconData icon;
-  final String count;
+  final String? count;
   final VoidCallback onTap;
   @override
   Widget build(BuildContext context) => InkWell(
@@ -289,7 +299,8 @@ class _BadgeIcon extends StatelessWidget {
       children: [
         const SizedBox(width: 28, height: 28),
         Positioned.fill(child: Icon(icon, color: Colors.white, size: 25)),
-        Positioned(right: -3, top: -3, child: _CountBadge(value: count)),
+        if (count != null)
+          Positioned(right: -3, top: -3, child: _CountBadge(value: count!)),
       ],
     ),
   );
@@ -1710,11 +1721,6 @@ class _RecommendedCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 6),
-                  Text(
-                    '★★★★★'.tr,
-                    style: TextStyle(color: Color(0xFFF59E0B), fontSize: 11),
-                  ),
-                  const SizedBox(height: 3),
                   Row(
                     children: [
                       Expanded(
