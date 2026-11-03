@@ -37,7 +37,7 @@ class SplashPage extends GetView<SplashViewModel> {
                         Padding(
                           padding: EdgeInsets.symmetric(horizontal: 24),
                           child: Text(
-                            'HEXY MEGASTORE',
+                            'HEXCY MEGASTORE',
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               color: Colors.white,

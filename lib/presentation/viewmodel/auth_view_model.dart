@@ -1,4 +1,6 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:mobile_hexy/core/base/base_view_model.dart';
@@ -99,7 +101,7 @@ class AuthViewModel extends BaseViewModel {
     final login = email.text.trim();
     if (login.isEmpty) return _message('Please enter your email or username.');
     if (password.text.isEmpty) return _message('Please enter your password.');
-    if (isLoggingIn.value) return;
+    if (isLoggingIn.value || isGoogleLoggingIn.value) return;
 
     isLoggingIn.value = true;
     try {
@@ -128,10 +130,13 @@ class AuthViewModel extends BaseViewModel {
     if (isGoogleLoggingIn.value || isLoggingIn.value) return;
     isGoogleLoggingIn.value = true;
     try {
+      // This must be a Web application OAuth client, also accepted by the backend.
+      // Android OAuth clients identify the package and signing certificate instead.
       const serverClientId = String.fromEnvironment(
         'GOOGLE_SERVER_CLIENT_ID',
         defaultValue:
             '976257170411-ilje208fkdmfdsou1ko0ccqr10vkru96.apps.googleusercontent.com',
+        // '976257170411-o2ijevqro9ale6cu2fd7mudotc5j1tlq.apps.googleusercontent.com',
       );
       if (serverClientId.isEmpty) {
         _message(
@@ -139,7 +144,14 @@ class AuthViewModel extends BaseViewModel {
         );
         return;
       }
+      // In google_sign_in_ios 5.9.0, pass both IDs at runtime so the
+      // backend serverClientId is applied when no GoogleService plist exists.
+      const iosClientId =
+          '976257170411-b88g3kgv47qltau9r79as3oovocph0b5.apps.googleusercontent.com';
       final googleSignIn = GoogleSignIn(
+        clientId: !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS
+            ? iosClientId
+            : null,
         scopes: const ['email', 'profile'],
         serverClientId: serverClientId,
       );
@@ -152,13 +164,21 @@ class AuthViewModel extends BaseViewModel {
           'Google did not return an ID token. Configure GOOGLE_SERVER_CLIENT_ID.',
         );
         return;
-      } else {
-        print('Google ID Token: $idToken');
       }
       await _loginWithGoogle(idToken);
       await _finishLogin();
     } on ServerException catch (error) {
       _message(error.message);
+    } on PlatformException catch (error) {
+      if (error.code == 'sign_in_failed' &&
+          RegExp(r'\b10\b').hasMatch(error.message ?? '')) {
+        _message(
+          'Google Sign-In is not configured for this app version. '
+          'Please contact support.',
+        );
+      } else {
+        _message('Unable to sign in with Google. Please try again.');
+      }
     } catch (error) {
       _message(
         error
