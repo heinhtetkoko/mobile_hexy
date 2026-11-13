@@ -126,13 +126,13 @@ class ProductGridShimmer extends StatelessWidget {
     child: GridView.builder(
       padding: const EdgeInsets.all(16),
       physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
+      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: 240,
         crossAxisSpacing: 12,
         mainAxisSpacing: 12,
         childAspectRatio: .82,
       ),
-      itemCount: 6,
+      itemCount: 15,
       itemBuilder: (_, _) => const ShimmerBox(
         width: double.infinity,
         height: double.infinity,

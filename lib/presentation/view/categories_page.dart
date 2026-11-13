@@ -231,7 +231,8 @@ class _SubcategoryCard extends StatelessWidget {
     onTap: () => Get.toNamed<void>(AppRoutes.productList, arguments: item),
     borderRadius: BorderRadius.circular(12),
     child: Container(
-      height: 72,
+      constraints: const BoxConstraints(minHeight: 72),
+      alignment: Alignment.centerLeft,
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -246,8 +247,8 @@ class _SubcategoryCard extends StatelessWidget {
         ],
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
             item.name.tr,

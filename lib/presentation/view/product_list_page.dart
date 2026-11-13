@@ -66,8 +66,8 @@ class ProductListPage extends GetView<ProductListViewModel> {
                           sliver: SliverGrid.builder(
                             itemCount: products.length,
                             gridDelegate:
-                                const SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: 2,
+                                const SliverGridDelegateWithMaxCrossAxisExtent(
+                                  maxCrossAxisExtent: 240,
                                   crossAxisSpacing: 12,
                                   mainAxisSpacing: 12,
                                   childAspectRatio: .82,
