@@ -12,6 +12,7 @@ import 'package:mobile_hexy/domain/usecases/login_user.dart';
 import 'package:mobile_hexy/domain/usecases/login_with_google.dart';
 import 'package:mobile_hexy/domain/usecases/register_user.dart';
 import 'package:mobile_hexy/data/datasources/auth_remote_data_source.dart';
+import 'package:mobile_hexy/presentation/viewmodel/main_view_model.dart';
 
 class AuthViewModel extends BaseViewModel {
   AuthViewModel(
@@ -212,9 +213,27 @@ class AuthViewModel extends BaseViewModel {
       return;
     }
     final tabIndex = loginArguments is Map ? loginArguments['tabIndex'] : null;
+    await _returnHome(tabIndex: tabIndex is int ? tabIndex : null);
+  }
+
+  /// Goes back to the main tabs after signing in or registering.
+  ///
+  /// When login was opened on top of the existing home screen (for example by
+  /// tapping the Profile tab as a guest), pop back to that screen and reload
+  /// the tab instead of replacing it with `offAllNamed`. Replacing it keeps the
+  /// guest-time tab view models (such as ProfileViewModel) attached to the new
+  /// screen until the old route is disposed, so their post-login refresh is
+  /// dropped and, e.g., the Delete Account button stays disabled.
+  Future<void> _returnHome({int? tabIndex}) async {
+    if (Get.isRegistered<MainViewModel>()) {
+      Get.until((route) => route.settings.name == AppRoutes.home);
+      final main = Get.find<MainViewModel>();
+      await main.changePage(tabIndex ?? main.selectedIndex.value);
+      return;
+    }
     await Get.offAllNamed<dynamic>(
       AppRoutes.home,
-      arguments: tabIndex is int ? {'tabIndex': tabIndex} : null,
+      arguments: tabIndex == null ? null : {'tabIndex': tabIndex},
     );
   }
 
@@ -238,7 +257,7 @@ class AuthViewModel extends BaseViewModel {
         email: email.text.trim(),
         password: password.text,
       );
-      await Get.offAllNamed<dynamic>(AppRoutes.home);
+      await _returnHome();
     } on ServerException catch (error) {
       _message(error.message);
     } catch (_) {

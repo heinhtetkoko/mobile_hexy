@@ -779,10 +779,10 @@ class _PaymentMethod extends StatelessWidget {
   final CheckoutViewModel controller;
   static const methods = [
     'Cash on Delivery',
-    'KBZPay',
-    'WavePay',
-    'Visa/Master',
-    'MPU',
+    // 'KBZPay',
+    // 'WavePay',
+    // 'Visa/Master',
+    // 'MPU',
   ];
 
   @override
