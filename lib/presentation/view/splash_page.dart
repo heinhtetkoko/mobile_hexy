@@ -1,3 +1,4 @@
+import 'package:mobile_hexy/presentation/widgets/app_version_label.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:mobile_hexy/core/services/asset_paths.dart';
@@ -78,8 +79,7 @@ class SplashPage extends GetView<SplashViewModel> {
                           ),
                         ),
                         Spacer(),
-                        Text(
-                          'Version 1.0.0',
+                        AppVersionLabel(
                           style: TextStyle(
                             color: Color(0xFFAAA6C1),
                             fontSize: 13,

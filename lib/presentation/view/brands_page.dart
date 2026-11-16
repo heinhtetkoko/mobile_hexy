@@ -1,3 +1,4 @@
+import 'package:mobile_hexy/presentation/widgets/catalog_image.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:mobile_hexy/app.dart';
@@ -157,21 +158,7 @@ class _BrandCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     clipBehavior: Clip.antiAlias,
-                    child: brand.imageUrl.isEmpty
-                        ? Icon(
-                            Icons.sell_outlined,
-                            size: 36,
-                            color: Colors.grey.shade400,
-                          )
-                        : Image.network(
-                            brand.imageUrl,
-                            fit: BoxFit.contain,
-                            errorBuilder: (_, _, _) => Icon(
-                              Icons.sell_outlined,
-                              size: 36,
-                              color: Colors.grey.shade400,
-                            ),
-                          ),
+                    child: CatalogImage(url: brand.imageUrl),
                   ),
                 ),
                 const SizedBox(height: 12),

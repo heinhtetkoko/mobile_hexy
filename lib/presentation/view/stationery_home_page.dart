@@ -1,3 +1,4 @@
+import 'package:mobile_hexy/presentation/widgets/catalog_image.dart';
 import 'package:mobile_hexy/core/services/asset_paths.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -597,19 +598,8 @@ class _CategoryImage extends StatelessWidget {
   final CatalogCategory item;
 
   @override
-  Widget build(BuildContext context) => item.imageUrl.isEmpty
-      ? const ColoredBox(
-          color: Color(0xFFF3F4F6),
-          child: Icon(Icons.category_outlined),
-        )
-      : Image.network(
-          item.imageUrl,
-          fit: BoxFit.cover,
-          errorBuilder: (_, _, _) => const ColoredBox(
-            color: Color(0xFFF3F4F6),
-            child: Icon(Icons.category_outlined),
-          ),
-        );
+  Widget build(BuildContext context) =>
+      CatalogImage(url: item.imageUrl, fit: BoxFit.cover);
 }
 
 class _BrandImage extends StatelessWidget {
@@ -618,13 +608,7 @@ class _BrandImage extends StatelessWidget {
   final CatalogBrand item;
 
   @override
-  Widget build(BuildContext context) => item.imageUrl.isEmpty
-      ? const Icon(Icons.sell_outlined)
-      : Image.network(
-          item.imageUrl,
-          fit: BoxFit.contain,
-          errorBuilder: (_, _, _) => const Icon(Icons.sell_outlined),
-        );
+  Widget build(BuildContext context) => CatalogImage(url: item.imageUrl);
 }
 
 class _CategoryList extends StatelessWidget {
@@ -1267,10 +1251,7 @@ class _FlashSaleContent extends StatelessWidget {
       );
     }
     if (items.isEmpty) {
-      return const SizedBox(
-        height: 120,
-        child: Center(child: Text('No flash sale products found.')),
-      );
+      return const SizedBox.shrink();
     }
     return _FlashSaleSection(
       items: items,

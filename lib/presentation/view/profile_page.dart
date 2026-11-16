@@ -1,3 +1,4 @@
+import 'package:mobile_hexy/presentation/widgets/app_version_label.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:mobile_hexy/core/theme/app_colors.dart';
@@ -200,8 +201,7 @@ class ProfilePage extends GetView<ProfileViewModel> {
                                 ),
                               ),
                               SizedBox(height: 3),
-                              Text(
-                                'Version 1.0.0'.tr,
+                              const AppVersionLabel(
                                 style: TextStyle(
                                   color: Color(0xFF9CA3AF),
                                   fontSize: 11,
