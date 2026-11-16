@@ -192,7 +192,7 @@ class ProfilePage extends GetView<ProfileViewModel> {
                           child: Column(
                             children: [
                               Text(
-                                'HEXY STATIONERY'.tr,
+                                'HEXCY STATIONERY & GADGETS'.tr,
                                 style: TextStyle(
                                   color: Color(0xFF9CA3AF),
                                   fontSize: 12,
@@ -201,7 +201,7 @@ class ProfilePage extends GetView<ProfileViewModel> {
                               ),
                               SizedBox(height: 3),
                               Text(
-                                'Version 2.4.1'.tr,
+                                'Version 1.0.0'.tr,
                                 style: TextStyle(
                                   color: Color(0xFF9CA3AF),
                                   fontSize: 11,

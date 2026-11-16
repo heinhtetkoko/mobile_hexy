@@ -87,7 +87,15 @@ class SplashPage extends GetView<SplashViewModel> {
                         ),
                         SizedBox(height: 6),
                         Text(
-                          '© 2026 StationeryHub. All rights reserved.',
+                          '© 2026 HEXCY STATIONERY & GADGETS.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Color(0xFFAAA6C1),
+                            fontSize: 13,
+                          ),
+                        ),
+                        Text(
+                          'All rights reserved.',
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             color: Color(0xFFAAA6C1),

@@ -1,5 +1,8 @@
 import 'dart:math' as math;
 import 'dart:io';
+import 'dart:typed_data';
+
+import 'package:path_provider/path_provider.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -662,8 +665,8 @@ class _ContactDetailRow extends StatelessWidget {
                       _plain(value),
                       style: TextStyle(
                         color: index == 0
-                            ? const Color(0xFF171725)
-                            : const Color(0xFF7D8597),
+                            ? Theme.of(context).colorScheme.onSurface
+                            : Theme.of(context).colorScheme.onSurfaceVariant,
                         fontSize: index == 0 ? 15 : 13,
                         fontWeight: index == 0
                             ? FontWeight.w800
@@ -731,7 +734,7 @@ class _ContactMapCard extends StatelessWidget {
             right: 6,
             top: 4,
             child: Text(
-              '© OpenStreetMap',
+              '© OpenStreetMap contributors',
               style: TextStyle(
                 color: Color(0xFF505866),
                 fontSize: 8,
@@ -785,16 +788,101 @@ class _OpenStreetMap extends StatelessWidget {
                 top: y * _tileSize - top,
                 width: _tileSize,
                 height: _tileSize,
-                child: Image.network(
-                  'https://tile.openstreetmap.org/$_zoom/$x/$y.png',
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, _, _) =>
-                      const ColoredBox(color: Color(0xFFF1F4F8)),
-                ),
+                child: _ContactMapTile(zoom: _zoom, x: x, y: y),
               ),
         ],
       );
     },
+  );
+}
+
+// Only visible tiles are requested. Keep disk copies for at least seven days
+// rather than repeatedly downloading them whenever this screen is reopened.
+class _ContactMapTile extends StatefulWidget {
+  const _ContactMapTile({required this.zoom, required this.x, required this.y});
+
+  final int zoom, x, y;
+
+  @override
+  State<_ContactMapTile> createState() => _ContactMapTileState();
+}
+
+class _ContactMapTileState extends State<_ContactMapTile> {
+  late Future<Uint8List> _image = _load();
+
+  @override
+  void didUpdateWidget(covariant _ContactMapTile oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.zoom != widget.zoom ||
+        oldWidget.x != widget.x ||
+        oldWidget.y != widget.y) {
+      _image = _load();
+    }
+  }
+
+  Future<Uint8List> _load() async {
+    final root = await getApplicationCacheDirectory();
+    final directory = Directory('${root.path}/contact_map_tiles');
+    await directory.create(recursive: true);
+    final file = File(
+      '${directory.path}/${widget.zoom}_${widget.x}_${widget.y}.png',
+    );
+    if (await file.exists()) {
+      final age = DateTime.now().difference(await file.lastModified());
+      if (age < const Duration(days: 7)) return file.readAsBytes();
+    }
+
+    final client = HttpClient()
+      ..userAgent = 'HEXCY-Mobile/1.0 (+https://www.hexcymegastore.com/)'
+      ..connectionTimeout = const Duration(seconds: 15);
+    try {
+      final request = await client.getUrl(
+        Uri.parse(
+          'https://tile.openstreetmap.org/${widget.zoom}/${widget.x}/${widget.y}.png',
+        ),
+      );
+      final response = await request.close().timeout(
+        const Duration(seconds: 15),
+      );
+      if (response.statusCode != HttpStatus.ok ||
+          response.headers.contentType?.mimeType != 'image/png') {
+        throw const HttpException('Map preview unavailable');
+      }
+      final builder = BytesBuilder(copy: false);
+      await for (final chunk in response.timeout(const Duration(seconds: 15))) {
+        builder.add(chunk);
+      }
+      final bytes = builder.takeBytes();
+      await file.writeAsBytes(bytes, flush: true);
+      return bytes;
+    } finally {
+      client.close(force: true);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => FutureBuilder<Uint8List>(
+    future: _image,
+    builder: (context, snapshot) {
+      if (snapshot.hasData) {
+        return Image.memory(
+          snapshot.data!,
+          fit: BoxFit.cover,
+          errorBuilder: (_, _, _) => const _MapTileFallback(),
+        );
+      }
+      return const _MapTileFallback();
+    },
+  );
+}
+
+class _MapTileFallback extends StatelessWidget {
+  const _MapTileFallback();
+
+  @override
+  Widget build(BuildContext context) => ColoredBox(
+    color: const Color(0xFFF1F4F8),
+    child: CustomPaint(painter: _ContactGridPainter()),
   );
 }
 
@@ -844,7 +932,11 @@ class _ContactPill extends StatelessWidget {
         ),
         child: Text(
           label,
-          style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800),
+          style: const TextStyle(
+            color: Color(0xFF242060),
+            fontSize: 10,
+            fontWeight: FontWeight.w800,
+          ),
         ),
       ),
     ),
