@@ -1,3 +1,4 @@
+import 'package:mobile_hexy/data/models/checkout_payment_provider.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -24,12 +25,44 @@ class CheckoutApi extends CheckoutRemoteDataSource {
   Map<String, dynamic> data = payload;
 
   @override
+  Future<CheckoutPaymentProviders> fetchPaymentProviders() async =>
+      const CheckoutPaymentProviders(
+        items: [
+          CheckoutPaymentProvider(
+            key: 'cod',
+            code: 'cod',
+            label: 'Cash on Delivery',
+            enabled: true,
+            selected: true,
+          ),
+        ],
+        selectedKey: 'cod',
+      );
+
+  @override
   Future<Map<String, dynamic>> fetchCheckout({String? orderId}) async => data;
 
   @override
   Future<List<Map<String, dynamic>>> fetchDeliveryMethods({
     String? orderId,
   }) async => [];
+}
+
+class LongLabelCheckoutApi extends CheckoutApi {
+  @override
+  Future<CheckoutPaymentProviders> fetchPaymentProviders() async =>
+      const CheckoutPaymentProviders(
+        items: [
+          CheckoutPaymentProvider(
+            key: 'cod',
+            code: 'cod',
+            label: 'Cash on Delivery with an exceptionally long provider label',
+            enabled: true,
+            selected: true,
+          ),
+        ],
+        selectedKey: 'cod',
+      );
 }
 
 class AddressApi extends ShippingAddressRemoteDataSource {
@@ -207,5 +240,24 @@ void main() {
     expect(find.text('Free Products'), findsNothing);
     expect(card, findsNothing);
     expect(find.text('Order Items (1)'), findsOneWidget);
+  });
+  testWidgets('narrow checkout handles long provider labels without overflow', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 1800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final cart = Get.put(CartViewModel(CartApi()));
+    Get.put(CheckoutViewModel(cart, LongLabelCheckoutApi(), AddressApi()));
+    await tester.pumpWidget(const GetMaterialApp(home: CheckoutPage()));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const Key('payment-cod')));
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Cash on Delivery with an exceptionally long provider label'),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
   });
 }

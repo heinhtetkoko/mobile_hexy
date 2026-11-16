@@ -1,3 +1,5 @@
+import 'package:mobile_hexy/data/models/payment_checkout_session.dart';
+import 'package:mobile_hexy/presentation/view/payment_checkout_page.dart';
 import 'package:mobile_hexy/presentation/view/collections_page.dart';
 import 'package:mobile_hexy/presentation/controllers/in_app_forgot_password_binding.dart';
 import 'package:mobile_hexy/presentation/view/in_app_forgot_password_page.dart';
@@ -77,6 +79,7 @@ abstract final class AppRoutes {
   static const productDetail = '/product-detail';
   static const checkout = '/checkout';
   static const paymentSuccess = '/payment-success';
+  static const paymentCheckout = '/payment-checkout';
   static const addressForm = '/address';
   static const shippingAddresses = '/shipping-addresses';
   static const productList = '/products';
@@ -133,6 +136,11 @@ abstract final class AppPages {
       name: AppRoutes.checkout,
       page: CheckoutPage.new,
       binding: CheckoutBinding(),
+    ),
+    GetPage(
+      name: AppRoutes.paymentCheckout,
+      page: () =>
+          PaymentCheckoutPage(session: Get.arguments as PaymentCheckoutSession),
     ),
     GetPage(
       name: AppRoutes.paymentSuccess,

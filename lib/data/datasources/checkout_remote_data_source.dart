@@ -1,3 +1,4 @@
+import 'package:mobile_hexy/data/models/checkout_payment_provider.dart';
 import 'package:mobile_hexy/core/networks/api_endpoints.dart';
 import 'package:mobile_hexy/core/networks/api_service.dart';
 
@@ -28,29 +29,30 @@ class CheckoutRemoteDataSource {
     return data;
   }
 
-  Future<Map<String, dynamic>> updateCheckout({
-    String? orderId,
-    int? shippingAddressId,
-    Object? deliveryMethodId,
-    String? paymentMethod,
-    String? deliveryNotes,
-  }) async {
-    final body = <String, dynamic>{
-      if (orderId != null) 'order_id': _numericId(orderId),
-    };
-    if (shippingAddressId != null) {
-      body['shipping_address_id'] = shippingAddressId;
-    }
-    if (deliveryMethodId != null) {
-      body['delivery_method_id'] = _numericId(deliveryMethodId);
-    }
-    if (paymentMethod != null) body['payment_method'] = paymentMethod;
-    if (deliveryNotes != null) body['delivery_notes'] = deliveryNotes;
-    final response = await _apiService.post<dynamic>(
-      ApiEndpoints.checkout,
-      data: body,
+  Future<CheckoutPaymentProviders> fetchPaymentProviders() async {
+    final response = await _apiService.get<dynamic>(
+      ApiEndpoints.paymentProviders,
     );
-    return _checkoutPayload(response.data);
+    final data = _data(response.data);
+    if (data is! Map || data['data'] is! List) {
+      throw const FormatException('Payment methods are unavailable.');
+    }
+    final selected = data['selected'];
+    return CheckoutPaymentProviders(
+      items: (data['data'] as List)
+          .whereType<Map>()
+          .map(CheckoutPaymentProvider.fromJson)
+          .where(
+            (item) =>
+                item.key.isNotEmpty &&
+                item.code.isNotEmpty &&
+                item.label.isNotEmpty,
+          )
+          .toList(),
+      selectedKey: selected is Map
+          ? (selected['key'] ?? selected['code'])?.toString()
+          : null,
+    );
   }
 
   Future<Map<String, dynamic>> placeOrder({
@@ -58,6 +60,7 @@ class CheckoutRemoteDataSource {
     required int shippingAddressId,
     required Object deliveryMethodId,
     required String paymentMethod,
+    int? paymentMethodId,
     required bool termsAccepted,
     required String deliveryNotes,
   }) async {
@@ -67,7 +70,7 @@ class CheckoutRemoteDataSource {
         if (orderId != null) 'order_id': _numericId(orderId),
         'shipping_address_id': shippingAddressId,
         'delivery_method_id': _numericId(deliveryMethodId),
-        'payment_method_id': null,
+        'payment_method_id': paymentMethodId,
         'payment_method': paymentMethod,
         'terms_accepted': termsAccepted,
         'delivery_notes': deliveryNotes,

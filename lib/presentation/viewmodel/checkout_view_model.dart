@@ -1,3 +1,5 @@
+import 'package:mobile_hexy/data/models/payment_checkout_session.dart';
+import 'package:mobile_hexy/data/models/checkout_payment_provider.dart';
 import 'package:mobile_hexy/core/utils/money_formatter.dart';
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
@@ -20,7 +22,14 @@ class CheckoutViewModel extends BaseViewModel {
   final CartViewModel cart;
   final CheckoutRemoteDataSource _checkoutRemoteDataSource;
   final ShippingAddressRemoteDataSource _addressRemoteDataSource;
-  final selectedPayment = 'Cash on Delivery'.obs;
+  final selectedPayment = ''.obs;
+  final paymentProviders = <CheckoutPaymentProvider>[].obs;
+  final isLoadingPaymentProviders = false.obs;
+  final paymentProvidersError = RxnString();
+  CheckoutPaymentProvider? get selectedPaymentProvider =>
+      paymentProviders.firstWhereOrNull(
+        (item) => item.key == selectedPayment.value && item.enabled,
+      );
   final termsAccepted = false.obs;
   final itemsExpanded = false.obs;
   final notesController = TextEditingController();
@@ -31,10 +40,10 @@ class CheckoutViewModel extends BaseViewModel {
   final isLoading = true.obs;
   final isUpdatingAddress = false.obs;
   final isUpdatingDeliveryMethod = false.obs;
-  final isUpdatingNotes = false.obs;
   final isPlacingOrder = false.obs;
   final hasCheckoutData = false.obs;
-  String _savedNotes = '';
+  int get shippingTotal => selectedDeliveryMethod.value?.price ?? cart.shipping;
+  int get grandTotal => cart.grandTotal - cart.shipping + shippingTotal;
 
   @override
   void onInit() {
@@ -50,6 +59,7 @@ class CheckoutViewModel extends BaseViewModel {
         _checkoutRemoteDataSource.fetchCheckout(orderId: orderId),
         _addressRemoteDataSource.fetchAddresses(),
         _checkoutRemoteDataSource.fetchDeliveryMethods(orderId: orderId),
+        loadPaymentProviders().then((_) => true),
       ]);
       addresses.assignAll(results[1] as List<ShippingAddress>);
       deliveryMethods.assignAll(
@@ -66,77 +76,49 @@ class CheckoutViewModel extends BaseViewModel {
     }
   }
 
-  void selectPayment(String payment) => selectedPayment.value = payment;
+  void selectPayment(String key) {
+    if (isPlacingOrder.value) return;
+    if (paymentProviders.any((item) => item.key == key && item.enabled)) {
+      selectedPayment.value = key;
+    }
+  }
+
+  Future<void> loadPaymentProviders() async {
+    if (isLoadingPaymentProviders.value) return;
+    isLoadingPaymentProviders.value = true;
+    paymentProvidersError.value = null;
+    try {
+      final result = await _checkoutRemoteDataSource.fetchPaymentProviders();
+      final previous = selectedPayment.value;
+      paymentProviders.assignAll(result.items);
+      final enabled = result.items.where((item) => item.enabled).toList();
+      selectedPayment.value =
+          enabled.firstWhereOrNull((item) => item.key == previous)?.key ??
+          enabled
+              .firstWhereOrNull((item) => item.key == result.selectedKey)
+              ?.key ??
+          enabled.firstWhereOrNull((item) => item.selected)?.key ??
+          enabled.firstOrNull?.key ??
+          '';
+    } catch (error) {
+      paymentProviders.clear();
+      selectedPayment.value = '';
+      paymentProvidersError.value = _message(error);
+    } finally {
+      isLoadingPaymentProviders.value = false;
+    }
+  }
 
   Future<bool> selectAddress(ShippingAddress address) async {
-    if (isUpdatingAddress.value) return false;
-    if (address.id == selectedAddress.value?.id) return true;
-    isUpdatingAddress.value = true;
-    try {
-      final data = await _checkoutRemoteDataSource.updateCheckout(
-        orderId: orderId,
-        shippingAddressId: address.id,
-      );
-      selectedAddress.value = address;
-      _applyCheckout(data, fallbackAddressId: address.id);
-      await _refreshDeliveryMethods();
-      return true;
-    } catch (error) {
-      _showError('Could not update delivery information', error);
-      return false;
-    } finally {
-      isUpdatingAddress.value = false;
-    }
+    if (isPlacingOrder.value) return false;
+    selectedAddress.value = address;
+    return true;
   }
 
   Future<bool> selectDeliveryMethod(CheckoutDeliveryMethod method) async {
-    if (isUpdatingDeliveryMethod.value) return false;
-    if (method.id == selectedDeliveryMethod.value?.id) return true;
-    final previousMethod = selectedDeliveryMethod.value;
+    if (isPlacingOrder.value) return false;
     selectedDeliveryMethod.value = method;
-    isUpdatingDeliveryMethod.value = true;
-    try {
-      final data = await _checkoutRemoteDataSource.updateCheckout(
-        orderId: orderId,
-        deliveryMethodId: method.id,
-      );
-      _applyCheckout(data, fallbackDeliveryMethodId: method.id);
-      return true;
-    } catch (error) {
-      selectedDeliveryMethod.value = previousMethod;
-      _showError('Could not update delivery method', error);
-      return false;
-    } finally {
-      isUpdatingDeliveryMethod.value = false;
-    }
-  }
-
-  Future<void> updateDeliveryNotes() async {
-    final notes = notesController.text.trim();
-    if (isUpdatingNotes.value || notes == _savedNotes) return;
-    isUpdatingNotes.value = true;
-    try {
-      await _checkoutRemoteDataSource.updateCheckout(
-        orderId: orderId,
-        deliveryNotes: notes,
-      );
-      _savedNotes = notes;
-    } catch (error) {
-      _showError('Could not update delivery notes', error);
-    } finally {
-      isUpdatingNotes.value = false;
-    }
-  }
-
-  Future<void> _refreshDeliveryMethods() async {
-    final raw = await _checkoutRemoteDataSource.fetchDeliveryMethods(
-      orderId: orderId,
-    );
-    final previousId = selectedDeliveryMethod.value?.id;
-    deliveryMethods.assignAll(raw.map(CheckoutDeliveryMethod.fromJson));
-    selectedDeliveryMethod.value = deliveryMethods.firstWhereOrNull(
-      (method) => method.selected || method.id == previousId,
-    );
+    return true;
   }
 
   void _applyCheckout(
@@ -185,16 +167,6 @@ class CheckoutViewModel extends BaseViewModel {
     selectedDeliveryMethod.value ??= deliveryMethods.firstWhereOrNull(
       (method) => method.selected,
     );
-
-    final payment = data['payment_method'] ?? data['selected_payment_method'];
-    _setPayment(payment is Map ? payment['code'] ?? payment['name'] : payment);
-  }
-
-  void _setPayment(Object? value) {
-    final normalized = value?.toString().toLowerCase() ?? '';
-    if (normalized == 'cod' || normalized.contains('cash')) {
-      selectedPayment.value = 'Cash on Delivery';
-    }
   }
 
   int? _id(Object? value) => value is Map
@@ -248,6 +220,15 @@ class CheckoutViewModel extends BaseViewModel {
       );
       return;
     }
+    final provider = selectedPaymentProvider;
+    if (isLoadingPaymentProviders.value || provider == null) {
+      Get.snackbar(
+        'Payment method required',
+        'Please select an available payment method.',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      return;
+    }
     isPlacingOrder.value = true;
     try {
       final purchasedItems = cart.items
@@ -271,19 +252,26 @@ class CheckoutViewModel extends BaseViewModel {
         orderId: orderId,
         shippingAddressId: selectedAddress.value!.id,
         deliveryMethodId: selectedDeliveryMethod.value!.id,
-        paymentMethod: _paymentCode(selectedPayment.value),
+        paymentMethod: provider.code,
+        paymentMethodId: provider.id,
         termsAccepted: termsAccepted.value,
         deliveryNotes: notesController.text.trim(),
       );
+      final checkoutUrl = result['checkout_url']?.toString().trim() ?? '';
+      if (provider.code.toLowerCase() == 'mpu' || checkoutUrl.isNotEmpty) {
+        final session = PaymentCheckoutSession.fromJson(result);
+        Get.offNamed<dynamic>(AppRoutes.paymentCheckout, arguments: session);
+        return;
+      }
       Get.offNamed<dynamic>(
         AppRoutes.paymentSuccess,
         arguments: <String, dynamic>{
           ...result,
           '_checkout_items': purchasedItems,
           '_checkout_item_count': purchasedItemCount,
-          '_checkout_grand_total': cart.grandTotal,
+          '_checkout_grand_total': grandTotal,
           '_checkout_currency_symbol': cart.currencySymbol.value,
-          '_checkout_payment_method': selectedPayment.value,
+          '_checkout_payment_method': provider.label,
           '_checkout_delivery_method': selectedDeliveryMethod.value!.name,
           '_checkout_delivery_notes': notesController.text.trim(),
           '_checkout_address': <String, dynamic>{
@@ -304,15 +292,6 @@ class CheckoutViewModel extends BaseViewModel {
       isPlacingOrder.value = false;
     }
   }
-
-  String _paymentCode(String payment) => switch (payment) {
-    'Cash on Delivery' => 'cod',
-    'KBZPay' => 'kbzpay',
-    'WavePay' => 'wavepay',
-    'Visa/Master' => 'card',
-    'MPU' => 'mpu',
-    _ => payment.toLowerCase().replaceAll(' ', '_'),
-  };
 
   @override
   void onClose() {

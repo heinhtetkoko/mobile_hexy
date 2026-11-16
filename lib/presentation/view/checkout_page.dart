@@ -24,9 +24,11 @@ class CheckoutPage extends GetView<CheckoutViewModel> {
           Expanded(child: Obx(() => _content(context))),
           Obx(
             () => _PlaceOrderBar(
-              total: controller.cart.grandTotal,
+              total: controller.grandTotal,
               enabled:
                   controller.termsAccepted.value &&
+                  !controller.isLoadingPaymentProviders.value &&
+                  controller.selectedPaymentProvider != null &&
                   !controller.isPlacingOrder.value,
               loading: controller.isPlacingOrder.value,
               onPressed: controller.placeOrder,
@@ -777,14 +779,6 @@ class _AddressSelectDialog extends StatelessWidget {
 class _PaymentMethod extends StatelessWidget {
   const _PaymentMethod({required this.controller});
   final CheckoutViewModel controller;
-  static const methods = [
-    'Cash on Delivery',
-    // 'KBZPay',
-    // 'WavePay',
-    // 'Visa/Master',
-    'MPU',
-  ];
-
   @override
   Widget build(BuildContext context) => _Panel(
     child: Column(
@@ -792,16 +786,40 @@ class _PaymentMethod extends StatelessWidget {
       children: [
         const _SectionTitle(emoji: '💳', title: 'Payment Method'),
         SizedBox(height: 8),
-        Obx(
-          () => Column(
-            children: methods.map((method) {
-              final selected = controller.selectedPayment.value == method;
+        Obx(() {
+          if (controller.isLoadingPaymentProviders.value) {
+            return const Padding(
+              padding: EdgeInsets.all(16),
+              child: Center(child: CircularProgressIndicator()),
+            );
+          }
+          if (controller.paymentProvidersError.value != null) {
+            return TextButton.icon(
+              onPressed: controller.loadPaymentProviders,
+              icon: const Icon(Icons.refresh),
+              label: Text('Could not load payment methods. Tap to retry.'.tr),
+            );
+          }
+          if (controller.paymentProviders.isEmpty) {
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              child: Text('No payment methods are available.'.tr),
+            );
+          }
+          return Column(
+            children: controller.paymentProviders.map((method) {
+              final selected = controller.selectedPayment.value == method.key;
               return InkWell(
-                key: Key('payment-$method'),
-                onTap: () => controller.selectPayment(method),
+                key: Key('payment-${method.key}'),
+                onTap: method.enabled
+                    ? () => controller.selectPayment(method.key)
+                    : null,
                 child: Container(
-                  height: 56,
-                  padding: const EdgeInsets.symmetric(horizontal: 2),
+                  constraints: const BoxConstraints(minHeight: 56),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 2,
+                    vertical: 9,
+                  ),
                   decoration: BoxDecoration(
                     border: Border(
                       left: selected
@@ -826,19 +844,25 @@ class _PaymentMethod extends StatelessWidget {
                             : Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                       SizedBox(width: 10),
-                      Text(
-                        method,
-                        style: TextStyle(
-                          color: selected
-                              ? Theme.of(context).colorScheme.onSurface
-                              : Theme.of(context).colorScheme.onSurfaceVariant,
-                          fontSize: 14,
-                          fontWeight: selected
-                              ? FontWeight.w800
-                              : FontWeight.w500,
+                      Expanded(
+                        child: Text(
+                          method.label,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: selected
+                                ? Theme.of(context).colorScheme.onSurface
+                                : Theme.of(
+                                    context,
+                                  ).colorScheme.onSurfaceVariant,
+                            fontSize: 14,
+                            fontWeight: selected
+                                ? FontWeight.w800
+                                : FontWeight.w500,
+                          ),
                         ),
                       ),
-                      const Spacer(),
+                      const SizedBox(width: 8),
                       if (selected)
                         Icon(
                           Icons.account_balance_wallet_outlined,
@@ -850,8 +874,8 @@ class _PaymentMethod extends StatelessWidget {
                 ),
               );
             }).toList(),
-          ),
-        ),
+          );
+        }),
       ],
     ),
   );
@@ -974,65 +998,71 @@ class _PriceBreakdown extends StatelessWidget {
   final CheckoutViewModel controller;
 
   @override
-  Widget build(BuildContext context) => _Panel(
-    child: Column(
-      children: [
-        _PriceRow('Product Total', CartPage.money(controller.cart.subtotal)),
-        _PriceRow('Shipping', CartPage.money(controller.cart.shipping)),
-        _PriceRow(
-          'Discount',
-          '−${CartPage.money(controller.cart.discount)}',
-          green: true,
-        ),
-        Divider(height: 18, color: Theme.of(context).dividerColor),
-        Row(
-          children: [
-            Text(
-              'Grand Total'.tr,
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
-            ),
-            const Spacer(),
-            Text(
-              CartPage.money(controller.cart.grandTotal),
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.primary,
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ],
-        ),
-      ],
+  Widget build(BuildContext context) => Obx(
+    () => _Panel(
+      child: Column(
+        children: [
+          _PriceRow('Product Total', CartPage.money(controller.cart.subtotal)),
+          _PriceRow('Shipping', CartPage.money(controller.shippingTotal)),
+          _PriceRow(
+            'Discount',
+            '−${CartPage.money(controller.cart.discount)}',
+            green: true,
+          ),
+          Divider(height: 18, color: Theme.of(context).dividerColor),
+          _PriceRow(
+            'Grand Total',
+            CartPage.money(controller.grandTotal),
+            large: true,
+          ),
+        ],
+      ),
     ),
   );
 }
 
 class _PriceRow extends StatelessWidget {
-  const _PriceRow(this.label, this.value, {this.green = false});
-  final String label;
-  final String value;
-  final bool green;
+  const _PriceRow(
+    this.label,
+    this.value, {
+    this.green = false,
+    this.large = false,
+  });
+  final String label, value;
+  final bool green, large;
 
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.only(bottom: 8),
     child: Row(
       children: [
-        Text(
-          label.tr,
-          style: TextStyle(
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-            fontSize: 14,
+        Expanded(
+          child: Text(
+            label.tr,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+              fontSize: large ? 18 : 14,
+              fontWeight: large ? FontWeight.w800 : FontWeight.normal,
+            ),
           ),
         ),
-        const Spacer(),
-        Text(
-          value,
-          style: TextStyle(
-            color: green
-                ? AppColors.success
-                : Theme.of(context).colorScheme.onSurface,
-            fontSize: 14,
+        const SizedBox(width: 12),
+        Flexible(
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerRight,
+            child: Text(
+              value,
+              style: TextStyle(
+                color: green
+                    ? AppColors.success
+                    : large
+                    ? Theme.of(context).colorScheme.primary
+                    : Theme.of(context).colorScheme.onSurface,
+                fontSize: large ? 18 : 14,
+                fontWeight: large ? FontWeight.w800 : FontWeight.normal,
+              ),
+            ),
           ),
         ),
       ],
@@ -1055,10 +1085,10 @@ class _DeliveryNotes extends StatelessWidget {
           controller: controller.notesController,
           minLines: 3,
           maxLines: 3,
-          onEditingComplete: controller.updateDeliveryNotes,
+          onEditingComplete: () =>
+              FocusManager.instance.primaryFocus?.unfocus(),
           onTapOutside: (_) {
             FocusManager.instance.primaryFocus?.unfocus();
-            controller.updateDeliveryNotes();
           },
           decoration: InputDecoration(
             hintText: 'Add delivery instructions...'.tr,
@@ -1162,50 +1192,62 @@ class _PlaceOrderBar extends StatelessWidget {
     ),
     child: Row(
       children: [
-        Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Grand Total'.tr,
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-                fontSize: 12,
-              ),
-            ),
-            Text(
-              CartPage.money(total),
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.primary,
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ],
-        ),
-        const Spacer(),
-        FilledButton.icon(
-          key: const Key('place-order'),
-          onPressed: enabled ? onPressed : null,
-          style: FilledButton.styleFrom(
-            backgroundColor: enabled
-                ? AppColors.accent
-                : Theme.of(context).disabledColor,
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-          ),
-          label: Text((loading ? 'Placing Order...' : 'Place Order').tr),
-          iconAlignment: IconAlignment.end,
-          icon: loading
-              ? const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.white,
+        Expanded(
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Grand Total'.tr,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    fontSize: 12,
                   ),
-                )
-              : const Icon(Icons.bolt_rounded, size: 18),
+                ),
+                Text(
+                  CartPage.money(total),
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.primary,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Flexible(
+          child: FilledButton.icon(
+            key: const Key('place-order'),
+            onPressed: enabled ? onPressed : null,
+            style: FilledButton.styleFrom(
+              backgroundColor: enabled
+                  ? AppColors.accent
+                  : Theme.of(context).disabledColor,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+            ),
+            label: Text(
+              (loading ? 'Placing Order...' : 'Place Order').tr,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            iconAlignment: IconAlignment.end,
+            icon: loading
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : const Icon(Icons.bolt_rounded, size: 18),
+          ),
         ),
       ],
     ),
@@ -1228,30 +1270,37 @@ class _SectionTitle extends StatelessWidget {
   Widget build(BuildContext context) => Row(
     children: [
       if (emoji != null) ...[
-        Text(emoji!, style: TextStyle(fontSize: 14)),
-        SizedBox(width: 8),
+        Text(emoji!, style: const TextStyle(fontSize: 14)),
+        const SizedBox(width: 8),
       ],
-      Text(
-        title.tr,
-        style: TextStyle(
-          color: Theme.of(context).colorScheme.onSurface,
-          fontSize: 16,
-          fontWeight: FontWeight.w800,
+      Expanded(
+        child: Text(
+          title.tr,
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurface,
+            fontSize: 16,
+            fontWeight: FontWeight.w800,
+          ),
         ),
       ),
-      const Spacer(),
-      if (action != null)
-        InkWell(
-          onTap: onAction,
-          child: Text(
-            action!,
-            style: TextStyle(
-              color: AppColors.accent,
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
+      if (action != null) ...[
+        const SizedBox(width: 8),
+        Flexible(
+          child: InkWell(
+            onTap: onAction,
+            child: Text(
+              action!,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: AppColors.accent,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
         ),
+      ],
     ],
   );
 }

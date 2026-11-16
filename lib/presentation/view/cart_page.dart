@@ -287,15 +287,21 @@ class CartItemCard extends StatelessWidget {
                     const SizedBox(height: 5),
                     Row(
                       children: [
-                        Text(
-                          money(item.unitPrice),
-                          style: TextStyle(
-                            color: Theme.of(context).colorScheme.primary,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w800,
+                        Expanded(
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              money(item.unitPrice),
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.primary,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
                           ),
                         ),
-                        const Spacer(),
+                        const SizedBox(width: 8),
                         if (!item.isFreeProduct)
                           _QuantityButton(
                             symbol: '−',

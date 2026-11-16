@@ -1,3 +1,4 @@
+import 'package:mobile_hexy/data/models/shipping_address.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -171,7 +172,6 @@ void main() {
       for (final id in ['11', '22', null]) {
         await api.fetchCheckout(orderId: id);
         await api.fetchDeliveryMethods(orderId: id);
-        await api.updateCheckout(orderId: id, shippingAddressId: 3);
         await api.placeOrder(
           orderId: id,
           shippingAddressId: 3,
@@ -181,18 +181,75 @@ void main() {
           deliveryNotes: '',
         );
       }
+      expect(
+        requests.where(
+          (r) => r.method == 'POST' && r.path == 'api/v1/checkout',
+        ),
+        isEmpty,
+      );
       for (var i = 0; i < requests.length; i++) {
-        final fields = i % 4 < 2
+        final fields = i % 3 < 2
             ? requests[i].queryParameters
             : requests[i].data as Map;
-        if (i < 8) {
-          expect(fields['order_id'], i < 4 ? 11 : 22);
+        if (i < 6) {
+          expect(fields['order_id'], i < 3 ? 11 : 22);
         } else {
           expect(fields.containsKey('order_id'), isFalse);
         }
       }
     },
   );
+  test(
+    'checkout edits stay local and selected shipping updates the total',
+    () async {
+      final requests = <RequestOptions>[];
+      final dio = Dio();
+      dio.interceptors.add(
+        InterceptorsWrapper(
+          onRequest: (request, handler) {
+            requests.add(request);
+            handler.reject(DioException(requestOptions: request));
+          },
+        ),
+      );
+      final service = ApiService(dio);
+      final cart = CartViewModel(CartRemoteDataSource(service));
+      cart.applyCheckoutPayload({
+        'order_summary': {'subtotal': 6000, 'shipping': 0, 'grand_total': 6000},
+      });
+      final vm = CheckoutViewModel(
+        cart,
+        CheckoutRemoteDataSource(service),
+        ShippingAddressRemoteDataSource(service),
+      );
+      final address = ShippingAddress.fromJson({
+        'id': 8576,
+        'name': 'Customer',
+      });
+      expect(await vm.selectAddress(address), true);
+      expect(
+        await vm.selectDeliveryMethod(
+          const CheckoutDeliveryMethod(
+            id: '6',
+            name: 'Delivery',
+            price: 2500,
+            selected: false,
+          ),
+        ),
+        true,
+      );
+      vm.notesController.text = 'Testing';
+      vm.selectPayment('Cash on Delivery');
+      expect(requests, isEmpty);
+      expect(vm.selectedAddress.value?.id, 8576);
+      expect(vm.shippingTotal, 2500);
+      expect(vm.grandTotal, 8500);
+      expect(vm.notesController.text, 'Testing');
+      vm.onClose();
+      cart.onClose();
+    },
+  );
+
   test(
     'pending checkout rejects missing or different returned order IDs',
     () async {

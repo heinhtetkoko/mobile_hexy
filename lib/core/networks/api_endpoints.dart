@@ -1,9 +1,9 @@
 abstract final class ApiEndpoints {
   static const baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'https://www.hexcymegastore.com/',
-    // defaultValue:
-    //     'https://heinhtetkoko-odooecommerce-staging-40743025.dev.odoo.com/',
+    // defaultValue: 'https://www.hexcymegastore.com/',
+    defaultValue:
+        'https://heinhtetkoko-odooecommerce-staging-40743025.dev.odoo.com/',
   );
   static const login = 'api/v1/auth/token';
   static const googleLogin = 'api/v1/auth/google';
@@ -33,6 +33,7 @@ abstract final class ApiEndpoints {
   static const allProducts = 'api/v1/products';
   static const cart = 'api/v1/cart';
   static const checkout = 'api/v1/checkout';
+  static const paymentProviders = 'api/v1/payment-providers';
   static const checkoutPlaceOrder = 'api/v1/checkout/place-order';
   static const deliveryMethods = 'api/v1/delivery-methods';
   static const orders = 'api/v1/orders';
