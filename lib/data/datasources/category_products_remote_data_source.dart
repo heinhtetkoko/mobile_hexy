@@ -107,7 +107,8 @@ class CategoryProductsRemoteDataSource {
   }
 
   Future<CategoryProductsResult> fetchFilteredProducts({
-    required String section,
+    String? section,
+    String? query,
     List<int> categoryIds = const [],
     List<int> brandIds = const [],
     int? categoryId,
@@ -122,7 +123,8 @@ class CategoryProductsRemoteDataSource {
     final response = await _apiService.get<dynamic>(
       ApiEndpoints.productFilter,
       queryParameters: {
-        'section': section,
+        'section': ?section,
+        if (query != null && query.isNotEmpty) 'q': query,
         if (categoryIds.isNotEmpty) 'category_ids': categoryIds.join(','),
         if (brandIds.isNotEmpty) 'brand_ids': brandIds.join(','),
         if (section == 'flash_sale') ...{

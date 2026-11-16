@@ -40,6 +40,35 @@ class CollectionsRemoteDataSource {
         : const [];
   }
 
+  /// Loads membership from the paginated endpoint, not the limited home preview.
+  Future<Set<String>> fetchCollectionProductIds(int id) async {
+    final ids = <String>{};
+    var page = 1;
+    while (true) {
+      final response = await _apiService.get<dynamic>(
+        '${ApiEndpoints.collection(id)}/products',
+        queryParameters: {'page': page, 'limit': 100},
+        options: Options(extra: const {ApiEndpoints.requiresAuthKey: false}),
+      );
+      final body = response.data;
+      if (body is! Map || body['success'] == false || body['data'] is! List) {
+        throw const FormatException('Could not load collection products.');
+      }
+      final items = body['data'] as List;
+      ids.addAll(
+        items.whereType<Map>().map(
+          (item) => (item['product_id'] ?? item['id']).toString(),
+        ),
+      );
+      final meta = body['meta'];
+      if (meta is! Map || meta['has_next'] != true) return ids;
+      if (items.isEmpty) {
+        throw const FormatException('Collection pagination is incomplete.');
+      }
+      page++;
+    }
+  }
+
   Future<CollectionDetailResult> fetchCollection(int id) async {
     final response = await _apiService.get<dynamic>(
       ApiEndpoints.collection(id),

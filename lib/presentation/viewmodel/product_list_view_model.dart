@@ -18,7 +18,6 @@ import 'package:mobile_hexy/data/models/product_list_request.dart';
 import 'package:mobile_hexy/presentation/widgets/add_to_cart_success_dialog.dart';
 import 'package:mobile_hexy/presentation/widgets/wishlist_success_dialog.dart';
 import 'package:mobile_hexy/presentation/widgets/out_of_stock_dialog.dart';
-import 'package:mobile_hexy/data/models/home_catalog.dart';
 import 'package:mobile_hexy/data/models/catalog_brand.dart';
 
 class ProductListViewModel extends BaseViewModel {
@@ -73,6 +72,7 @@ class ProductListViewModel extends BaseViewModel {
   int? _collectionId;
   int? _brandId;
   int _page = 1;
+  Future<Set<String>>? _scopeIds;
   int _loadRevision = 0;
   final loadMoreError = RxnString();
   ProductListMode? _mode;
@@ -104,7 +104,8 @@ class ProductListViewModel extends BaseViewModel {
       sortLabel.value = switch (_mode) {
         ProductListMode.bestSellers => 'Popular',
         ProductListMode.newArrivals => 'New Arrivals',
-        ProductListMode.flashSale => 'Biggest Discount',
+        ProductListMode.flashSale ||
+        ProductListMode.discountProducts => 'Biggest Discount',
         _ => 'Sort by',
       };
       categoryName.value = switch (category.mode) {
@@ -477,9 +478,9 @@ class ProductListViewModel extends BaseViewModel {
     await loadProducts();
   }
 
-  bool get supportsSortFilter => _mode != ProductListMode.recommended;
+  bool get supportsSortFilter => true;
 
-  bool get usesSectionFilter => section != null;
+  bool get usesSectionFilter => true;
 
   String? get section => switch (_mode) {
     ProductListMode.bestSellers => 'best_sellers',
@@ -526,114 +527,121 @@ class ProductListViewModel extends BaseViewModel {
   Future<({List<CatalogProduct> products, int page, bool hasNext})> _fetchPage(
     int page,
   ) async {
-    if (_mode == null) {
-      final result = await _remoteDataSource.fetchProducts(
-        categoryId: _categoryId,
-        page: page,
-        limit: pageLimit,
-      );
+    final categories = selectedCategories.toList();
+    final brands = selectedBrands.toList();
+    // The brand page always stays scoped to the brand the user opened.
+    if (_brandId != null) {
+      if (brands.isNotEmpty && !brands.contains(_brandId)) {
+        return (products: <CatalogProduct>[], page: page, hasNext: false);
+      }
+      brands
+        ..clear()
+        ..add(_brandId!);
+    }
+    if (_mode == null && categories.isEmpty && _categoryId > 0) {
+      categories.add(_categoryId);
+    }
+    final minimum = minPrice;
+    final maximum = maxPrice;
+    final stock = inStockOnly.value ? true : null;
+    final sort = _sortValue;
+    final search = query.value.trim();
+    Future<CategoryProductsResult> fetch(int requestedPage, int limit) =>
+        _remoteDataSource.fetchFilteredProducts(
+          section: section,
+          query: search,
+          categoryId: categories.length == 1 ? categories.single : null,
+          categoryIds: categories.length > 1 ? categories : const [],
+          brandId: brands.length == 1 ? brands.single : null,
+          brandIds: brands.length > 1 ? brands : const [],
+          minPrice: minimum,
+          maxPrice: maximum,
+          inStock: stock,
+          sort: sort,
+          page: requestedPage,
+          limit: limit,
+        );
+
+    if (_mode == ProductListMode.collection ||
+        _mode == ProductListMode.recommended ||
+        _mode == ProductListMode.discountProducts) {
+      final ids = await (_scopeIds ??= _loadScopeIds());
+      if (ids.isEmpty) {
+        return (products: <CatalogProduct>[], page: page, hasNext: false);
+      }
+      // The collection API ignores filters. Intersect its complete membership
+      // with the server-sorted catalogue, before applying visible pagination.
+      final matches = <CatalogProduct>[];
+      final seen = <String>{};
+      var sourcePage = 1;
+      final target = page * pageLimit;
+      while (true) {
+        final result = await fetch(sourcePage, 100);
+        for (final product in result.products) {
+          if (ids.contains(product.id) && seen.add(product.id)) {
+            matches.add(product);
+          }
+        }
+        if (matches.length > target || !result.hasNext) break;
+        if (result.products.isEmpty) {
+          throw const FormatException('Product pagination is incomplete.');
+        }
+        sourcePage++;
+      }
       return (
-        products: result.products,
-        page: result.page,
-        hasNext: result.hasNext,
+        products: matches.skip((page - 1) * pageLimit).take(pageLimit).toList(),
+        page: page,
+        hasNext: matches.length > target,
       );
     }
+    final result = await fetch(page, pageLimit);
+    return (
+      products: result.products,
+      page: result.page,
+      hasNext: result.hasNext,
+    );
+  }
 
-    switch (_mode!) {
-      case ProductListMode.bestSellers:
-      case ProductListMode.newArrivals:
-      case ProductListMode.flashSale:
-        final result = await _remoteDataSource.fetchFilteredProducts(
-          section: section!,
-          categoryId: selectedCategories.length == 1
-              ? selectedCategories.single
-              : null,
-          categoryIds: selectedCategories.length > 1
-              ? selectedCategories.toList()
-              : const [],
-          brandId: selectedBrands.length == 1 ? selectedBrands.single : null,
-          brandIds: selectedBrands.length > 1
-              ? selectedBrands.toList()
-              : const [],
-          minPrice: minPrice,
-          maxPrice: maxPrice,
-          inStock: inStockOnly.value ? true : null,
-          sort: _sortValue,
-          page: page,
-          limit: pageLimit,
-        );
-        return (
-          products: result.products,
-          page: result.page,
-          hasNext: result.hasNext,
-        );
-      case ProductListMode.recommended:
-        final result = await _homeProductsDataSource.fetch(
-          path: ApiEndpoints.recommendedProducts,
-          page: page,
-          limit: pageLimit,
-        );
-        return _catalogResult(result.products, result.page, result.hasNext);
-      case ProductListMode.discountProducts:
-        final result = await _remoteDataSource.fetchDiscountProducts(
-          page: page,
-          limit: pageLimit,
-        );
-        return (
-          products: result.products,
-          page: result.page,
-          hasNext: result.hasNext,
-        );
-      case ProductListMode.collection:
-        final collectionId = _collectionId;
-        if (collectionId == null || collectionId <= 0) {
+  Future<Set<String>> _loadScopeIds() async {
+    try {
+      if (_mode == ProductListMode.collection) {
+        final id = _collectionId;
+        if (id == null || id <= 0) {
           throw const FormatException('Collection information is incomplete.');
         }
-        final result = await _collectionsRemoteDataSource.fetchCollection(
-          collectionId,
-        );
-        if (result.name.isNotEmpty) categoryName.value = result.name;
-        return (products: result.products, page: 1, hasNext: false);
-      case ProductListMode.brand:
-        final brandId = _brandId;
-        if (brandId == null || brandId <= 0) {
-          throw const FormatException('Brand information is incomplete.');
+        return await _collectionsRemoteDataSource.fetchCollectionProductIds(id);
+      }
+      final ids = <String>{};
+      var page = 1;
+      while (true) {
+        if (_mode == ProductListMode.discountProducts) {
+          final result = await _remoteDataSource.fetchDiscountProducts(
+            page: page,
+            limit: 100,
+          );
+          ids.addAll(result.products.map((product) => product.id));
+          if (!result.hasNext) return ids;
+          if (result.products.isEmpty) {
+            throw const FormatException('Promotional products are incomplete.');
+          }
+        } else {
+          final result = await _homeProductsDataSource.fetch(
+            path: ApiEndpoints.recommendedProducts,
+            page: page,
+            limit: 100,
+          );
+          ids.addAll(result.products.map((product) => product.id));
+          if (!result.hasNext) return ids;
+          if (result.products.isEmpty) {
+            throw const FormatException('Recommended products are incomplete.');
+          }
         }
-        final result = await _remoteDataSource.fetchAllProducts(
-          query: '',
-          categoryId: null,
-          brandId: brandId,
-          minPrice: null,
-          maxPrice: null,
-          inStock: null,
-          sort: _sortValue,
-          page: page,
-          limit: pageLimit,
-        );
-        return (
-          products: result.products,
-          page: result.page,
-          hasNext: result.hasNext,
-        );
-      case ProductListMode.search:
-        final selectedCategoryId = selectedCategories.firstOrNull;
-        final selectedBrandId = selectedBrands.firstOrNull;
-        final result = await _remoteDataSource.fetchAllProducts(
-          query: query.value.trim(),
-          categoryId: selectedCategoryId,
-          brandId: selectedBrandId,
-          minPrice: priceRange.value.start <= 0 ? null : priceRange.value.start,
-          maxPrice: priceRange.value.end >= 15000 ? null : priceRange.value.end,
-          inStock: inStockOnly.value ? true : null,
-          sort: _sortValue,
-          page: page,
-          limit: pageLimit,
-        );
-        return (
-          products: result.products,
-          page: result.page,
-          hasNext: result.hasNext,
-        );
+        page++;
+      }
+    } catch (_) {
+      _scopeIds =
+          null; // A retry must be able to recover from a failed request.
+      rethrow;
     }
   }
 
@@ -648,41 +656,4 @@ class ProductListViewModel extends BaseViewModel {
     'Z–A' => 'z_a',
     _ => 'default',
   };
-
-  ({List<CatalogProduct> products, int page, bool hasNext}) _catalogResult(
-    List<HomeProduct> products,
-    int page,
-    bool hasNext,
-  ) {
-    return (
-      products: products
-          .map(
-            (product) => CatalogProduct(
-              id: product.id,
-              name: product.name,
-              price: product.price,
-              imageAsset: product.imageAsset,
-              imageUrl: product.imageUrl,
-              variantId: product.variantId,
-              inStock: product.hot,
-              availableQty: product.availableQty,
-              discount:
-                  product.discountPercent != null &&
-                      product.discountPercent! > 0
-                  ? '${_formatDiscount(product.discountPercent!)}%'
-                  : null,
-            ),
-          )
-          .toList(growable: false),
-      page: page,
-      hasNext: hasNext,
-    );
-  }
-
-  String _formatDiscount(double value) => value == value.truncateToDouble()
-      ? value.toInt().toString()
-      : value
-            .toStringAsFixed(2)
-            .replaceFirst(RegExp(r'0+$'), '')
-            .replaceFirst(RegExp(r'\.$'), '');
 }

@@ -2,6 +2,8 @@ abstract final class ApiEndpoints {
   static const baseUrl = String.fromEnvironment(
     'API_BASE_URL',
     defaultValue: 'https://www.hexcymegastore.com/',
+    // defaultValue:
+    //     'https://heinhtetkoko-odooecommerce-staging-40743025.dev.odoo.com/',
   );
   static const login = 'api/v1/auth/token';
   static const googleLogin = 'api/v1/auth/google';

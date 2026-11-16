@@ -782,7 +782,7 @@ class _PaymentMethod extends StatelessWidget {
     // 'KBZPay',
     // 'WavePay',
     // 'Visa/Master',
-    // 'MPU',
+    'MPU',
   ];
 
   @override

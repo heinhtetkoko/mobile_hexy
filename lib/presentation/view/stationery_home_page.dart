@@ -1764,9 +1764,15 @@ class _CollectionsSection extends StatelessWidget {
               CircleAvatar(
                 radius: 18,
                 backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                child: Icon(
-                  Icons.chevron_right_rounded,
-                  color: Theme.of(context).colorScheme.primary,
+                child: IconButton(
+                  key: const Key('home-collections-view-all'),
+                  tooltip: 'View All'.tr,
+                  padding: EdgeInsets.zero,
+                  onPressed: () => Get.toNamed<void>(AppRoutes.collections),
+                  icon: Icon(
+                    Icons.chevron_right_rounded,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
                 ),
               ),
             ],

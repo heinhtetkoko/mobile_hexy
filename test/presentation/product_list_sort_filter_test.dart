@@ -1,3 +1,4 @@
+import 'package:mobile_hexy/data/models/catalog_category.dart';
 import 'dart:async';
 
 import 'package:dio/dio.dart';
@@ -29,17 +30,17 @@ class Call {
   final Map<String, dynamic> query;
   final Options? options;
   final completion = Completer<Response<dynamic>>();
-  void succeed({int? id, bool hasNext = true}) {
+  void succeed({int? id, List<int>? ids, bool hasNext = true}) {
     completion.complete(
       Response(
         requestOptions: RequestOptions(path: path),
         data: {
           'success': true,
           'data': [
-            if (id != null)
+            for (final productId in ids ?? [?id])
               {
-                'id': id,
-                'name': 'Product $id',
+                'id': productId,
+                'name': 'Product $productId',
                 'price': 1250000,
                 'currency': {'symbol': 'Ks'},
               },
@@ -275,23 +276,180 @@ void main() {
     },
   );
 
+  for (final entry in [
+    (
+      const ProductListRequest.collection(id: 7, name: 'Office'),
+      'api/v1/collections/7/products',
+    ),
+    (const ProductListRequest.recommended(), ApiEndpoints.recommendedProducts),
+    (
+      const ProductListRequest.discountProducts(),
+      ApiEndpoints.discountProducts,
+    ),
+  ]) {
+    test(
+      '${entry.$1.mode} filters and sorts without leaking other products',
+      () async {
+        start(entry.$1);
+        expect(vm.supportsSortFilter, true);
+        expect(api.calls.single.path, entry.$2);
+        api.calls.last.succeed(ids: [2, 4], hasNext: false);
+        await flush();
+        expect(api.calls.last.path, ApiEndpoints.productFilter);
+        api.calls.last.succeed(ids: [99, 4, 2], hasNext: false);
+        await flush();
+        expect(vm.products.map((p) => p.id), ['4', '2']);
+        vm.beginFilter();
+        vm.togglePendingCategory(3);
+        vm.togglePendingBrand(9);
+        vm.minPriceInput.text = '100';
+        vm.maxPriceInput.text = '2000000';
+        vm.pendingInStockOnly.value = true;
+        final filtering = vm.applyFilters();
+        await flush();
+        final filtered = api.calls.last;
+        expect(filtered.query['category_id'], 3);
+        expect(filtered.query['brand_id'], 9);
+        expect(filtered.query['min_price'], 100);
+        expect(filtered.query['max_price'], 2000000);
+        expect(filtered.query['in_stock'], true);
+        filtered.succeed(ids: [99, 2], hasNext: false);
+        await filtering;
+        expect(vm.products.map((p) => p.id), ['2']);
+        vm.pendingSort.value = 'Price: Low to High';
+        final sorting = vm.applySort();
+        await flush();
+        expect(api.calls.last.query['sort'], 'price_asc');
+        expect(api.calls.last.query['category_id'], 3);
+        api.calls.last.succeed(ids: [2, 99, 4], hasNext: false);
+        await sorting;
+        expect(vm.products.map((p) => p.id), ['2', '4']);
+        vm.beginFilter();
+        vm.resetPendingFilters();
+        final resetting = vm.applyFilters();
+        await flush();
+        expect(api.calls.last.query.keys, isNot(contains('min_price')));
+        api.calls.last.succeed(ids: [4], hasNext: false);
+        await resetting;
+        expect(vm.activeFilters.value, 0);
+        expect(api.calls.where((c) => c.path == entry.$2).length, 1);
+      },
+    );
+  }
+
   test(
-    'recommendations send only page and limit and preserve pagination',
+    'collection membership and visible results both paginate correctly',
     () async {
-      start(const ProductListRequest.recommended());
-      expect(vm.supportsSortFilter, false);
-      expect(api.calls.single.path, ApiEndpoints.recommendedProducts);
-      expect(api.calls.single.query, {'page': 1, 'limit': 10});
-      api.calls.last.succeed(id: 1);
+      start(const ProductListRequest.collection(id: 7, name: 'Office'));
+      api.calls.last.succeed(ids: [1, 2, 3, 4, 5, 6]);
       await flush();
-      await vm.applySort();
-      await vm.applyFilters();
-      expect(api.calls.length, 1);
+      expect(api.calls.last.query['page'], 2);
+      api.calls.last.succeed(ids: [7, 8, 9, 10, 11, 12], hasNext: false);
+      await flush();
+      final ids = List.generate(12, (i) => i + 1);
+      api.calls.last.succeed(ids: [99, ...ids], hasNext: false);
+      await flush();
+      expect(vm.products.length, 10);
+      expect(vm.hasNextPage.value, true);
       final more = vm.loadMore();
-      expect(api.calls.last.query, {'page': 2, 'limit': 10});
-      api.calls.last.succeed(id: 2);
+      await flush();
+      api.calls.last.succeed(ids: [99, ...ids], hasNext: false);
       await more;
-      expect(vm.products.length, 2);
+      expect(vm.products.map((p) => p.id), ids.map((id) => '$id'));
+      expect(vm.hasNextPage.value, false);
     },
   );
+
+  test(
+    'category browsing applies sort, filters and reset to its requests',
+    () async {
+      Get.routing.args = const CatalogCategory(
+        id: 7,
+        name: 'Pens',
+        imageUrl: '',
+        productCount: 10,
+        hasChildren: false,
+        next: '',
+      );
+      vm = ProductListViewModel(
+        CategoryProductsRemoteDataSource(api),
+        HomeProductsRemoteDataSource(api),
+        CartRemoteDataSource(api),
+        WishlistRemoteDataSource(api),
+        CollectionsRemoteDataSource(api),
+      );
+      vm.onInit();
+      expect(api.calls.single.path, ApiEndpoints.productFilter);
+      expect(api.calls.single.query['category_id'], 7);
+      api.calls.last.succeed(hasNext: false);
+      await flush();
+      vm.pendingBrands.add(9);
+      vm.minPriceInput.text = '20000';
+      final filtering = vm.applyFilters();
+      expect(api.calls.last.query['min_price'], 20000);
+      expect(api.calls.last.query['brand_id'], 9);
+      expect(api.calls.last.query['category_id'], 7);
+      api.calls.last.succeed(hasNext: false);
+      await filtering;
+      vm.pendingSort.value = 'Price: High to Low';
+      final sorting = vm.applySort();
+      expect(api.calls.last.query['sort'], 'price_desc');
+      api.calls.last.succeed(hasNext: false);
+      await sorting;
+      vm.beginFilter();
+      vm.resetPendingFilters();
+      final resetting = vm.applyFilters();
+      expect(api.calls.last.query['category_id'], 7);
+      expect(api.calls.last.query.keys, isNot(contains('brand_id')));
+      api.calls.last.succeed(hasNext: false);
+      await resetting;
+      Get.routing.args = null;
+    },
+  );
+
+  test('failed collection membership can be retried', () async {
+    start(const ProductListRequest.collection(id: 7, name: 'Office'));
+    api.calls.last.fail();
+    await flush();
+    expect(vm.errorMessage.value, isNotNull);
+    final retry = vm.loadProducts();
+    expect(api.calls.last.path, 'api/v1/collections/7/products');
+    api.calls.last.succeed(ids: [2], hasNext: false);
+    await flush();
+    api.calls.last.succeed(ids: [99, 2], hasNext: false);
+    await retry;
+    expect(vm.products.single.id, '2');
+    expect(vm.errorMessage.value, isNull);
+  });
+
+  for (final entry in [
+    (const ProductListRequest.brand(id: 82, name: 'Brand'), 82),
+    (const ProductListRequest.search(query: 'pen'), null),
+  ]) {
+    test(
+      '${entry.$1.mode} sends active filters and retains base scope',
+      () async {
+        start(entry.$1);
+        expect(api.calls.single.path, ApiEndpoints.productFilter);
+        if (entry.$2 != null) {
+          expect(api.calls.single.query['brand_id'], entry.$2);
+        }
+        if (entry.$2 == null) expect(api.calls.single.query['q'], 'pen');
+        api.calls.last.succeed(hasNext: false);
+        await flush();
+        vm.pendingCategories.add(5);
+        vm.maxPriceInput.text = '40000';
+        vm.pendingInStockOnly.value = true;
+        final filter = vm.applyFilters();
+        expect(api.calls.last.query['category_id'], 5);
+        expect(api.calls.last.query['max_price'], 40000);
+        expect(api.calls.last.query['in_stock'], true);
+        if (entry.$2 != null) {
+          expect(api.calls.last.query['brand_id'], entry.$2);
+        }
+        api.calls.last.succeed(hasNext: false);
+        await filter;
+      },
+    );
+  }
 }

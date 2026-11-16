@@ -1,3 +1,4 @@
+import 'package:mobile_hexy/presentation/view/collections_page.dart';
 import 'package:mobile_hexy/presentation/controllers/in_app_forgot_password_binding.dart';
 import 'package:mobile_hexy/presentation/view/in_app_forgot_password_page.dart';
 import 'package:flutter/material.dart';
@@ -72,6 +73,7 @@ abstract final class AppRoutes {
   static const home = '/home';
   static const categories = '/categories';
   static const brands = '/brands';
+  static const collections = '/collections';
   static const productDetail = '/product-detail';
   static const checkout = '/checkout';
   static const paymentSuccess = '/payment-success';
@@ -116,6 +118,7 @@ abstract final class AppPages {
       page: CategoriesPage.new,
       binding: CategoriesBinding(),
     ),
+    GetPage(name: AppRoutes.collections, page: CollectionsPage.new),
     GetPage(
       name: AppRoutes.brands,
       page: BrandsPage.new,
