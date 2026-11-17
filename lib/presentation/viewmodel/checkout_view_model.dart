@@ -257,34 +257,35 @@ class CheckoutViewModel extends BaseViewModel {
         termsAccepted: termsAccepted.value,
         deliveryNotes: notesController.text.trim(),
       );
+      final successArguments = <String, dynamic>{
+        ...result,
+        '_checkout_items': purchasedItems,
+        '_checkout_item_count': purchasedItemCount,
+        '_checkout_grand_total': grandTotal,
+        '_checkout_currency_symbol': cart.currencySymbol.value,
+        '_checkout_payment_method': provider.label,
+        '_checkout_delivery_method': selectedDeliveryMethod.value!.name,
+        '_checkout_delivery_notes': notesController.text.trim(),
+        '_checkout_address': <String, dynamic>{
+          'id': deliveryAddress.id,
+          'name': deliveryAddress.name,
+          'phone': deliveryAddress.phone,
+          'address_type': deliveryAddress.addressType,
+          'building': deliveryAddress.building,
+          'street_address': deliveryAddress.streetAddress,
+          'city_township': deliveryAddress.cityTownship,
+          'state_region': deliveryAddress.stateRegion,
+        },
+      };
       final checkoutUrl = result['checkout_url']?.toString().trim() ?? '';
       if (provider.code.toLowerCase() == 'mpu' || checkoutUrl.isNotEmpty) {
-        final session = PaymentCheckoutSession.fromJson(result);
+        final session = PaymentCheckoutSession.fromJson(successArguments);
         Get.offNamed<dynamic>(AppRoutes.paymentCheckout, arguments: session);
         return;
       }
       Get.offNamed<dynamic>(
         AppRoutes.paymentSuccess,
-        arguments: <String, dynamic>{
-          ...result,
-          '_checkout_items': purchasedItems,
-          '_checkout_item_count': purchasedItemCount,
-          '_checkout_grand_total': grandTotal,
-          '_checkout_currency_symbol': cart.currencySymbol.value,
-          '_checkout_payment_method': provider.label,
-          '_checkout_delivery_method': selectedDeliveryMethod.value!.name,
-          '_checkout_delivery_notes': notesController.text.trim(),
-          '_checkout_address': <String, dynamic>{
-            'id': deliveryAddress.id,
-            'name': deliveryAddress.name,
-            'phone': deliveryAddress.phone,
-            'address_type': deliveryAddress.addressType,
-            'building': deliveryAddress.building,
-            'street_address': deliveryAddress.streetAddress,
-            'city_township': deliveryAddress.cityTownship,
-            'state_region': deliveryAddress.stateRegion,
-          },
-        },
+        arguments: successArguments,
       );
     } catch (error) {
       _showError('Could not place order', error);

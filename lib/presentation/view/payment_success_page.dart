@@ -461,9 +461,9 @@ class _OrderReceipt extends StatelessWidget {
       'order_number',
       'number',
       'name',
-      'reference',
       'sale_order_id',
       'order_id',
+      'reference',
       'id',
     ]);
     final orderDate = _text(const [
@@ -639,29 +639,50 @@ class _ReceiptRow extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.only(bottom: 12),
     child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label.tr,
-          style: TextStyle(
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-            fontSize: 12,
+        Expanded(
+          flex: 2,
+          child: Text(
+            label.tr,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+              fontSize: 12,
+            ),
           ),
         ),
-        const Spacer(),
-        if (icon != null) ...[
-          Icon(icon, size: 15, color: Theme.of(context).colorScheme.onSurface),
-          const SizedBox(width: 4),
-        ],
-        Text(
-          value,
-          style: TextStyle(
-            color: green
-                ? AppColors.success
-                : (bold
-                      ? Theme.of(context).colorScheme.primary
-                      : Theme.of(context).colorScheme.onSurface),
-            fontSize: 13,
-            fontWeight: bold ? FontWeight.w600 : FontWeight.w400,
+        const SizedBox(width: 12),
+        Expanded(
+          flex: 3,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              if (icon != null) ...[
+                Icon(
+                  icon,
+                  size: 15,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+                const SizedBox(width: 4),
+              ],
+              Flexible(
+                child: Text(
+                  value,
+                  textAlign: TextAlign.right,
+                  softWrap: true,
+                  style: TextStyle(
+                    color: green
+                        ? AppColors.success
+                        : bold
+                        ? Theme.of(context).colorScheme.primary
+                        : Theme.of(context).colorScheme.onSurface,
+                    fontSize: 13,
+                    fontWeight: bold ? FontWeight.w600 : FontWeight.w400,
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ],
@@ -878,23 +899,29 @@ class _SecondaryActions extends StatelessWidget {
   Widget build(BuildContext context) => Row(
     mainAxisAlignment: MainAxisAlignment.spaceBetween,
     children: [
-      _SmallAction(
-        icon: Icons.share_outlined,
-        label: 'Share Receipt',
-        color: Color(0xFFEEF2FF),
-        onTap: onTap,
+      Expanded(
+        child: _SmallAction(
+          icon: Icons.share_outlined,
+          label: 'Share Receipt',
+          color: Color(0xFFEEF2FF),
+          onTap: onTap,
+        ),
       ),
-      _SmallAction(
-        icon: Icons.star_outline_rounded,
-        label: 'Rate Order',
-        color: Color(0xFFFEF3C7),
-        onTap: onTap,
+      Expanded(
+        child: _SmallAction(
+          icon: Icons.star_outline_rounded,
+          label: 'Rate Order',
+          color: Color(0xFFFEF3C7),
+          onTap: onTap,
+        ),
       ),
-      _SmallAction(
-        icon: Icons.chat_bubble_outline_rounded,
-        label: 'Need Help?',
-        color: Color(0xFFFDF2F8),
-        onTap: onTap,
+      Expanded(
+        child: _SmallAction(
+          icon: Icons.chat_bubble_outline_rounded,
+          label: 'Need Help?',
+          color: Color(0xFFFDF2F8),
+          onTap: onTap,
+        ),
       ),
     ],
   );

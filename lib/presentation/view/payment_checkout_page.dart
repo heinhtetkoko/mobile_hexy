@@ -1,3 +1,5 @@
+import 'package:get/get.dart';
+import 'package:mobile_hexy/app.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -24,6 +26,43 @@ class _PaymentCheckoutPageState extends State<PaymentCheckoutPage> {
   String? _error;
   String? _currentPageUrl;
   int _attempt = 0;
+  bool _completed = false;
+
+  bool _handleCompletion(String url) {
+    final status = widget.session.completionStatus(url);
+    if (!mounted || _completed || status == null) {
+      return false;
+    }
+    _completed = true;
+    _attempt++;
+    // This is the merchant-requested completion UI. It does not update payment
+    // or accounting state; those remain controlled by the backend webhook.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _finishCompletion(status);
+    });
+    WidgetsBinding.instance.scheduleFrame();
+    return true;
+  }
+
+  Future<void> _finishCompletion(PaymentCompletionStatus status) async {
+    if (status == PaymentCompletionStatus.cancelled) {
+      try {
+        // Await native cache removal before disposing the payment WebView.
+        await _controller?.clearCache();
+      } catch (error) {
+        debugPrint(
+          'Payment WebView cache clearing failed: ${error.runtimeType}',
+        );
+      }
+    }
+    if (!mounted) return;
+    Get.offNamed<dynamic>(
+      status == PaymentCompletionStatus.success
+          ? AppRoutes.paymentSuccess
+          : AppRoutes.checkout,
+      arguments: widget.session.orderDetails,
+    );
+  }
 
   @override
   void initState() {
@@ -70,6 +109,7 @@ class _PaymentCheckoutPageState extends State<PaymentCheckoutPage> {
           if (mounted && attempt == _attempt) setState(() => _progress = value);
         },
         onPageStarted: (url) {
+          if (_handleCompletion(url)) return;
           _currentPageUrl = url;
           if (mounted && attempt == _attempt) {
             setState(() {
@@ -97,9 +137,13 @@ class _PaymentCheckoutPageState extends State<PaymentCheckoutPage> {
             );
           }
         },
-        // Bank redirects remain inside the WebView. A redirect is never treated
-        // as proof of payment; confirmation belongs to the merchant backend.
+        onUrlChange: (change) {
+          if (change.url != null) _handleCompletion(change.url!);
+        },
         onNavigationRequest: (request) {
+          if (request.isMainFrame && _handleCompletion(request.url)) {
+            return NavigationDecision.prevent;
+          }
           final uri = Uri.tryParse(request.url);
           return uri != null && uri.scheme == 'https'
               ? NavigationDecision.navigate
