@@ -1,3 +1,4 @@
+import 'package:mobile_hexy/core/services/app_update_service.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:get/get.dart';
@@ -74,6 +75,13 @@ class InitialBinding extends Bindings {
     );
     Get.put<Dio>(dio, permanent: true);
     Get.put<ApiService>(ApiService(dio), permanent: true);
+    Get.put(
+      AppUpdateService(
+        Get.find<ApiService>(),
+        storage: Get.find<SecureStorage>(),
+      ),
+      permanent: true,
+    );
     Get.put<UiService>(UiServiceImpl(), permanent: true);
 
     Get.lazyPut(() => AuthRemoteDataSource(Get.find()), fenix: true);

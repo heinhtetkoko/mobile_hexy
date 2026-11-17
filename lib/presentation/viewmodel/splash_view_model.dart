@@ -1,3 +1,4 @@
+import 'package:mobile_hexy/core/services/app_update_service.dart';
 import 'dart:async';
 
 import 'package:flutter/services.dart';
@@ -8,7 +9,8 @@ import 'package:mobile_hexy/core/services/app_navigator.dart';
 import 'package:mobile_hexy/core/services/secure_storage.dart';
 
 class SplashViewModel extends BaseViewModel {
-  SplashViewModel(this._navigator, this._storage);
+  SplashViewModel(this._navigator, this._storage, {this.appUpdateService});
+  final AppUpdateService? appUpdateService;
   final AppNavigator _navigator;
   final SecureStorage _storage;
   Timer? _timer;
@@ -23,6 +25,8 @@ class SplashViewModel extends BaseViewModel {
   }
 
   Future<void> _continueFromSplash() async {
+    await appUpdateService?.checkForUpdate();
+    if (isClosed) return;
     var onboardingCompleted = false;
     try {
       onboardingCompleted =

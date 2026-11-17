@@ -10,6 +10,21 @@ class AppTranslations extends Translations {
   static const _english = <String, String>{};
 
   static const _myanmar = <String, String>{
+    'App Update': 'အက်ပ် အပ်ဒိတ်',
+    'A new version is ready': 'ဗားရှင်းအသစ် အဆင်သင့်ဖြစ်ပါပြီ',
+    'Current version': 'လက်ရှိဗားရှင်း',
+    'New version': 'ဗားရှင်းအသစ်',
+    'Available on your app store': 'သင့်အက်ပ်စတိုးမှ ရယူနိုင်ပါသည်',
+    'Update Required': 'ဗားရှင်းအသစ်သို့ ပြောင်းရန်လိုအပ်ပါသည်',
+    'Update Available': 'ဗားရှင်းအသစ် ရရှိနိုင်ပါပြီ',
+    'Update Now': 'ယခု အပ်ဒိတ်လုပ်မည်',
+    'Later': 'နောက်မှ',
+    'Please update HEXCY to continue using the app.':
+        'HEXCY ကို ဆက်လက်အသုံးပြုရန် ဗားရှင်းအသစ်သို့ ပြောင်းပေးပါ။',
+    'A newer version of HEXCY is available.':
+        'HEXCY ဗားရှင်းအသစ် ရရှိနိုင်ပါပြီ။',
+    'Could not open the store. Please try again.':
+        'အက်ပ်စတိုးကို ဖွင့်မရပါ။ ပြန်လည်ကြိုးစားပေးပါ။',
     'Home': 'ပင်မ',
     'Cart': 'ဈေးခြင်း',
     'Profile': 'ကိုယ်ရေးအချက်အလက်',

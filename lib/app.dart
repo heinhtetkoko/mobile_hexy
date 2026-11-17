@@ -1,3 +1,4 @@
+import 'package:mobile_hexy/presentation/widgets/app_update_gate.dart';
 import 'package:mobile_hexy/data/models/payment_checkout_session.dart';
 import 'package:mobile_hexy/presentation/view/payment_checkout_page.dart';
 import 'package:mobile_hexy/presentation/view/collections_page.dart';
@@ -57,6 +58,8 @@ class HexyApp extends StatelessWidget {
   Widget build(BuildContext context) => GetMaterialApp(
     title: 'Hexy Megastore',
     debugShowCheckedModeBanner: false,
+    builder: (context, child) =>
+        AppUpdateGate(child: child ?? const SizedBox.shrink()),
     initialBinding: InitialBinding(),
     initialRoute: AppRoutes.splash,
     getPages: AppPages.pages,

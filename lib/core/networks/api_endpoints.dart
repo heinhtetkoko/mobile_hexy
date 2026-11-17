@@ -5,6 +5,7 @@ abstract final class ApiEndpoints {
     defaultValue:
         'https://heinhtetkoko-odooecommerce-staging-40743025.dev.odoo.com/',
   );
+  static const appVersion = 'api/v1/app-version';
   static const login = 'api/v1/auth/token';
   static const googleLogin = 'api/v1/auth/google';
   static const signup = 'api/v1/auth/signup';
