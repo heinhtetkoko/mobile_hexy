@@ -83,6 +83,40 @@ class CheckoutRemoteDataSource {
     return Map<String, dynamic>.from(data);
   }
 
+  Future<Map<String, dynamic>> fetchPaymentStatus(
+    Map<String, dynamic> orderDetails,
+  ) async {
+    final statusUrl = orderDetails['status_url']?.toString().trim();
+    final transactionId = orderDetails['transaction_id']?.toString();
+    final statusPath = statusUrl == null || statusUrl.isEmpty
+        ? '/api/v1/payments/$transactionId/status'
+        : statusUrl;
+    // Keep the authenticated request on the configured backend and bind it
+    // to the transaction returned by place-order.
+    final match = RegExp(
+      r'^/?api/v1/payments/([1-9][0-9]*)/status$',
+    ).firstMatch(statusPath);
+    final id = match?.group(1);
+    if (id == null || (transactionId != null && transactionId != id)) {
+      throw const FormatException('Invalid payment status URL.');
+    }
+
+    final response = await _apiService.get<dynamic>(
+      'api/v1/payments/$id/status',
+    );
+    final data = _data(response.data);
+    final expectedOrderId = orderDetails['order_id']?.toString();
+    if (data is! Map ||
+        (data['transaction_id'] != null &&
+            data['transaction_id'].toString() != id) ||
+        (expectedOrderId != null &&
+            data['order_id'] != null &&
+            data['order_id'].toString() != expectedOrderId)) {
+      throw const FormatException('Invalid payment status response.');
+    }
+    return Map<String, dynamic>.from(data);
+  }
+
   Future<List<Map<String, dynamic>>> fetchDeliveryMethods({
     String? orderId,
   }) async {

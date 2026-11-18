@@ -4,6 +4,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:mobile_hexy/data/models/payment_checkout_session.dart';
+import 'package:mobile_hexy/data/datasources/checkout_remote_data_source.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 class PaymentCheckoutPage extends StatefulWidget {
@@ -27,6 +28,9 @@ class _PaymentCheckoutPageState extends State<PaymentCheckoutPage> {
   String? _currentPageUrl;
   int _attempt = 0;
   bool _completed = false;
+  bool _checkingPayment = false;
+  Timer? _paymentStatusTimer;
+  String? _paymentMessage;
 
   bool _handleCompletion(String url) {
     final status = widget.session.completionStatus(url);
@@ -35,8 +39,7 @@ class _PaymentCheckoutPageState extends State<PaymentCheckoutPage> {
     }
     _completed = true;
     _attempt++;
-    // This is the merchant-requested completion UI. It does not update payment
-    // or accounting state; those remain controlled by the backend webhook.
+    // The redirect signals that it is time to verify the payment.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _finishCompletion(status);
     });
@@ -45,23 +48,66 @@ class _PaymentCheckoutPageState extends State<PaymentCheckoutPage> {
   }
 
   Future<void> _finishCompletion(PaymentCompletionStatus status) async {
-    if (status == PaymentCompletionStatus.cancelled) {
-      try {
-        // Await native cache removal before disposing the payment WebView.
-        await _controller?.clearCache();
-      } catch (error) {
-        debugPrint(
-          'Payment WebView cache clearing failed: ${error.runtimeType}',
-        );
-      }
+    if (!mounted) return;
+    if (status == PaymentCompletionStatus.success) {
+      setState(() => _checkingPayment = true);
+      await _checkPaymentStatus();
+      return;
+    }
+    try {
+      await _controller?.clearCache();
+    } catch (error) {
+      debugPrint('Payment WebView cache clearing failed: ${error.runtimeType}');
     }
     if (!mounted) return;
     Get.offNamed<dynamic>(
-      status == PaymentCompletionStatus.success
-          ? AppRoutes.paymentSuccess
-          : AppRoutes.checkout,
+      AppRoutes.checkout,
       arguments: widget.session.orderDetails,
     );
+  }
+
+  Future<void> _checkPaymentStatus() async {
+    try {
+      final payment = await Get.find<CheckoutRemoteDataSource>()
+          .fetchPaymentStatus(widget.session.orderDetails);
+      if (!mounted) return;
+      final status = payment['status']?.toString().trim().toLowerCase();
+      if (const {'paid', 'success', 'succeeded', 'done'}.contains(status)) {
+        Get.offNamed<dynamic>(
+          AppRoutes.paymentSuccess,
+          arguments: {...widget.session.orderDetails, ...payment},
+        );
+        return;
+      }
+      final terminalMessage = switch (status) {
+        'failed' || 'error' => 'The payment failed.',
+        'cancelled' || 'canceled' => 'The payment was cancelled.',
+        _ => null,
+      };
+      if (terminalMessage != null) {
+        setState(() {
+          _checkingPayment = false;
+          _paymentMessage = terminalMessage;
+        });
+        return;
+      }
+    } catch (error) {
+      debugPrint('Payment status check failed: ${error.runtimeType}');
+    }
+
+    // Wait for this request to finish before scheduling the next one.
+    if (mounted) {
+      _paymentStatusTimer = Timer(
+        const Duration(seconds: 1),
+        _checkPaymentStatus,
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _paymentStatusTimer?.cancel();
+    super.dispose();
   }
 
   @override
@@ -165,7 +211,25 @@ class _PaymentCheckoutPageState extends State<PaymentCheckoutPage> {
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: Text(widget.session.title)),
     body: SafeArea(
-      child: _error != null
+      child: _checkingPayment || _paymentMessage != null
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (_checkingPayment) ...[
+                      const CircularProgressIndicator(),
+                      const SizedBox(height: 16),
+                      const Text('Checking payment status…'),
+                    ] else ...[
+                      Text(_paymentMessage!, textAlign: TextAlign.center),
+                    ],
+                  ],
+                ),
+              ),
+            )
+          : _error != null
           ? Center(
               child: Padding(
                 padding: const EdgeInsets.all(24),
