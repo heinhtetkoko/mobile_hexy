@@ -109,7 +109,7 @@ class MainActivity : FlutterActivity() {
             try {
                 val token = withContext(Dispatchers.IO) { requestPgToken() }
                 PaymentSdkConfig.initialize(pgBaseUrl(), token)
-                PaymentManager.setReturnActivity(MainActivity::class.java.name)
+                PaymentManager.setReturnActivity(PgReturnActivity::class.java.name)
                 activePgOrderId = orderId
                 val error = PaymentManager().createPayment(
                     context = this@MainActivity,

@@ -10,6 +10,13 @@
         android:networkSecurityConfig="@xml/network_security_config">
         <!-- com.kbzbank.payment.sdk.callback.CallbackResultActivity is declared by PGInAppSDK. -->
         <activity
+            android:name=".PgReturnActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:taskAffinity="com.joytech.hexcy.pgreturn"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+        <activity
             android:name=".MainActivity"
             android:exported="true"
             android:launchMode="singleTop"
