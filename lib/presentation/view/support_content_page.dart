@@ -332,7 +332,7 @@ class _ContactContent extends StatelessWidget {
                       onPressed: () => _openContactLink(
                         Uri(
                           scheme: 'viber',
-                          host: 'chat',
+                          host: Platform.isIOS ? 'contact' : 'chat',
                           queryParameters: const {'number': '+959752473565'},
                         ),
                         label: 'Viber',
@@ -590,7 +590,7 @@ class _ContactStoreView extends StatelessWidget {
                       onPressed: () => _openContactLink(
                         Uri(
                           scheme: 'viber',
-                          host: 'chat',
+                          host: Platform.isIOS ? 'contact' : 'chat',
                           queryParameters: const {'number': '+959752473565'},
                         ),
                         label: 'Viber',

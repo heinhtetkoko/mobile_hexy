@@ -5,19 +5,29 @@ class PaymentCheckoutSession {
     required this.url,
     required this.title,
     this.orderDetails = const {},
+    this.kbzPayArguments,
   });
 
-  final Uri url;
+  final Uri? url;
   final String title;
   final Map<String, dynamic> orderDetails;
+  final Map<String, String>? kbzPayArguments;
+
+  static bool isKbzPay(Object? method) => const {
+    'kpay',
+    'kbzpay',
+  }.contains(method?.toString().trim().toLowerCase());
+
+  static bool isKbzPayUatOrigin(Uri uri) =>
+      uri.scheme == 'https' &&
+      uri.host == 'paymentaggregatoruat.kbzbank.com' &&
+      uri.port == 443 &&
+      uri.userInfo.isEmpty;
 
   bool isCompletionUrl(String value) {
     final candidate = Uri.tryParse(value);
     return candidate != null &&
-        candidate.scheme == 'https' &&
-        candidate.host.toLowerCase() == 'paymentaggregatoruat.kbzbank.com' &&
-        candidate.port == 443 &&
-        candidate.userInfo.isEmpty &&
+        isKbzPayUatOrigin(candidate) &&
         candidate.path == '/Payment/Complete' &&
         candidate.queryParametersAll['MerchantId']?.length == 1 &&
         candidate.queryParameters['MerchantId'] == 'M003022';
@@ -35,19 +45,52 @@ class PaymentCheckoutSession {
   }
 
   factory PaymentCheckoutSession.fromJson(Map<String, dynamic> data) {
-    final url = Uri.tryParse(data['checkout_url']?.toString().trim() ?? '');
-    if (url == null ||
-        url.scheme != 'https' ||
-        url.host.isEmpty ||
-        url.userInfo.isNotEmpty) {
+    final method = data['payment_method']?.toString().trim().toLowerCase();
+    final native = data['kbzpay_native'];
+    final Map<String, String>? nativeArguments;
+    if (native
+        case {
+          'environment': 'uat',
+          'sign_type': 'SHA256',
+          'order_info': final String info,
+          'sign': final String sign,
+          'merchant_order_id': final String orderId,
+        }
+        when isKbzPay(method) &&
+            orderId.trim().isNotEmpty &&
+            RegExp(r'^[a-fA-F0-9]{64}$').hasMatch(sign) &&
+            RegExp(
+              r'^appid=[^&#=]+&merch_code=[^&#=]+&nonce_str=[^&#=]+&prepay_id=[^&#=]+&timestamp=[0-9]+$',
+            ).hasMatch(info)) {
+      nativeArguments = {'orderInfo': info, 'sign': sign, 'orderId': orderId};
+    } else {
+      nativeArguments = null;
+    }
+
+    final candidate = Uri.tryParse(
+      data['checkout_url']?.toString().trim() ?? '',
+    );
+    final url =
+        candidate != null &&
+            candidate.scheme == 'https' &&
+            candidate.host.isNotEmpty &&
+            candidate.userInfo.isEmpty
+        ? candidate
+        : null;
+    if (url == null && nativeArguments == null) {
       throw const FormatException(
         'The payment checkout URL is unavailable or invalid.',
       );
     }
     return PaymentCheckoutSession(
       url: url,
-      orderDetails: Map<String, dynamic>.unmodifiable(data),
-      title: data['payment_method']?.toString().toLowerCase() == 'mpu'
+      orderDetails: Map<String, dynamic>.unmodifiable(
+        {...data}..remove('kbzpay_native'),
+      ),
+      kbzPayArguments: nativeArguments,
+      title: isKbzPay(method)
+          ? 'KBZPay'
+          : method == 'mpu'
           ? 'MPU Payment'
           : 'Payment',
     );

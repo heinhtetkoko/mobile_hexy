@@ -259,6 +259,11 @@ class CheckoutViewModel extends BaseViewModel {
       );
       final successArguments = <String, dynamic>{
         ...result,
+        'payment_method':
+            result['payment_method'] ??
+            (PaymentCheckoutSession.isKbzPay(result['type'])
+                ? result['type']
+                : provider.code),
         '_checkout_items': purchasedItems,
         '_checkout_item_count': purchasedItemCount,
         '_checkout_grand_total': grandTotal,
@@ -278,7 +283,10 @@ class CheckoutViewModel extends BaseViewModel {
         },
       };
       final checkoutUrl = result['checkout_url']?.toString().trim() ?? '';
-      if (provider.code.toLowerCase() == 'mpu' || checkoutUrl.isNotEmpty) {
+      if (provider.code.toLowerCase() == 'mpu' ||
+          PaymentCheckoutSession.isKbzPay(provider.code) ||
+          PaymentCheckoutSession.isKbzPay(successArguments['payment_method']) ||
+          checkoutUrl.isNotEmpty) {
         final session = PaymentCheckoutSession.fromJson(successArguments);
         Get.offNamed<dynamic>(AppRoutes.paymentCheckout, arguments: session);
         return;

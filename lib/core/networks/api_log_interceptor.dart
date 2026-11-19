@@ -22,7 +22,7 @@ class ApiLogInterceptor extends Interceptor {
   ) {
     debugPrint('┌── API RESPONSE ────────────────────────────');
     debugPrint('│ ${response.statusCode} ${response.requestOptions.uri}');
-    debugPrint('│ Body: ${_encode(response.data)}');
+    debugPrint('│ Body: ${_encode(_redact(response.data))}');
     debugPrint('└────────────────────────────────────────────');
     handler.next(response);
   }
@@ -39,7 +39,7 @@ class ApiLogInterceptor extends Interceptor {
       '│ Request headers: ${_encode(_redact(err.requestOptions.headers))}',
     );
     debugPrint('│ Request body: ${_encode(_redact(err.requestOptions.data))}');
-    debugPrint('│ Response body: ${_encode(err.response?.data)}');
+    debugPrint('│ Response body: ${_encode(_redact(err.response?.data))}');
     debugPrint('└────────────────────────────────────────────');
     handler.next(err);
   }
@@ -64,6 +64,7 @@ class ApiLogInterceptor extends Interceptor {
           'refresh_token',
           'id_token',
           'token',
+          'kbzpay_native',
         };
         return MapEntry(
           key,

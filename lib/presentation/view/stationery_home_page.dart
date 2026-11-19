@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+
 import 'package:mobile_hexy/presentation/widgets/catalog_image.dart';
 import 'package:mobile_hexy/core/services/asset_paths.dart';
 import 'package:flutter/material.dart';
@@ -2015,7 +2017,7 @@ class _ChatFooter extends StatelessWidget {
     const phoneNumber = '+959752473565';
     final uri = Uri(
       scheme: 'viber',
-      host: 'chat',
+      host: Platform.isIOS ? 'contact' : 'chat',
       queryParameters: const {'number': phoneNumber},
     );
 
