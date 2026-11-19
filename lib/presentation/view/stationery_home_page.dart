@@ -1969,7 +1969,7 @@ class _ChatFooter extends StatelessWidget {
               label: 'Messenger',
               color: Color(0xFF168AFF),
               onTap: () => _openExternalUrl(
-                url: 'https://m.me/hexcystationery',
+                url: 'https://www.facebook.com/104166172455018',
                 channelName: 'Messenger',
               ),
             ),
@@ -1987,7 +1987,10 @@ class _ChatFooter extends StatelessWidget {
               customIcon: const _ViberIcon(),
               label: 'Viber',
               color: Color(0xFF8B5CF6),
-              onTap: _openViberChat,
+              onTap: () => _openExternalUrl(
+                url: 'https://viber.me/959752473565',
+                channelName: 'Viber',
+              ),
             ),
             _SupportChannel(
               customIcon: const _InstagramIcon(),
@@ -2010,28 +2013,6 @@ class _ChatFooter extends StatelessWidget {
       ],
     ),
   );
-
-  static Future<void> _openViberChat() async {
-    const phoneNumber = '+959752473565';
-    final uri = Uri(
-      scheme: 'viber',
-      host: 'chat',
-      queryParameters: const {'number': phoneNumber},
-    );
-
-    try {
-      final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
-      if (opened) return;
-    } catch (_) {
-      // The error message below handles devices without Viber.
-    }
-
-    Get.snackbar(
-      'Unable to open Viber',
-      'Please install Viber and try again.',
-      snackPosition: SnackPosition.BOTTOM,
-    );
-  }
 
   static Future<void> _openExternalUrl({
     required String url,

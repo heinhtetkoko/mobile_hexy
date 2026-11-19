@@ -330,11 +330,7 @@ class _ContactContent extends StatelessWidget {
                       icon: Icons.phone_outlined,
                       color: Color(0xFF7354ED),
                       onPressed: () => _openContactLink(
-                        Uri(
-                          scheme: 'viber',
-                          host: 'chat',
-                          queryParameters: const {'number': '+959752473565'},
-                        ),
+                        Uri.parse('https://viber.me/959752473565'),
                         label: 'Viber',
                       ),
                     ),
@@ -588,11 +584,7 @@ class _ContactStoreView extends StatelessWidget {
                       icon: Icons.phone_outlined,
                       color: const Color(0xFF7354ED),
                       onPressed: () => _openContactLink(
-                        Uri(
-                          scheme: 'viber',
-                          host: 'chat',
-                          queryParameters: const {'number': '+959752473565'},
-                        ),
+                        Uri.parse('https://viber.me/959752473565'),
                         label: 'Viber',
                       ),
                     ),
